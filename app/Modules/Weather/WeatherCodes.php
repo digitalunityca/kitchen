@@ -49,4 +49,20 @@ class WeatherCodes
             default => 'cloudy',
         };
     }
+
+    /** A character for plain-text places such as Fully's action bar title. */
+    public static function emoji(?string $icon): string
+    {
+        return match ($icon) {
+            'clear' => '☀️',
+            'clear-night' => '🌙',
+            'partly' => '⛅',
+            'partly-night', 'cloudy' => '☁️',
+            'fog' => '🌫️',
+            'rain' => '🌧️',
+            'snow' => '🌨️',
+            'thunder' => '⛈️',
+            default => '',
+        };
+    }
 }

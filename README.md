@@ -137,7 +137,7 @@ WEATHER_LON=-75.69
 
 It shows the current temperature and condition, today's high and low, and the next 4 hours. Forecasts are cached for 15 minutes, and the card refreshes itself from `/modules/weather/now` (JSON) at the same interval. Until the coordinates are set, or whenever Open-Meteo fails, the card shows sample data with a "Sample data" pill.
 
-In Fully Kiosk the card also writes a one-line summary to the action bar title, for example `4° Partly cloudy · H 6° L −1° · Rain likely from 3 PM`. The rain part appears when an hour later today has a precipitation probability of 50% or more. This needs Toolbars and Appearance › Show Action Bar.
+In Fully Kiosk the card also writes a one-line summary to the action bar title, for example `⛅ 4° Partly cloudy · H 6° L −1° · 🌧️ Rain likely 3–6 PM`. The rain part (or snow) appears when hours later today have a precipitation probability of 50% or more. It names the first such stretch: `3–6 PM`, `until 4 PM` if it's already likely now, or `from 9 PM` if it lasts past midnight. This needs Toolbars and Appearance › Show Action Bar.
 
 ## YouTube Music
 

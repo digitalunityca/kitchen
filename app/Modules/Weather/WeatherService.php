@@ -27,7 +27,7 @@ class WeatherService
     ) {}
 
     /**
-     * @return array{real: bool, temp: int, code: int, label: string, icon: string,
+     * @return array{real: bool, temp: int, code: int, label: string, icon: string, precip_icon: string|null,
      *               high: int, low: int, hours: list<array{label: string, temp: int, pop: int|null, icon: string}>|null,
      *               precip: string|null, summary: string}
      */
@@ -86,16 +86,15 @@ class WeatherService
         $codes = (array) data_get($data, 'hourly.weather_code', []);
 
         $hours = [];
-        $precip = null;
+        $rest = []; // [time, pop, code] for the rest of today, from this hour on
         foreach ($times as $i => $time) {
             if ($time < $thisHour) {
                 continue;
             }
 
             $pop = isset($pops[$i]) ? (int) $pops[$i] : null;
-            if ($precip === null && str_starts_with($time, $today) && $pop !== null && $pop >= self::LIKELY) {
-                $word = WeatherCodes::isSnow((int) ($codes[$i] ?? 0)) ? 'Snow' : 'Rain';
-                $precip = $time === $thisHour ? "$word likely now" : "$word likely from ".self::hourLabel($time);
+            if (str_starts_with($time, $today)) {
+                $rest[] = [$time, $pop, (int) ($codes[$i] ?? 0)];
             }
 
             if ($time > $thisHour && count($hours) < 4) {
@@ -109,6 +108,7 @@ class WeatherService
                 ];
             }
         }
+        [$precip, $precipIcon] = self::precipitation($rest, $thisHour);
 
         $forecast = [
             'real' => true,
@@ -120,6 +120,7 @@ class WeatherService
             'low' => (int) round((float) data_get($data, 'daily.temperature_2m_min.0')),
             'hours' => $hours,
             'precip' => $precip,
+            'precip_icon' => $precipIcon,
         ];
         $forecast['summary'] = self::summary($forecast);
 
@@ -139,24 +140,77 @@ class WeatherService
             'low' => -1,
             'hours' => null, // the card fills in the next 4 hours from the tablet's clock
             'precip' => null,
+            'precip_icon' => null,
         ];
         $forecast['summary'] = self::summary($forecast);
 
         return $forecast;
     }
 
-    /** One line for Fully's action bar, e.g. "4° Partly cloudy · H 6° L −1° · Rain likely from 3 PM". */
+    /**
+     * When rain or snow is likely today (hourly probability >= LIKELY), as text
+     * and an icon name: "Rain likely 3–6 PM", "Snow likely until 5 PM",
+     * "Rain likely from 9 PM" (still likely at midnight). The first likely
+     * stretch counts; it ends at the first hour that drops below LIKELY.
+     *
+     * @param  list<array{0: string, 1: int|null, 2: int}>  $hours  [time, probability, code], this hour first
+     * @return array{0: string|null, 1: string|null}
+     */
+    public static function precipitation(array $hours, string $thisHour): array
+    {
+        $start = $end = null;
+        $word = 'Rain';
+        foreach ($hours as [$time, $pop, $code]) {
+            $likely = $pop !== null && $pop >= self::LIKELY;
+            if ($start === null && $likely) {
+                $start = $time;
+                $word = WeatherCodes::isSnow($code) ? 'Snow' : 'Rain';
+            } elseif ($start !== null && ! $likely) {
+                $end = $time;
+                break;
+            }
+        }
+
+        if ($start === null) {
+            return [null, null];
+        }
+
+        $icon = strtolower($word);
+        if ($start === $thisHour) {
+            return [$end ? "$word likely until ".self::hourLabel($end) : "$word likely today", $icon];
+        }
+        if (! $end) {
+            return ["$word likely from ".self::hourLabel($start), $icon];
+        }
+
+        return ["$word likely ".self::hourRange($start, $end), $icon];
+    }
+
+    /**
+     * One line for Fully's action bar, e.g.
+     * "⛅ 4° Partly cloudy · H 6° L −1° · 🌧 Rain likely 3–6 PM".
+     */
     public static function summary(array $f): string
     {
-        $line = self::deg($f['temp']).' '.$f['label'].' · H '.self::deg($f['high']).' L '.self::deg($f['low']);
+        $line = WeatherCodes::emoji($f['icon']).' '.self::deg($f['temp']).' '.$f['label']
+            .' · H '.self::deg($f['high']).' L '.self::deg($f['low']);
 
-        return $f['precip'] ? $line.' · '.$f['precip'] : $line;
+        return $f['precip'] ? $line.' · '.WeatherCodes::emoji($f['precip_icon']).' '.$f['precip'] : $line;
     }
 
     /** 7 → "7°", -1 → "−1°" (a real minus sign). */
     public static function deg(int $t): string
     {
         return ($t < 0 ? '−'.abs($t) : (string) $t).'°';
+    }
+
+    /** "…T15:00", "…T18:00" → "3–6 PM"; "…T11:00", "…T14:00" → "11 AM–2 PM". */
+    public static function hourRange(string $from, string $to): string
+    {
+        $a = self::hourLabel($from);
+        $b = self::hourLabel($to);
+
+        return substr($a, -2) === substr($b, -2) ? substr($a, 0, -3).'–'.$b : $a.'–'.$b;
     }
 
     /** "2026-11-24T15:00" → "3 PM". */
