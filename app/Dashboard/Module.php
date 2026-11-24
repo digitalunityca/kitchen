@@ -24,7 +24,11 @@ abstract class Module
     /** Human name shown in admin screens. */
     abstract public function name(): string;
 
-    /** Data handed to the card view. */
+    /**
+     * Data handed to the card view.
+     *
+     * @return array<string, mixed>
+     */
     public function data(): array
     {
         return [];
