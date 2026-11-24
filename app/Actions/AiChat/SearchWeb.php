@@ -44,7 +44,8 @@ class SearchWeb
                     'instructions' => $this->instructions(),
                     'input' => $query,
                     'tools' => [['type' => 'web_search', 'user_location' => $this->userLocation()]],
-                    'max_output_tokens' => 1200,
+                    'reasoning' => ['effort' => 'low'],
+                    'max_output_tokens' => 4000,
                 ]);
         } catch (Throwable $e) {
             $this->log->warning('OpenAI web search failed.', ['error' => $e::class]);
