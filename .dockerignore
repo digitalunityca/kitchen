@@ -18,3 +18,9 @@ bootstrap/cache/*.php
 tests
 *.log
 .DS_Store
+
+# AI tooling (Laravel Boost) — dev only
+.claude
+.mcp.json
+CLAUDE.md
+boost.json
