@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Modules\{{ class }};
+
+use App\Dashboard\Module;
+use Illuminate\Routing\Router;
+
+class {{ class }}Module extends Module
+{
+    public function key(): string
+    {
+        return '{{ key }}';
+    }
+
+    public function name(): string
+    {
+        return '{{ name }}';
+    }
+
+    /** Data for resources/views/modules/{{ key }}/card.blade.php. Read settings with $this->config('...'). */
+    public function data(): array
+    {
+        return [];
+    }
+
+    /** Optional routes, served under /modules/{{ key }}/... and named modules.{{ key }}.* */
+    public function routes(Router $router): void
+    {
+        // $router->get('data', fn () => ['ok' => true])->name('data');
+    }
+}

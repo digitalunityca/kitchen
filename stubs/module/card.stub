@@ -1,0 +1,12 @@
+<section class="card" aria-label="{{ name }}">
+  <p class="label">{{ name }}</p>
+  <p style="margin:0;font-size:28px;font-weight:600">Hello from {{ name }}</p>
+  <span></span>
+</section>
+
+@push('scripts')
+<script>
+  // Runs once a second with the current time, if you need it:
+  // document.addEventListener('dashboard:tick', function (e) { var now = e.detail; });
+</script>
+@endpush
