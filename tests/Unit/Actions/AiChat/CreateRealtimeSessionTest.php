@@ -39,7 +39,10 @@ class CreateRealtimeSessionTest extends TestCase
             && $request['session']['model'] === 'gpt-realtime-2.1'
             && $request['session']['audio']['output']['voice'] === 'marin'
             && $request['session']['audio']['input']['transcription']['model'] === 'gpt-4o-mini-transcribe'
-            && str_contains($request['session']['instructions'], 'Sainte-Catherine, Quebec'));
+            && str_contains($request['session']['instructions'], 'Sainte-Catherine, Quebec')
+            && str_contains($request['session']['instructions'], 'possibly a young child')
+            && $request['session']['tools'][0]['name'] === 'get_weather'
+            && $request['session']['tool_choice'] === 'auto');
     }
 
     public function test_without_a_key_it_refuses_and_calls_nothing(): void

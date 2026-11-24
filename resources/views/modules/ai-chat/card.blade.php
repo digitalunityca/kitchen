@@ -5,7 +5,7 @@
   voice while it answers. The latest caption appears in a bubble above it.
 --}}
 <div class="aic" id="aic" data-state="idle"
-  @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}" @endif>
+  @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" @if ($familySafe) data-moderate="{{ route('modules.ai-chat.moderate') }}" @endif data-weather="{{ route('modules.ai-chat.weather') }}" data-csrf="{{ csrf_token() }}" @endif>
   <p class="aic-bubble" id="aic-bubble" role="status" aria-live="polite"></p>
   <div class="aic-stage">
     <span class="aic-ring" aria-hidden="true"></span>
@@ -125,24 +125,68 @@
       case 'input_audio_buffer.speech_started': state('listening'); break;
       case 'input_audio_buffer.speech_stopped': state('thinking'); break;
       case 'conversation.item.input_audio_transcription.completed':
-        if (ev.transcript && root.dataset.state !== 'speaking') say(ev.transcript, 'You'); break;
-      case 'response.created': botText = ''; break;
+        if (ev.transcript && root.dataset.state !== 'speaking') say(ev.transcript, 'You');
+        moderate(ev.transcript); break;
+      case 'response.created': botText = ''; moderatedUpTo = 0; break;
       case 'output_audio_buffer.started': state('speaking'); break;
       case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
-        state('speaking'); botText += ev.delta || ''; say(botText, 'ChatGPT', true); break;
+        state('speaking'); botText += ev.delta || ''; say(botText, 'ChatGPT', true); moderateAnswerSoFar(false); break;
       case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done':
-        if (botText) say(botText, 'ChatGPT'); break;
+        if (botText) { say(botText, 'ChatGPT'); moderateAnswerSoFar(true); } break;
       case 'output_audio_buffer.stopped':
       case 'output_audio_buffer.cleared':
         if (active) state('listening'); break;
+      case 'response.function_call_arguments.done':
+        runTool(ev); break;
       case 'error':
         if (ev.error && ev.error.message) say(ev.error.message); break;
     }
   }
 
   function fail(text) { say(text); end(); }
+
+  // Family-safe mode, second line of defence after the persona rules: every
+  // line (yours and ChatGPT's) goes through OpenAI moderation via the hub. If
+  // one is flagged, the answer stops at once and the chat ends.
+  /** The assistant asked for get_weather: answer from the hub's forecast, then let it speak. */
+  function runTool(ev) {
+    if (ev.name !== 'get_weather') return;
+    state('thinking');
+    var args = {}; try { args = JSON.parse(ev.arguments || '{}'); } catch (e) {}
+    fetch(root.dataset.weather + (args.day ? '?day=' + encodeURIComponent(args.day) : ''), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : { available: false }; })
+      .catch(function () { return { available: false }; })
+      .then(function (result) {
+        send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: ev.call_id, output: JSON.stringify(result) } });
+        send({ type: 'response.create' });
+      });
+  }
+
+  var moderatedUpTo = 0;
+  function send(event) { if (dc && dc.readyState === 'open') dc.send(JSON.stringify(event)); }
+  function moderate(text) {
+    if (!text || !root.dataset.moderate) return;
+    fetch(root.dataset.moderate, {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': root.dataset.csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (result) {
+      if (!result || !result.flagged || !active) return;
+      send({ type: 'response.cancel' });
+      send({ type: 'output_audio_buffer.clear' });
+      var audio = document.getElementById('aic-audio'); if (audio) audio.muted = true;
+      say('Let’s talk about something else.');
+      end();
+      if (audio) audio.muted = false;
+    }).catch(function () {});
+  }
+  /** Check ChatGPT's answer a sentence at a time while it streams, so a bad line is cut short. */
+  function moderateAnswerSoFar(final) {
+    var upTo = final ? botText.length : Math.max(botText.lastIndexOf('. '), botText.lastIndexOf('? '), botText.lastIndexOf('! ')) + 1;
+    if (upTo > moderatedUpTo) { moderate(botText.slice(moderatedUpTo, upTo)); moderatedUpTo = upTo; }
+  }
 
   async function start() {
     active = true; activity(); state('connecting');

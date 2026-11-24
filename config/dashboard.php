@@ -74,6 +74,9 @@ return [
         // Shown as a blue mic button floating in the bottom-right corner.
         AiChatModule::class => [
             'location' => env('AI_CHAT_LOCATION', 'Sainte-Catherine, Quebec'),
+            // Children use the tablet: kid-safe persona rules plus an OpenAI
+            // moderation check on every spoken line. Set false for adults-only.
+            'family_safe' => (bool) env('AI_CHAT_FAMILY_SAFE', true),
         ],
 
     ],

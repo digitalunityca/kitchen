@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\AiChat\CreateRealtimeSession;
+use App\Dashboard\ModuleRegistry;
+use App\Modules\AiChat\AiChatModule;
+use App\Modules\Weather\WeatherModule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -73,5 +76,29 @@ class AiChatTest extends TestCase
         }
 
         $this->postJson('/modules/ai-chat/session')->assertStatus(429);
+    }
+
+    public function test_family_safe_mode_moderates_every_line_and_can_be_turned_off(): void
+    {
+        config(['services.openai.key' => 'sk-test-not-a-real-key']);
+        Http::fake(['api.openai.com/v1/moderations' => Http::response(['results' => [['flagged' => true, 'categories' => ['violence' => true]]]])]);
+
+        $this->get('/')->assertSee('data-moderate="'.route('modules.ai-chat.moderate').'"', false);
+        $this->postJson('/modules/ai-chat/moderate', ['text' => 'a line'])->assertOk()->assertJsonPath('flagged', true);
+        $this->postJson('/modules/ai-chat/moderate', [])->assertUnprocessable();
+
+        config(['dashboard.modules.'.AiChatModule::class.'.family_safe' => false]);
+        $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
+
+        $this->get('/')->assertDontSee('data-moderate=', false);
+        $this->postJson('/modules/ai-chat/moderate', ['text' => 'a line'])->assertOk()->assertJsonPath('flagged', false);
+    }
+
+    public function test_the_weather_tool_route_answers_from_the_hub_forecast(): void
+    {
+        config(['dashboard.modules.'.WeatherModule::class.'.lat' => null]);
+        $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
+
+        $this->getJson('/modules/ai-chat/weather?day=tomorrow')->assertOk()->assertJsonPath('available', false);
     }
 }

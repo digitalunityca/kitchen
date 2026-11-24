@@ -12,6 +12,7 @@ final class RealtimeSettings
         public readonly string $model,
         public readonly string $voice,
         public readonly string $location,
+        public readonly bool $familySafe = true,
     ) {}
 
     public function isConfigured(): bool
@@ -22,6 +23,6 @@ final class RealtimeSettings
     /** Keep the key out of dumps and exception traces. */
     public function __debugInfo(): array
     {
-        return ['apiKey' => $this->isConfigured() ? '[set]' : null, 'model' => $this->model, 'voice' => $this->voice, 'location' => $this->location];
+        return ['apiKey' => $this->isConfigured() ? '[set]' : null, 'model' => $this->model, 'voice' => $this->voice, 'location' => $this->location, 'familySafe' => $this->familySafe];
     }
 }

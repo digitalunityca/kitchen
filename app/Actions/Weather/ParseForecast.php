@@ -19,7 +19,8 @@ class ParseForecast
      * @param  array<string, mixed>  $data  the Open-Meteo JSON body
      * @return array{real: bool, temp: int, code: int, label: string, icon: string, high: int, low: int,
      *               hours: list<array{label: string, temp: int, pop: int|null, icon: string}>,
-     *               precip: string|null, precip_icon: string|null, summary: string}
+     *               precip: string|null, precip_icon: string|null, summary: string,
+     *               days: list<array{date: string, high: int, low: int, code: int, label: string, rain_chance: int|null}>}
      */
     public function handle(array $data): array
     {
@@ -75,7 +76,35 @@ class ParseForecast
             'precip_icon' => $precipitationIcon,
         ];
         $forecast['summary'] = $this->buildWeatherSummary->handle($forecast);
+        $forecast['days'] = $this->days($data);
 
         return $forecast;
+    }
+
+    /**
+     * The daily forecast, today first.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{date: string, high: int, low: int, code: int, label: string, rain_chance: int|null}>
+     */
+    private function days(array $data): array
+    {
+        $days = [];
+
+        foreach ((array) data_get($data, 'daily.time', []) as $i => $date) {
+            $code = (int) data_get($data, "daily.weather_code.$i", 0);
+            $rainChance = data_get($data, "daily.precipitation_probability_max.$i");
+
+            $days[] = [
+                'date' => (string) $date,
+                'high' => (int) round((float) data_get($data, "daily.temperature_2m_max.$i")),
+                'low' => (int) round((float) data_get($data, "daily.temperature_2m_min.$i")),
+                'code' => $code,
+                'label' => WeatherCodes::label($code),
+                'rain_chance' => $rainChance === null ? null : (int) $rainChance,
+            ];
+        }
+
+        return $days;
     }
 }

@@ -51,7 +51,9 @@ class CreateRealtimeSession
                     'session' => [
                         'type' => 'realtime',
                         'model' => $this->settings->model,
-                        'instructions' => $this->buildAssistantInstructions->handle($this->settings->location),
+                        'instructions' => $this->buildAssistantInstructions->handle($this->settings->location, $this->settings->familySafe),
+                        'tools' => [self::weatherTool()],
+                        'tool_choice' => 'auto',
                         'audio' => [
                             'input' => [
                                 'transcription' => ['model' => 'gpt-4o-mini-transcribe'],
@@ -84,6 +86,30 @@ class CreateRealtimeSession
             'value' => $value,
             'expires_at' => (int) $response->json('expires_at'),
             'model' => $this->settings->model,
+        ];
+    }
+
+    /**
+     * The get_weather function the model may call; the tablet answers it from
+     * /modules/ai-chat/weather (App\Actions\AiChat\BuildWeatherToolResult).
+     *
+     * @return array<string, mixed>
+     */
+    public static function weatherTool(): array
+    {
+        return [
+            'type' => 'function',
+            'name' => 'get_weather',
+            'description' => 'Current weather and the daily forecast (high, low, conditions, chance of precipitation) for the next 7 days at the family\'s home. Use it for any weather or temperature question.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'day' => [
+                        'type' => 'string',
+                        'description' => 'The day asked about, e.g. "today", "tomorrow", "saturday". Optional; the result always covers all 7 days.',
+                    ],
+                ],
+            ],
         ];
     }
 }

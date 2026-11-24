@@ -22,6 +22,9 @@ class FetchForecast
 
     public const CACHE_MINUTES = 15;
 
+    /** Days of daily forecast fetched (today first); the voice assistant's weather tool uses all of them. */
+    public const DAYS = 7;
+
     public function __construct(
         private readonly WeatherLocation $location,
         private readonly Http $http,
@@ -34,7 +37,8 @@ class FetchForecast
     /**
      * @return array{real: bool, temp: int, code: int, label: string, icon: string, high: int, low: int,
      *               hours: list<array{label: string, temp: int, pop: int|null, icon: string}>|null,
-     *               precip: string|null, precip_icon: string|null, summary: string}
+     *               precip: string|null, precip_icon: string|null, summary: string,
+     *               days: list<array{date: string, high: int, low: int, code: int, label: string, rain_chance: int|null}>}
      */
     public function handle(): array
     {
@@ -54,9 +58,9 @@ class FetchForecast
                 'longitude' => $this->location->longitude,
                 'current' => 'temperature_2m,weather_code,is_day',
                 'hourly' => 'temperature_2m,precipitation_probability,weather_code',
-                'daily' => 'temperature_2m_max,temperature_2m_min',
+                'daily' => 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max',
                 'timezone' => 'auto',
-                'forecast_days' => 2,
+                'forecast_days' => self::DAYS,
             ]);
 
             if (! $response->successful()) {
@@ -91,6 +95,7 @@ class FetchForecast
             'hours' => null,
             'precip' => null,
             'precip_icon' => null,
+            'days' => [],
         ];
         $forecast['summary'] = $this->buildWeatherSummary->handle($forecast);
 

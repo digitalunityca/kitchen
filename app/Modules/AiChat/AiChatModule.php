@@ -40,19 +40,26 @@ class AiChatModule extends Module
                 (string) config('services.openai.realtime_model', 'gpt-realtime-2.1'),
                 (string) config('services.openai.realtime_voice', 'marin'),
                 (string) ($module?->config('location') ?? 'Canada'),
+                (bool) ($module?->config('family_safe') ?? true),
             );
         });
     }
 
-    /** @return array{configured: bool} */
+    /** @return array{configured: bool, familySafe: bool} */
     public function data(): array
     {
-        return ['configured' => app(RealtimeSettings::class)->isConfigured()];
+        $settings = app(RealtimeSettings::class);
+
+        return ['configured' => $settings->isConfigured(), 'familySafe' => $settings->familySafe];
     }
 
     public function routes(Router $router): void
     {
         $router->post('session', [AiChatController::class, 'session'])
             ->middleware('throttle:10,1')->name('session');
+        $router->post('moderate', [AiChatController::class, 'moderate'])
+            ->middleware('throttle:60,1')->name('moderate');
+        $router->get('weather', [AiChatController::class, 'weather'])
+            ->middleware('throttle:30,1')->name('weather');
     }
 }
