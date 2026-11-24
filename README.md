@@ -38,9 +38,11 @@ A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connectio
 One-time setup, on a machine where `cloudflared tunnel login` has been run (`~/.cloudflared/cert.pem` exists):
 
 ```bash
-cloudflared tunnel create --credentials-file deploy/cloudflared/credentials.json home-hub
-cloudflared tunnel route dns home-hub kitchen.<your-domain>
+cloudflared --config deploy/cloudflared/config.yml tunnel create --credentials-file deploy/cloudflared/credentials.json home-hub
+cloudflared --config deploy/cloudflared/config.yml tunnel route dns home-hub kitchen.<your-domain>
 ```
+
+Keep the `--config deploy/cloudflared/config.yml`: without it cloudflared reads `~/.cloudflared/config.yml`, and if that file names another tunnel, `route dns` quietly points the hostname at that tunnel instead (the site then answers 404). Check with `dig` or the DNS tab: the CNAME must be `<HOME_HUB_TUNNEL_ID>.cfargotunnel.com`; fix with `route dns --overwrite-dns`.
 
 Then in `.env`:
 
