@@ -39,9 +39,12 @@
       }).join('');
     }
 
+    // fully.setActionBarTitle() is a no-op in Fully 1.61.4, so write the "Action Bar
+    // Title" setting itself; Fully shows it at once, also on other pages (YouTube TV).
     function setTitle() {
-      if (!window.fully || typeof fully.setActionBarTitle !== 'function') return;
-      try { fully.setActionBarTitle(weather.real ? weather.summary : ''); } catch (e) {}
+      if (!window.fully || typeof fully.setStringSetting !== 'function') return;
+      var title = weather.real ? weather.summary : '';
+      try { if (fully.getStringSetting('actionBarTitle') !== title) fully.setStringSetting('actionBarTitle', title); } catch (e) {}
     }
 
     function render(w) {
