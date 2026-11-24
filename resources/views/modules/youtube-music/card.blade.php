@@ -11,7 +11,7 @@
   <div class="ytm-side">
     <div class="row">
       <p class="label"><span class="ytm-dot"></span>YouTube Music</p>
-      <a class="pill" href="https://music.youtube.com/" aria-label="Open the full YouTube Music site">Open full app ↗</a>
+      <a class="pill" href="https://www.youtube.com/tv" aria-label="Open YouTube Premium (the YouTube TV app)">Open YouTube Premium ↗</a>
     </div>
 
     @if (count($playlists))
