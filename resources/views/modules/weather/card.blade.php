@@ -1,4 +1,4 @@
-@php($deg = fn ($t) => \App\Modules\Weather\WeatherService::deg($t))
+@php($deg = fn ($t) => \App\Modules\Weather\WeatherFormat::deg($t))
 <section class="card" aria-label="Weather">
   <div class="row">
     <p class="label">Outside · {{ $city }}</p>

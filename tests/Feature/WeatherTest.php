@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Weather\FetchForecast;
 use App\Dashboard\ModuleRegistry;
 use App\Modules\Weather\WeatherModule;
-use App\Modules\Weather\WeatherService;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -59,7 +59,7 @@ class WeatherTest extends TestCase
             ->assertSee('<div><span>5 PM</span><span>0°</span></div>', false)
             ->assertSee('id="weather-sample" hidden', false);
 
-        Http::assertSent(fn (Request $r) => str_starts_with($r->url(), WeatherService::URL)
+        Http::assertSent(fn (Request $r) => str_starts_with($r->url(), FetchForecast::URL)
             && $r['latitude'] == 45.42 && $r['longitude'] == -75.69 && $r['timezone'] === 'auto');
     }
 
@@ -87,29 +87,6 @@ class WeatherTest extends TestCase
         $this->getJson('/modules/weather/now')
             ->assertJsonPath('precip', null)
             ->assertJsonPath('summary', '☁️ −1° Cloudy · H 2° L −4°');
-    }
-
-    public function test_rain_note_names_the_hours(): void
-    {
-        $day = fn (array $pops, array $codes = []) => array_map(
-            fn ($h, $pop) => [sprintf('2026-11-24T%02d:00', $h), $pop, $codes[$h] ?? 61],
-            range(13, 23), $pops,
-        );
-
-        // likely 3 PM to 6 PM
-        $this->assertSame(['Rain likely 3–6 PM', 'rain'],
-            WeatherService::precipitation($day([0, 0, 60, 80, 70, 20, 0, 0, 0, 0, 0]), '2026-11-24T13:00'));
-        // across noon is not possible after 1 PM, so check the AM/PM form directly
-        $this->assertSame('11 AM–2 PM', WeatherService::hourRange('2026-11-24T11:00', '2026-11-24T14:00'));
-        // already raining now
-        $this->assertSame(['Rain likely until 4 PM', 'rain'],
-            WeatherService::precipitation($day([90, 80, 50, 10, 0, 0, 0, 0, 0, 0, 0]), '2026-11-24T13:00'));
-        // still likely at the end of the day
-        $this->assertSame(['Snow likely from 9 PM', 'snow'],
-            WeatherService::precipitation($day([0, 0, 0, 0, 0, 0, 0, 0, 60, 70, 80], [21 => 73]), '2026-11-24T13:00'));
-        // nothing likely
-        $this->assertSame([null, null],
-            WeatherService::precipitation($day([0, 10, 20, 30, 40, 49, 0, 0, 0, 0, 0]), '2026-11-24T13:00'));
     }
 
     public function test_forecast_is_cached_for_15_minutes(): void

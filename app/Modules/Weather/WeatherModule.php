@@ -2,16 +2,18 @@
 
 namespace App\Modules\Weather;
 
+use App\Actions\Weather\FetchForecast;
 use App\Dashboard\Module;
-use Illuminate\Http\JsonResponse;
+use App\Dashboard\ModuleRegistry;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
 
 /**
  * Current conditions, today's high/low and the next 4 hours from Open-Meteo
- * (WeatherService). Set WEATHER_LAT and WEATHER_LON in .env; until then the
- * card shows sample data with a "Sample data" pill. The card refreshes itself
- * from /modules/weather/now every 15 minutes and, in Fully Kiosk, puts a
- * one-line summary in the action bar title.
+ * (App\Actions\Weather\FetchForecast). Set WEATHER_LAT and WEATHER_LON in .env;
+ * until then the card shows sample data with a "Sample data" pill. The card
+ * refreshes itself from /modules/weather/now every 15 minutes and, in Fully
+ * Kiosk, puts a one-line summary in the action bar title.
  */
 class WeatherModule extends Module
 {
@@ -25,35 +27,26 @@ class WeatherModule extends Module
         return 'Weather';
     }
 
-    public function service(): WeatherService
+    public function register(Container $app): void
     {
-        $coord = fn (string $key) => is_numeric($v = $this->config($key)) ? (float) $v : null;
+        $app->bind(WeatherLocation::class, function (Container $app): WeatherLocation {
+            $module = $app->make(ModuleRegistry::class)->get($this->key());
 
-        return new WeatherService($coord('lat'), $coord('lon'));
+            return WeatherLocation::fromConfig($module?->config('lat'), $module?->config('lon'));
+        });
     }
 
+    /** @return array{city: mixed, weather: array<string, mixed>} */
     public function data(): array
     {
         return [
             'city' => $this->config('city'),
-            'weather' => $this->service()->forecast(),
+            'weather' => app(FetchForecast::class)->handle(),
         ];
     }
 
     public function routes(Router $router): void
     {
         $router->get('now', WeatherController::class)->name('now');
-    }
-
-    public function json(): JsonResponse
-    {
-        $weather = $this->service()->forecast();
-        $weather['icon_svg'] = view('modules.weather.icon', ['icon' => $weather['icon'], 'size' => 72])->render();
-        $weather['hours'] = $weather['hours'] === null ? null : array_map(
-            fn ($h) => $h + ['icon_svg' => view('modules.weather.icon', ['icon' => $h['icon'], 'size' => 22])->render()],
-            $weather['hours'],
-        );
-
-        return response()->json($weather)->header('Cache-Control', 'no-store');
     }
 }
