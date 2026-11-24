@@ -71,10 +71,8 @@ return [
 
         // "Ask ChatGPT" voice chat (OpenAI Realtime). Needs OPENAI_API_KEY in .env
         // (config/services.php). The location shapes the assistant's answers.
-        // 'placement' => 'floating' shows it as a round button in the bottom-right
-        // corner; set 'grid' plus 'column'/'row' to give it a card instead.
+        // Shown as a blue mic button floating in the bottom-right corner.
         AiChatModule::class => [
-            'placement' => 'floating',
             'location' => env('AI_CHAT_LOCATION', 'Sainte-Catherine, Quebec'),
         ],
 

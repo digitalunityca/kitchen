@@ -8,7 +8,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
 
 /**
- * "Ask ChatGPT": a voice chat panel over OpenAI's Realtime API (WebRTC from the
+ * "Ask ChatGPT": a floating mic button for voice chat over OpenAI's Realtime API (WebRTC from the
  * tablet, a one-minute client secret from App\Actions\AiChat\CreateRealtimeSession).
  * Needs OPENAI_API_KEY in .env; without it the tile says so.
  */
@@ -22,6 +22,12 @@ class AiChatModule extends Module
     public function name(): string
     {
         return 'Ask ChatGPT';
+    }
+
+    /** Always the floating mic button; the conversation happens on the button itself. */
+    public function placement(): string
+    {
+        return 'floating';
     }
 
     public function register(Container $app): void

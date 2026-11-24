@@ -1,143 +1,120 @@
-@php($floating = $module->placement() === 'floating')
-@php($sparkle = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M12 7.6l1 2.1 2.1 1-2.1 1-1 2.1-1-2.1-2.1-1 2.1-1z" fill="currentColor" stroke-width="1"/></svg>')
-@if ($floating)
-  @if ($configured)
-  <button type="button" class="aic-fab" id="aic-open" aria-label="Ask ChatGPT by voice"
-    data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}">{!! $sparkle !!}</button>
-  @else
-  <button type="button" class="aic-fab aic-off" id="aic-off" aria-label="Ask ChatGPT (not set up)">{!! $sparkle !!}</button>
-  <p class="aic-tip" id="aic-tip" hidden>Ask ChatGPT: add OPENAI_API_KEY to turn this on</p>
-  @endif
-@else
-  @if ($configured)
-  <button type="button" class="card aic" id="aic-open" aria-label="Ask ChatGPT by voice"
-    data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}">
-  @else
-  <div class="card aic aic-off" aria-label="Ask ChatGPT (not set up)">
-  @endif
-    <span class="tile-icon aic-icon" aria-hidden="true" style="color:#fff">{!! $sparkle !!}</span>
-    <div class="row" style="align-items:flex-end">
-      <div>
-        <span class="tile-title">Ask ChatGPT</span>
-        <span class="tile-sub">{{ $configured ? 'Tap and talk: recipes, swaps, timings' : 'Add OPENAI_API_KEY to turn this on' }}</span>
-      </div>
-    </div>
-  @if ($configured) </button> @else </div> @endif
-@endif
-
-@if ($configured)
-<div class="aic-panel" id="aic-panel" hidden role="dialog" aria-modal="true" aria-label="Voice chat">
-  <button type="button" class="aic-close" id="aic-close" aria-label="Close voice chat">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-  </button>
-  <p class="aic-status" id="aic-status">Connecting…</p>
-  <button type="button" class="aic-orb" id="aic-orb" aria-label="Mute or unmute the microphone"><span></span></button>
-  <div class="aic-captions" aria-live="polite">
-    <p class="aic-you" id="aic-you"></p>
-    <p class="aic-bot" id="aic-bot"></p>
+{{--
+  "Ask ChatGPT": a blue mic button floating bottom right. Tap to talk, tap again
+  to end. The button itself shows the conversation: a spinner while connecting,
+  rings that follow your voice while you speak, a glow that follows ChatGPT's
+  voice while it answers. The latest caption appears in a bubble above it.
+--}}
+<div class="aic" id="aic" data-state="idle"
+  @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}" @endif>
+  <p class="aic-bubble" id="aic-bubble" role="status" aria-live="polite"></p>
+  <div class="aic-stage">
+    <span class="aic-ring" aria-hidden="true"></span>
+    <span class="aic-ring aic-ring-2" aria-hidden="true"></span>
+    <span class="aic-spin" aria-hidden="true"></span>
+    <button type="button" class="aic-fab {{ $configured ? '' : 'aic-off' }}" id="aic-fab"
+      aria-label="{{ $configured ? 'Talk to ChatGPT' : 'Ask ChatGPT (not set up)' }}" aria-pressed="false">
+      <svg class="aic-mic" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3" fill="#fff"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+    </button>
   </div>
-  <p class="aic-hint" id="aic-hint">Just talk. Interrupt any time. Tap the orb to mute.</p>
-  <audio id="aic-audio" autoplay playsinline></audio>
+  @if ($configured)<audio id="aic-audio" autoplay playsinline></audio>@endif
 </div>
-@endif
 
-@once
 @push('styles')
 <style>
-  .aic { text-align: left; }
-  .aic.card { width: 100%; }
-  .aic-icon { background: linear-gradient(135deg, #0071E3, #8E5CF7); }
-  .aic-off .aic-icon { background: var(--sub); }
-  .aic-off.card { opacity: .75; }
+  .aic { position: relative; --lvl: 0; }
+  .aic-stage { position: relative; width: 64px; height: 64px; }
   .aic-fab {
-    width: 64px; height: 64px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
-    background: var(--card); color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.08), 0 10px 28px rgba(0,0,0,.14);
-    transition: background-color .6s ease, transform .15s ease;
+    position: relative; z-index: 1; width: 64px; height: 64px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: var(--accent); box-shadow: 0 4px 14px rgba(0, 113, 227, .35), 0 10px 28px rgba(0, 0, 0, .12);
+    transition: background .3s ease, transform .15s ease, box-shadow .3s ease;
   }
   .aic-fab:active { transform: scale(.94); }
-  body.night .aic-fab { background: #2C2C2E; box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 10px 28px rgba(0,0,0,.6); }
-  .aic-fab.aic-off { color: var(--sub); }
-  .aic-tip {
-    position: absolute; right: 0; bottom: 76px; margin: 0; white-space: nowrap; padding: 10px 14px; border-radius: 14px;
-    background: var(--text); color: var(--bg); font-size: 14px; font-weight: 500; box-shadow: var(--shadow);
+  .aic-fab.aic-off { opacity: .6; box-shadow: 0 6px 18px rgba(0, 0, 0, .12); }
+  body.night .aic-fab { box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 26px rgba(10, 132, 255, .35); }
+  .aic-mic { position: relative; z-index: 2; }
+
+  /* Rings and spinner sit behind the glyph, hidden until a state needs them. */
+  .aic-ring, .aic-spin { position: absolute; inset: 0; border-radius: 999px; pointer-events: none; opacity: 0; }
+  .aic-ring { background: var(--accent); z-index: 0; }
+  .aic-spin { inset: -7px; border: 3px solid transparent; border-top-color: var(--accent); border-right-color: var(--accent); z-index: 2; }
+
+  /* Connecting / thinking: spinner around the button. */
+  .aic[data-state="connecting"] .aic-spin, .aic[data-state="thinking"] .aic-spin { opacity: 1; animation: aic-spin .9s linear infinite; }
+
+  /* Listening: two rings that grow with your voice. */
+  .aic[data-state="listening"] .aic-ring { opacity: calc(.18 + var(--lvl) * .4); transform: scale(calc(1.12 + var(--lvl) * .9)); transition: transform .08s linear, opacity .08s linear; }
+  .aic[data-state="listening"] .aic-ring-2 { opacity: calc(.1 + var(--lvl) * .25); transform: scale(calc(1.3 + var(--lvl) * 1.5)); }
+
+  /* Speaking: purple-blue glow that breathes with ChatGPT's voice, plus soft waves. */
+  .aic[data-state="speaking"] .aic-fab {
+    background: linear-gradient(135deg, #0A84FF, #8E5CF7);
+    box-shadow: 0 0 calc(18px + var(--lvl) * 46px) calc(var(--lvl) * 14px) rgba(142, 92, 247, .55);
   }
-  .floating-slot { position: relative; }
-  .aic-panel {
-    position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px;
-    padding: 48px 64px; background: rgba(0, 0, 0, .86); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); color: #F5F5F7;
-    animation: aic-in .25s ease-out;
+  .aic[data-state="speaking"] .aic-ring { background: #8E5CF7; animation: aic-wave 1.6s ease-out infinite; }
+  .aic[data-state="speaking"] .aic-ring-2 { animation-delay: .8s; }
+
+  @keyframes aic-spin { to { transform: rotate(360deg); } }
+  @keyframes aic-wave { from { opacity: .45; transform: scale(1); } to { opacity: 0; transform: scale(2.1); } }
+
+  .aic-bubble {
+    position: absolute; right: 44px; bottom: 74px; margin: 0; width: max-content; max-width: 440px; padding: 12px 16px;
+    border-radius: 18px 18px 4px 18px; background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 6px 20px rgba(0,0,0,.08);
+    font-size: 17px; line-height: 1.35; opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease; pointer-events: none;
+    overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
   }
-  .aic-panel[hidden] { display: none; }
-  @keyframes aic-in { from { opacity: 0; transform: scale(1.02); } to { opacity: 1; transform: none; } }
-  .aic-close { position: absolute; top: 32px; right: 36px; width: 64px; height: 64px; border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; display: flex; align-items: center; justify-content: center; }
-  .aic-status { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: .01em; color: #A1A1A6; min-height: 28px; }
-  .aic-orb { width: 220px; height: 220px; border-radius: 999px; position: relative; display: flex; align-items: center; justify-content: center; }
-  .aic-orb span {
-    width: 180px; height: 180px; border-radius: 999px; display: block; transform: scale(var(--level, 1)); transition: transform .08s linear, filter .3s;
-    background: radial-gradient(circle at 35% 30%, #8FD3FF 0%, #0A84FF 35%, #6E4BF2 75%, #3A1C9E 100%);
-    box-shadow: 0 0 80px rgba(10, 132, 255, .55), 0 0 160px rgba(110, 75, 242, .35);
+  .aic-bubble.show { opacity: 1; transform: none; }
+  .aic-bubble small { display: block; font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  body.night .aic-bubble { background: #2C2C2E; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aic-fab, .aic-bubble, .aic-ring { transition: none; }
+    .aic-ring, .aic-ring-2 { animation: none !important; transform: none !important; }
+    .aic[data-state="listening"] .aic-ring { opacity: .25; transform: scale(1.18) !important; }
+    .aic[data-state="speaking"] .aic-fab { box-shadow: 0 0 24px rgba(142, 92, 247, .55); }
+    .aic[data-state="connecting"] .aic-spin, .aic[data-state="thinking"] .aic-spin { animation: none; opacity: .6; border-color: var(--accent); }
   }
-  .aic-panel.speaking .aic-orb span { background: radial-gradient(circle at 35% 30%, #FFE0F0 0%, #FF6FB5 30%, #8E5CF7 75%, #3A1C9E 100%); box-shadow: 0 0 90px rgba(255, 111, 181, .5); }
-  .aic-panel.thinking .aic-orb span { animation: aic-breathe 1.2s ease-in-out infinite; }
-  .aic-panel.muted .aic-orb span, .aic-panel.idle .aic-orb span { filter: grayscale(1) brightness(.7); }
-  @keyframes aic-breathe { 50% { transform: scale(.9); } }
-  .aic-captions { width: min(900px, 100%); min-height: 150px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
-  .aic-captions p { margin: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; }
-  .aic-you { font-size: 20px; color: #A1A1A6; -webkit-line-clamp: 2; }
-  .aic-bot { font-size: 30px; font-weight: 500; line-height: 1.3; letter-spacing: -.01em; -webkit-line-clamp: 4; }
-  .aic-hint { margin: 0; font-size: 15px; color: #6E6E73; }
 </style>
 @endpush
-@endonce
 
-@unless ($configured)
-@if ($floating)
 @push('scripts')
 <script>
-(function () {
-  var b = document.getElementById('aic-off'), tip = document.getElementById('aic-tip'), t = 0;
-  b.addEventListener('click', function () { tip.hidden = false; clearTimeout(t); t = setTimeout(function () { tip.hidden = true; }, 4000); });
-})();
-</script>
-@endpush
-@endif
-@endunless
-
 @if ($configured)
-@push('scripts')
-<script>
-// Voice chat with OpenAI's Realtime API over WebRTC. The server hands out a
-// one-minute client secret (POST data-session); audio goes straight between the
-// tablet and OpenAI. Music pauses while the panel is open (dashboard:audio-claim).
+// Voice chat with OpenAI's Realtime API over WebRTC. The hub hands out a
+// one-minute client secret (data-session); audio goes straight between the
+// tablet and OpenAI. Music pauses while talking (dashboard:audio-claim/release).
 (function () {
-  var tile = document.getElementById('aic-open'), panel = document.getElementById('aic-panel');
-  var $ = function (id) { return document.getElementById(id); };
-  var QUIET_MS = 2 * 60 * 1000, CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
-  var pc = null, dc = null, mic = null, ctx = null, meters = [], raf = 0, quietTimer = 0, lastActivity = 0, open = false, userItem = null;
+  var root = document.getElementById('aic'), fab = document.getElementById('aic-fab'), bubble = document.getElementById('aic-bubble');
+  var QUIET_MS = 2 * 60 * 1000, BUBBLE_MS = 5000, CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
+  var pc = null, dc = null, mic = null, ctx = null, micMeter = null, outMeter = null, raf = 0, quietTimer = 0, bubbleTimer = 0;
+  var active = false, lastActivity = 0, level = 0, userItem = null, botText = '';
 
-  function status(text, state) {
-    $('aic-status').textContent = text;
-    ['listening', 'thinking', 'speaking', 'muted', 'idle'].forEach(function (s) { panel.classList.toggle(s, s === state); });
+  function state(s) { root.dataset.state = s; fab.setAttribute('aria-pressed', s === 'idle' ? 'false' : 'true'); fab.setAttribute('aria-label', s === 'idle' ? 'Talk to ChatGPT' : 'End the chat'); }
+  function say(text, who, sticky) {
+    bubble.innerHTML = '';
+    if (who) { var w = document.createElement('small'); w.textContent = who; bubble.appendChild(w); }
+    bubble.appendChild(document.createTextNode(text));
+    bubble.classList.add('show');
+    clearTimeout(bubbleTimer);
+    if (!sticky) bubbleTimer = setTimeout(function () { bubble.classList.remove('show'); }, BUBBLE_MS);
   }
   function activity() { lastActivity = Date.now(); }
-  function fail(text) { status(text, 'idle'); $('aic-hint').textContent = 'Close and try again.'; teardown(); }
 
   function meter(stream) {
     try {
-      var a = ctx.createAnalyser(); a.fftSize = 256;
-      ctx.createMediaStreamSource(stream).connect(a);
-      meters.push({ a: a, buf: new Uint8Array(a.frequencyBinCount) });
-    } catch (e) {}
+      var a = ctx.createAnalyser(); a.fftSize = 256; ctx.createMediaStreamSource(stream).connect(a);
+      return { a: a, buf: new Uint8Array(a.fftSize) };
+    } catch (e) { return null; }
+  }
+  function peak(m) {
+    if (!m) return 0;
+    m.a.getByteTimeDomainData(m.buf);
+    var p = 0; for (var i = 0; i < m.buf.length; i++) p = Math.max(p, Math.abs(m.buf[i] - 128));
+    return Math.min(1, (p / 128) * 2.2);
   }
   function animate() {
-    var level = 0;
-    meters.forEach(function (m) {
-      m.a.getByteTimeDomainData(m.buf);
-      var peak = 0;
-      for (var i = 0; i < m.buf.length; i++) peak = Math.max(peak, Math.abs(m.buf[i] - 128));
-      level = Math.max(level, peak / 128);
-    });
-    $('aic-orb').style.setProperty('--level', (1 + Math.min(level * 1.6, 0.35)).toFixed(3));
+    var s = root.dataset.state, target = s === 'listening' ? peak(micMeter) : s === 'speaking' ? peak(outMeter) : 0;
+    level += (target - level) * (target > level ? 0.5 : 0.12);
+    root.style.setProperty('--lvl', level.toFixed(3));
     raf = requestAnimationFrame(animate);
   }
 
@@ -145,33 +122,30 @@
     var ev; try { ev = JSON.parse(e.data); } catch (err) { return; }
     activity();
     switch (ev.type) {
-      case 'input_audio_buffer.speech_started':
-        status('Listening…', 'listening'); break;
-      case 'input_audio_buffer.speech_stopped':
-        status('Thinking…', 'thinking'); break;
-      case 'conversation.item.input_audio_transcription.delta':
-        if (userItem !== ev.item_id) { userItem = ev.item_id; $('aic-you').textContent = ''; }
-        $('aic-you').textContent += ev.delta || ''; break;
+      case 'input_audio_buffer.speech_started': state('listening'); break;
+      case 'input_audio_buffer.speech_stopped': state('thinking'); break;
       case 'conversation.item.input_audio_transcription.completed':
-        userItem = ev.item_id; $('aic-you').textContent = ev.transcript || ''; break;
-      case 'response.created':
-        $('aic-bot').textContent = ''; break;
+        if (ev.transcript && root.dataset.state !== 'speaking') say(ev.transcript, 'You'); break;
+      case 'response.created': botText = ''; break;
+      case 'output_audio_buffer.started': state('speaking'); break;
       case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
-        status('Speaking…', 'speaking'); $('aic-bot').textContent += ev.delta || ''; break;
+        state('speaking'); botText += ev.delta || ''; say(botText, 'ChatGPT', true); break;
+      case 'response.output_audio_transcript.done':
+      case 'response.audio_transcript.done':
+        if (botText) say(botText, 'ChatGPT'); break;
       case 'output_audio_buffer.stopped':
-      case 'response.done':
-        if (!panel.classList.contains('muted')) status('Listening…', 'listening'); break;
+      case 'output_audio_buffer.cleared':
+        if (active) state('listening'); break;
       case 'error':
-        $('aic-hint').textContent = (ev.error && ev.error.message) || 'Something went wrong.'; break;
+        if (ev.error && ev.error.message) say(ev.error.message); break;
     }
   }
 
+  function fail(text) { say(text); end(); }
+
   async function start() {
-    open = true; activity();
-    $('aic-you').textContent = ''; $('aic-bot').textContent = '';
-    $('aic-hint').textContent = 'Just talk. Interrupt any time. Tap the orb to mute.';
-    panel.hidden = false; status('Connecting…', 'thinking');
+    active = true; activity(); state('connecting');
     document.dispatchEvent(new CustomEvent('dashboard:audio-claim', { detail: { by: 'ai-chat' } }));
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
 
@@ -181,15 +155,13 @@
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
-      return fail(e && e.name === 'NotAllowedError'
-        ? 'The microphone is blocked. Allow it in Fully: Web Content Settings › Enable Microphone Access.'
-        : 'No microphone found.');
+      return fail(e && e.name === 'NotAllowedError' ? 'The microphone is blocked. Allow it in Fully: Web Content Settings › Enable Microphone Access.' : 'No microphone found.');
     }
-    if (!open) return teardown();
+    if (!active) return end();
 
     var secret;
     try {
-      var r = await fetch(tile.dataset.session, { method: 'POST', headers: { 'X-CSRF-TOKEN': tile.dataset.csrf, 'Accept': 'application/json' } });
+      var r = await fetch(root.dataset.session, { method: 'POST', headers: { 'X-CSRF-TOKEN': root.dataset.csrf, 'Accept': 'application/json' } });
       var body = await r.json().catch(function () { return {}; });
       if (!r.ok) {
         return fail(body.error === 'not_configured' ? 'Add OPENAI_API_KEY to the hub’s .env to turn this on.'
@@ -197,56 +169,59 @@
       }
       secret = body.value;
     } catch (e) { return fail('Can’t reach the hub.'); }
-    if (!open) return teardown();
+    if (!active) return end();
 
     try {
       pc = new RTCPeerConnection();
-      pc.ontrack = function (e) { var audio = $('aic-audio'); audio.srcObject = e.streams[0]; audio.play().catch(function () {}); if (ctx) meter(e.streams[0]); };
-      pc.onconnectionstatechange = function () { if (open && (pc.connectionState === 'failed' || pc.connectionState === 'disconnected')) fail('The connection dropped.'); };
+      pc.ontrack = function (e) {
+        var audio = document.getElementById('aic-audio'); audio.srcObject = e.streams[0]; audio.play().catch(function () {});
+        if (ctx) outMeter = meter(e.streams[0]);
+      };
+      pc.onconnectionstatechange = function () { if (active && pc && (pc.connectionState === 'failed' || pc.connectionState === 'disconnected')) fail('The connection dropped.'); };
       pc.addTrack(mic.getTracks()[0], mic);
       dc = pc.createDataChannel('oai-events');
       dc.addEventListener('message', onEvent);
       dc.addEventListener('open', function () {
-        status('Listening…', 'listening');
+        state('listening');
         dc.send(JSON.stringify({ type: 'response.create', response: { instructions: 'Greet the cook in one short, warm sentence and ask what they are making.' } }));
       });
       var offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       var answer = await fetch(CALLS_URL, { method: 'POST', body: offer.sdp, headers: { 'Authorization': 'Bearer ' + secret, 'Content-Type': 'application/sdp' } });
       if (!answer.ok) return fail('ChatGPT refused the call (' + answer.status + ').');
+      if (!active) return end();
       await pc.setRemoteDescription({ type: 'answer', sdp: await answer.text() });
     } catch (e) { return fail('Couldn’t start the voice chat.'); }
 
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(function () {}); meter(mic); animate(); }
-    quietTimer = setInterval(function () {
-      if (Date.now() - lastActivity > QUIET_MS) close();
-    }, 5000);
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(function () {}); micMeter = meter(mic); }
+    cancelAnimationFrame(raf); animate();
+    quietTimer = setInterval(function () { if (Date.now() - lastActivity > QUIET_MS) { say('Ended after 2 minutes of quiet.'); end(); } }, 5000);
   }
 
-  function teardown() {
-    clearInterval(quietTimer); cancelAnimationFrame(raf);
+  function end() {
+    var wasActive = active;
+    active = false; clearInterval(quietTimer); cancelAnimationFrame(raf);
     if (dc) try { dc.close(); } catch (e) {}
     if (pc) try { pc.close(); } catch (e) {}
     if (mic) mic.getTracks().forEach(function (t) { t.stop(); });
     if (ctx) ctx.close().catch(function () {});
-    $('aic-audio').srcObject = null;
-    pc = dc = mic = ctx = null; meters = []; userItem = null;
-  }
-  function close() {
-    if (!open) return;
-    open = false; teardown(); panel.hidden = true; panel.className = 'aic-panel';
-    document.dispatchEvent(new CustomEvent('dashboard:audio-release', { detail: { by: 'ai-chat' } }));
+    var audio = document.getElementById('aic-audio'); if (audio) audio.srcObject = null;
+    pc = dc = mic = ctx = micMeter = outMeter = null; userItem = null; level = 0;
+    root.style.setProperty('--lvl', '0'); state('idle');
+    if (wasActive) document.dispatchEvent(new CustomEvent('dashboard:audio-release', { detail: { by: 'ai-chat' } }));
   }
 
-  tile.addEventListener('click', function () { if (!open) start(); });
-  $('aic-close').addEventListener('click', close);
-  $('aic-orb').addEventListener('click', function () {
-    if (!mic) return;
-    var track = mic.getTracks()[0]; track.enabled = !track.enabled; activity();
-    if (track.enabled) status('Listening…', 'listening'); else status('Muted. Tap the orb to talk.', 'muted');
-  });
-  document.addEventListener('visibilitychange', function () { if (document.hidden) close(); });
+  fab.addEventListener('click', function () { if (active) end(); else start(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && active) end(); });
 })();
+@else
+(function () {
+  var fab = document.getElementById('aic-fab'), bubble = document.getElementById('aic-bubble'), t = 0;
+  fab.addEventListener('click', function () {
+    bubble.textContent = 'Add OPENAI_API_KEY to the hub’s .env to turn on Ask ChatGPT.';
+    bubble.classList.add('show'); clearTimeout(t); t = setTimeout(function () { bubble.classList.remove('show'); }, 4000);
+  });
+})();
+@endif
 </script>
 @endpush
-@endif

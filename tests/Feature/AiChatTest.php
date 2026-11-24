@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\AiChat\CreateRealtimeSession;
-use App\Dashboard\ModuleRegistry;
-use App\Modules\AiChat\AiChatModule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -22,24 +20,24 @@ class AiChatTest extends TestCase
         config(['services.openai.key' => null, 'dashboard.allowed_ips' => [self::HOME], 'dashboard.pin' => '4821']);
     }
 
-    public function test_without_a_key_the_tile_says_how_to_turn_it_on(): void
+    public function test_without_a_key_the_button_says_how_to_turn_it_on(): void
     {
         $this->get('/')->assertOk()
-            ->assertSee('Ask ChatGPT')
-            ->assertSee('add OPENAI_API_KEY to turn this on')
-            ->assertDontSee('id="aic-panel"', false);
+            ->assertSee('Ask ChatGPT (not set up)')
+            ->assertSee('Add OPENAI_API_KEY to the hub’s .env to turn on Ask ChatGPT.', false)
+            ->assertDontSee('data-session=', false);
 
         $this->postJson('/modules/ai-chat/session')->assertStatus(503)->assertJsonPath('error', 'not_configured');
     }
 
-    public function test_with_a_key_the_tile_opens_the_voice_panel(): void
+    public function test_with_a_key_the_mic_button_starts_a_voice_chat(): void
     {
         config(['services.openai.key' => 'sk-test-not-a-real-key']);
 
         $this->get('/')->assertOk()
-            ->assertSee('id="aic-open"', false)
-            ->assertSee('id="aic-panel"', false)
-            ->assertSee('class="aic-fab"', false)
+            ->assertSee('aria-label="Talk to ChatGPT"', false)
+            ->assertSee('id="aic-audio"', false)
+            ->assertSee('prefers-reduced-motion', false)
             ->assertSee('data-session="'.route('modules.ai-chat.session').'"', false)
             ->assertSee('dashboard:audio-claim', false)
             ->assertDontSee('sk-test-not-a-real-key');
@@ -75,16 +73,5 @@ class AiChatTest extends TestCase
         }
 
         $this->postJson('/modules/ai-chat/session')->assertStatus(429);
-    }
-
-    public function test_as_a_grid_card_it_shows_the_full_tile(): void
-    {
-        config([
-            'services.openai.key' => 'sk-test-not-a-real-key',
-            'dashboard.modules.'.AiChatModule::class.'.placement' => 'grid',
-        ]);
-        $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
-
-        $this->get('/')->assertOk()->assertSee('Tap and talk: recipes, swaps, timings')->assertSee('class="card aic"', false)->assertDontSee('class="aic-fab"', false);
     }
 }
