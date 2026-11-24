@@ -115,7 +115,9 @@ window.ytmRestoreUserAgent = (function () {
   link.addEventListener('click', function (e) {
     e.preventDefault();
     var href = link.href, now = window.ytmNowPlaying && window.ytmNowPlaying();
-    if (now) href = link.href.replace(/#.*$/, '') + '#/watch?v=' + now.v + '&t=' + now.t + (now.list ? '&list=' + now.list : '');
+    // No &list=: YouTube TV ignores &t= when a list is given (checked on the tablet).
+    // The query string forces a real load even if YouTube TV is already open.
+    if (now) href = link.href.replace(/#.*$/, '') + '?h=' + Date.now() + '#/watch?v=' + now.v + '&t=' + now.t;
     fully.setStringSetting('customUserAgent', tvUa);
     fully.setStringSetting('userAgent', 'custom');
     location.href = href;
