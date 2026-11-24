@@ -34,6 +34,7 @@ class YouTubeMusicModule extends Module
             'volume' => (int) $this->config('volume', 60),
             'tvUrl' => (string) $this->config('tv_url', 'https://www.youtube.com/tv'),
             'tvUserAgent' => (string) $this->config('tv_user_agent', ''),
+            'injectScript' => $this->injectScript(),
         ];
     }
 
@@ -50,5 +51,18 @@ class YouTubeMusicModule extends Module
             ->whereNumber('index')->name('playlists.destroy');
         $router->post('playlists/{index}/up', [SettingsController::class, 'moveUp'])
             ->whereNumber('index')->name('playlists.up');
+
+        // Song handoff from YouTube Premium (see HandoffController).
+        $router->post('handoff', [HandoffController::class, 'store'])
+            ->middleware('throttle:30,1')->name('handoff.store');
+        $router->get('handoff', [HandoffController::class, 'show'])->name('handoff');
+        $router->post('handoff/clear', [HandoffController::class, 'clear'])->name('handoff.clear');
+    }
+
+    /** The script Fully injects into youtube.com, with this install's handoff URL. */
+    public function injectScript(): string
+    {
+        return str_replace('__HANDOFF_URL__', route('modules.youtube-music.handoff.store'),
+            (string) file_get_contents(resource_path('inject/youtube-handoff.js')));
     }
 }

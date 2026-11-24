@@ -34,6 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // The unlock cookie is encrypted by App\Http\Access\AccessGate itself,
         // because RestrictTunnelVisitors reads it before EncryptCookies runs.
         $middleware->encryptCookies(except: [AccessGate::COOKIE]);
+
+        // Posted by the script Fully injects into youtube.com, which has no CSRF token.
+        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

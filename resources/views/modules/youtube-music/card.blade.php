@@ -1,5 +1,6 @@
 @php($settingsUrl = route('modules.youtube-music.settings'))
-<section class="card ytm" aria-label="YouTube Music" data-volume="{{ $volume }}">
+<section class="card ytm" aria-label="YouTube Music" data-volume="{{ $volume }}"
+  data-handoff="{{ route('modules.youtube-music.handoff') }}" data-handoff-clear="{{ route('modules.youtube-music.handoff.clear') }}" data-csrf="{{ csrf_token() }}">
   <div class="ytm-art">
     {{-- YouTube's player must stay visible (at least 200x200 px) under its terms, so it doubles as the artwork. --}}
     <div id="ytm-player"></div>
@@ -101,15 +102,23 @@
 // above won't play under one. So "Open YouTube Premium" switches Fully to the TV
 // user agent, and the dashboard switches it back whenever it loads.
 // Fully settings: userAgent "0" = default, "custom" = use customUserAgent.
+// Song handoff: the button opens YouTube TV at the card's song and position
+// (window.ytmNowPlaying), and the script installed below as Fully's "Inject
+// JavaScript" reports what YouTube TV plays so the card can carry on afterwards.
 window.ytmRestoreUserAgent = (function () {
   var link = document.getElementById('ytm-premium'), tvUa = link.dataset.tvUa;
   if (!window.fully || !tvUa) return false;
 
+  var inject = @json($injectScript);
+  try { if (fully.getStringSetting('injectJsCode') !== inject) fully.setStringSetting('injectJsCode', inject); } catch (err) {}
+
   link.addEventListener('click', function (e) {
     e.preventDefault();
+    var href = link.href, now = window.ytmNowPlaying && window.ytmNowPlaying();
+    if (now) href = link.href.replace(/#.*$/, '') + '#/watch?v=' + now.v + '&t=' + now.t + (now.list ? '&list=' + now.list : '');
     fully.setStringSetting('customUserAgent', tvUa);
     fully.setStringSetting('userAgent', 'custom');
-    location.href = link.href;
+    location.href = href;
   });
 
   if (fully.getStringSetting('userAgent') === 'custom' && fully.getStringSetting('customUserAgent') === tvUa) {
@@ -135,6 +144,7 @@ window.ytmRestoreUserAgent = (function () {
   var card = document.querySelector('.ytm'), $ = function (id) { return document.getElementById(id); };
   var chips = [].slice.call(document.querySelectorAll('.ytm-chip'));
   var player = null, ready = false, current = 0, shuffle = false, toastTimer;
+  var pending = null, single = false; // handoff: a song to find in the playlist / a lone song outside the playlists
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
   var saved = parseInt(store('ytm.playlist'), 10);
@@ -165,7 +175,40 @@ window.ytmRestoreUserAgent = (function () {
     }
   }
 
+  // For "Open YouTube Premium": the song, position and playlist, then pause here.
+  window.ytmNowPlaying = function () {
+    if (!ready) return null;
+    var d = player.getVideoData() || {};
+    if (!d.video_id) return null;
+    var now = { v: d.video_id, t: Math.floor(player.getCurrentTime() || 0), list: single ? null : chips[current].dataset.list };
+    player.pauseVideo();
+    return now;
+  };
+
+  // Back from YouTube Premium: carry on with the song it was playing (under 10 minutes old).
+  function resumeHandoff() {
+    fetch(card.dataset.handoff, { cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (h) {
+        if (!h || !h.v) return;
+        fetch(card.dataset.handoffClear, { method: 'POST', headers: { 'X-CSRF-TOKEN': card.dataset.csrf } }).catch(function () {});
+        var i = -1;
+        chips.forEach(function (c, k) { if (h.list && c.dataset.list === h.list) i = k; });
+        if (i < 0) i = current;
+        pending = h;
+        loadList(i, false); // cue the playlist, then find the song in it (onStateChange)
+      })
+      .catch(function () {});
+  }
+  function playPending() {
+    var h = pending, idx = (player.getPlaylist() || []).indexOf(h.v);
+    pending = null;
+    if (idx >= 0) player.loadPlaylist({ listType: 'playlist', list: chips[current].dataset.list, index: idx, startSeconds: h.t });
+    else { single = true; player.loadVideoById({ videoId: h.v, startSeconds: h.t }); }
+  }
+
   function loadList(i, autoplay) {
+    single = false;
     current = i; store('ytm.playlist', i); selectChip(i);
     var args = { listType: 'playlist', list: chips[i].dataset.list, index: 0 };
     // Without stopVideo() first, YouTube keeps the old playlist's tracks and only swaps the list id.
@@ -187,15 +230,19 @@ window.ytmRestoreUserAgent = (function () {
           player.setVolume(parseInt(card.dataset.volume, 10) || 60);
           selectChip(current);
           if (shuffle) setShuffle(true);
+          resumeHandoff();
         },
         onStateChange: function (e) {
+          if (pending && e.data === YT.PlayerState.CUED) { playPending(); return; }
+          if (single && e.data === YT.PlayerState.ENDED) { loadList(current, true); return; }
           card.classList.toggle('playing', e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING);
           $('ytm-play').setAttribute('aria-label', card.classList.contains('playing') ? 'Pause' : 'Play');
           showMeta();
         },
         onError: function (e) {
           // 101/150: the label blocks playback outside YouTube. 100: removed. Skip to the next song.
-          if (e.data === 101 || e.data === 150 || e.data === 100) { toast('Skipped a song that only plays on YouTube itself'); player.nextVideo(); }
+          if ((e.data === 101 || e.data === 150 || e.data === 100) && single) { toast('That song only plays on YouTube itself. Back to your playlist.'); loadList(current, true); }
+          else if (e.data === 101 || e.data === 150 || e.data === 100) { toast('Skipped a song that only plays on YouTube itself'); player.nextVideo(); }
           else if (e.data === 153) toast('YouTube rejected the player (missing referrer)');
           else if (e.data === 2) toast('That playlist link looks wrong. Check it in settings.');
           else toast('YouTube error ' + e.data);
