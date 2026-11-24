@@ -68,14 +68,15 @@ class YouTubeMusicTest extends TestCase
         rmdir(resource_path('views/modules/shopping-list'));
     }
 
-    public function test_the_card_has_a_volume_slider_that_uses_fullys_system_volume(): void
+    public function test_playlist_chips_are_buttons_and_playback_resumes_after_a_reload(): void
     {
-        app(PlaylistStore::class)->save([['name' => 'A', 'id' => 'PLaaaaaaaaaa']]);
+        app(PlaylistStore::class)->save([['name' => 'A', 'id' => 'PLaaaaaaaaaa'], ['name' => 'B', 'id' => 'PLbbbbbbbbbb']]);
 
-        $this->get('/')->assertOk()
-            ->assertSee('id="ytm-vol"', false)
-            ->assertSee('role="slider"', false)
-            ->assertSee('fully.setAudioVolume(level, 3)', false)
-            ->assertSee('id="ytm-vol-mute"', false);
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertSame(2, substr_count($html, '<button class="ytm-chip"'));
+        $this->assertStringNotContainsString('<a class="ytm-chip"', $html);
+        $this->assertStringContainsString("window.addEventListener('pagehide'", $html);
+        $this->assertStringContainsString('resumeAfterReload()', $html);
     }
 }

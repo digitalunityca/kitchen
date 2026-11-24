@@ -4,6 +4,7 @@ use App\Modules\AiChat\AiChatModule;
 use App\Modules\Calendar\CalendarModule;
 use App\Modules\Clock\ClockModule;
 use App\Modules\Habs\HabsModule;
+use App\Modules\Volume\VolumeModule;
 use App\Modules\Weather\WeatherModule;
 use App\Modules\YouTubeMusic\YouTubeMusicModule;
 
@@ -83,6 +84,10 @@ return [
             // moderation check on every spoken line. Set false for adults-only.
             'family_safe' => (bool) env('AI_CHAT_FAMILY_SAFE', true),
         ],
+
+        // Volume slider in the side menu, under the ChatGPT mic. In Fully it sets
+        // the tablet's media volume; 'default' is only used in other browsers.
+        VolumeModule::class => ['default' => 60],
 
     ],
 
