@@ -4,6 +4,14 @@
   <div class="ytm-art">
     {{-- YouTube's player must stay visible (at least 200x200 px) under its terms, so it doubles as the artwork. --}}
     <div id="ytm-player"></div>
+    {{-- Volume: a frosted pill over the artwork's left edge while music plays (clear of Fully's screen-edge swipe). --}}
+    <div class="ytm-vol" id="ytm-vol" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0">
+      <div class="ytm-vol-track" id="ytm-vol-track"><i id="ytm-vol-fill"></i></div>
+      <button type="button" class="ytm-vol-mute" id="ytm-vol-mute" aria-label="Mute">
+        <svg class="i-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        <svg class="i-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="m16 9 6 6M22 9l-6 6"/></svg>
+      </button>
+    </div>
     <div class="ytm-art-empty" id="ytm-art-empty">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     </div>
@@ -93,6 +101,28 @@
                background: var(--text); color: var(--card); font-size: 14px; font-weight: 500; padding: 8px 14px; border-radius: 999px;
                transition: opacity .25s, transform .25s; white-space: nowrap; }
   .ytm-toast.show { opacity: 1; transform: translate(-50%, 0); }
+  /* Volume pill: visible while playing, shrinks to a slim level line after 4 s untouched. */
+  .ytm-vol {
+    position: absolute; z-index: 3; left: 12px; top: 20%; height: 60%; width: 44px; border-radius: 22px; padding: 10px 0 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; touch-action: none;
+    background: rgba(255,255,255,.72); -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6);
+    box-shadow: 0 4px 16px rgba(0,0,0,.18); color: #1D1D1F;
+    opacity: 0; pointer-events: none; transition: opacity .3s ease, width .3s ease, left .3s ease, padding .3s ease, background .3s ease;
+  }
+  body.night .ytm-vol { background: rgba(44,44,46,.72); color: #F5F5F7; }
+  .ytm.playing .ytm-vol { opacity: 1; pointer-events: auto; }
+  .ytm-vol-track { position: relative; flex: 1; width: 8px; border-radius: 4px; background: rgba(120,120,128,.28); overflow: hidden; }
+  .ytm-vol-track::before { content: ''; position: absolute; inset: 0 -18px; } /* wider touch target */
+  .ytm-vol-track i { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; border-radius: 4px; background: currentColor; transition: height .08s linear; }
+  .ytm-vol-mute { width: 36px; height: 36px; border-radius: 999px; display: flex; align-items: center; justify-content: center; flex: none; }
+  .ytm-vol-mute .i-off, .ytm-vol.muted .ytm-vol-mute .i-on { display: none; }
+  .ytm-vol.muted .ytm-vol-mute .i-off { display: block; }
+  .ytm-vol.muted .ytm-vol-track i { opacity: .35; }
+  .ytm-vol.dim { width: 10px; left: 16px; padding: 0; background: rgba(255,255,255,.55); box-shadow: none; }
+  .ytm-vol.dim .ytm-vol-track { width: 4px; }
+  .ytm-vol.dim .ytm-vol-mute { display: none; }
+  .ytm-vol.dim::after { content: ''; position: absolute; inset: -10px -24px; } /* tap the slim line to bring the pill back */
+  @media (prefers-reduced-motion: reduce) { .ytm-vol, .ytm-vol-track i { transition: none; } }
 </style>
 @endpush
 
@@ -229,7 +259,9 @@ window.ytmRestoreUserAgent = (function () {
       events: {
         onReady: function () {
           ready = true;
-          player.setVolume(parseInt(card.dataset.volume, 10) || 60);
+          // In Fully the volume pill sets the tablet's loudness; elsewhere it sets the player's.
+          var usesSystemVolume = window.fully && typeof fully.setAudioVolume === 'function';
+          player.setVolume(!usesSystemVolume && window.ytmVolume ? ytmVolume.get() : (parseInt(card.dataset.volume, 10) || 60));
           selectChip(current);
           if (shuffle) setShuffle(true);
           resumeHandoff();
@@ -258,6 +290,62 @@ window.ytmRestoreUserAgent = (function () {
     var s = player.getPlayerState();
     if (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING) player.pauseVideo(); else player.playVideo();
   });
+  // Volume pill. On the tablet it sets the real loudness (Android music stream)
+  // through Fully; elsewhere it sets the YouTube player's own volume.
+  (function () {
+    var vol = $('ytm-vol'), track = $('ytm-vol-track'), fill = $('ytm-vol-fill'), dimTimer = 0, level = 50, beforeMute = 50;
+    var system = !!(window.fully && typeof fully.setAudioVolume === 'function');
+    function read() {
+      if (system) { try { var v = parseInt(fully.getAudioVolume(3), 10); if (!isNaN(v)) return v; } catch (e) {} }
+      var saved = parseInt(store('ytm-volume'), 10);
+      return isNaN(saved) ? (parseInt(card.dataset.volume, 10) || 60) : saved;
+    }
+    function show(v) {
+      fill.style.height = v + '%'; vol.setAttribute('aria-valuenow', String(v));
+      vol.classList.toggle('muted', v === 0);
+      $('ytm-vol-mute').setAttribute('aria-label', v === 0 ? 'Unmute' : 'Mute');
+    }
+    function apply(v) {
+      level = Math.max(0, Math.min(100, Math.round(v)));
+      if (system) { try { fully.setAudioVolume(level, 3); } catch (e) {} }
+      else if (ready) { player.setVolume(level); }
+      if (level > 0) store('ytm-volume', String(level));
+      show(level);
+    }
+    function wake() {
+      vol.classList.remove('dim'); clearTimeout(dimTimer);
+      dimTimer = setTimeout(function () { vol.classList.add('dim'); }, 4000);
+    }
+    function fromPointer(e) {
+      var r = track.getBoundingClientRect();
+      apply((1 - (e.clientY - r.top) / r.height) * 100);
+    }
+    level = read(); beforeMute = level || 50; show(level);
+    if (!system && ready) player.setVolume(level);
+    track.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); wake();
+      if (vol.classList.contains('dim')) return;
+      track.setPointerCapture(e.pointerId); fromPointer(e);
+      track.onpointermove = function (m) { fromPointer(m); wake(); };
+    });
+    track.addEventListener('pointerup', function () { track.onpointermove = null; });
+    track.addEventListener('pointercancel', function () { track.onpointermove = null; });
+    vol.addEventListener('pointerdown', function () { if (vol.classList.contains('dim')) wake(); });
+    $('ytm-vol-mute').addEventListener('click', function () {
+      wake();
+      if (level > 0) { beforeMute = level; apply(0); } else { apply(beforeMute || 50); }
+    });
+    vol.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowUp') { apply(level + 5); wake(); }
+      if (e.key === 'ArrowDown') { apply(level - 5); wake(); }
+    });
+    // Show the full pill whenever playback starts; pick up changes made with the tablet's buttons.
+    new MutationObserver(function () {
+      if (card.classList.contains('playing')) { level = read(); show(level); wake(); }
+    }).observe(card, { attributes: true, attributeFilter: ['class'] });
+    window.ytmVolume = { get: function () { return level; }, set: apply };
+  })();
+
   // Another card (the voice chat) needs the speaker: pause, then resume afterwards only if music was playing.
   var pausedForOther = false;
   document.addEventListener('dashboard:audio-claim', function () {

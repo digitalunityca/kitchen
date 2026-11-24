@@ -67,4 +67,15 @@ class YouTubeMusicTest extends TestCase
         unlink(resource_path('views/modules/shopping-list/card.blade.php'));
         rmdir(resource_path('views/modules/shopping-list'));
     }
+
+    public function test_the_card_has_a_volume_slider_that_uses_fullys_system_volume(): void
+    {
+        app(PlaylistStore::class)->save([['name' => 'A', 'id' => 'PLaaaaaaaaaa']]);
+
+        $this->get('/')->assertOk()
+            ->assertSee('id="ytm-vol"', false)
+            ->assertSee('role="slider"', false)
+            ->assertSee('fully.setAudioVolume(level, 3)', false)
+            ->assertSee('id="ytm-vol-mute"', false);
+    }
 }
