@@ -3,7 +3,6 @@
 namespace App\Modules\Weather;
 
 use App\Dashboard\Module;
-use App\Dashboard\ModuleRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Router;
 
@@ -43,7 +42,7 @@ class WeatherModule extends Module
 
     public function routes(Router $router): void
     {
-        $router->get('now', fn (ModuleRegistry $modules) => $modules->get($this->key())->json())->name('now');
+        $router->get('now', WeatherController::class)->name('now');
     }
 
     public function json(): JsonResponse
