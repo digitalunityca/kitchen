@@ -56,14 +56,17 @@
   @keyframes aic-spin { to { transform: rotate(360deg); } }
   @keyframes aic-wave { from { opacity: .45; transform: scale(1); } to { opacity: 0; transform: scale(2.1); } }
 
+  /* Caption bubble: grows with the answer up to 460 px wide and half the screen tall, then scrolls to the newest words. */
   .aic-bubble {
-    position: absolute; right: 44px; bottom: 74px; margin: 0; width: max-content; max-width: 440px; padding: 12px 16px;
+    position: absolute; right: 44px; bottom: 74px; margin: 0; width: max-content; max-width: min(460px, calc(100vw - 120px));
+    max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 12px 16px;
     border-radius: 18px 18px 4px 18px; background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 6px 20px rgba(0,0,0,.08);
-    font-size: 17px; line-height: 1.35; opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease; pointer-events: none;
-    overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4;
+    font-size: 17px; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere;
+    opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease; pointer-events: none;
   }
+  .aic-bubble::-webkit-scrollbar { display: none; }
   .aic-bubble.show { opacity: 1; transform: none; }
-  .aic-bubble small { display: block; font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+  .aic-bubble small { position: sticky; top: -12px; display: block; margin: -12px -16px 2px; padding: 12px 16px 4px; background: inherit; border-radius: 18px 18px 0 0; font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .04em; }
   body.night .aic-bubble { background: #2C2C2E; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -84,7 +87,7 @@
 // tablet and OpenAI. Music pauses while talking (dashboard:audio-claim/release).
 (function () {
   var root = document.getElementById('aic'), fab = document.getElementById('aic-fab'), bubble = document.getElementById('aic-bubble');
-  var QUIET_MS = 2 * 60 * 1000, BUBBLE_MS = 5000, CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
+  var QUIET_MS = 2 * 60 * 1000, BUBBLE_MS = 8000, CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
   var pc = null, dc = null, mic = null, ctx = null, micMeter = null, outMeter = null, raf = 0, quietTimer = 0, bubbleTimer = 0;
   var active = false, lastActivity = 0, level = 0, userItem = null, botText = '';
 
@@ -94,6 +97,7 @@
     if (who) { var w = document.createElement('small'); w.textContent = who; bubble.appendChild(w); }
     bubble.appendChild(document.createTextNode(text));
     bubble.classList.add('show');
+    bubble.scrollTop = bubble.scrollHeight;
     clearTimeout(bubbleTimer);
     if (!sticky) bubbleTimer = setTimeout(function () { bubble.classList.remove('show'); }, BUBBLE_MS);
   }
