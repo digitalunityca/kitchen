@@ -15,5 +15,4 @@ class ClockModule extends Module
     {
         return 'Clock';
     }
-
 }

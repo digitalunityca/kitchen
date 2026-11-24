@@ -1,5 +1,11 @@
 <?php
 
+use App\Modules\AiChat\AiChatModule;
+use App\Modules\Calendar\CalendarModule;
+use App\Modules\Clock\ClockModule;
+use App\Modules\Weather\WeatherModule;
+use App\Modules\YouTubeMusic\YouTubeMusicModule;
+
 /*
 | Kitchen dashboard.
 |
@@ -29,11 +35,11 @@ return [
 
     'modules' => [
 
-        App\Modules\Clock\ClockModule::class => [
+        ClockModule::class => [
             'column' => '1', 'row' => '1',
         ],
 
-        App\Modules\Weather\WeatherModule::class => [
+        WeatherModule::class => [
             'column' => '2', 'row' => '1',
             // Label on the card. Forecast from Open-Meteo for these coordinates
             // (decimal degrees, e.g. 45.42 / -75.69); empty = sample data.
@@ -42,11 +48,11 @@ return [
             'lon' => env('WEATHER_LON'),
         ],
 
-        App\Modules\Calendar\CalendarModule::class => [
+        CalendarModule::class => [
             'column' => '3', 'row' => '1 / span 2',
         ],
 
-        App\Modules\YouTubeMusic\YouTubeMusicModule::class => [
+        YouTubeMusicModule::class => [
             'column' => '1 / span 2', 'row' => '2',
             // Playlists added on /modules/youtube-music/settings are stored in
             // storage/app/youtube-music.json. These are only the first-run defaults.
@@ -64,7 +70,7 @@ return [
 
         // The AI Chat tile, off until the chat service exists. Turn it on and
         // move YouTube Music to column '1' to bring the old layout back.
-        App\Modules\AiChat\AiChatModule::class => [
+        AiChatModule::class => [
             'enabled' => false,
             'column' => '2', 'row' => '2',
             'url' => env('AI_CHAT_URL', '#'),

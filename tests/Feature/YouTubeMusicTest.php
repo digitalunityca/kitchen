@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Modules\YouTubeMusic\PlaylistStore;
+use App\Modules\YouTubeMusic\YouTubeMusicModule;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -36,7 +37,7 @@ class YouTubeMusicTest extends TestCase
 
     public function test_premium_button_carries_the_tv_user_agent_from_config(): void
     {
-        $ua = config('dashboard.modules.'.\App\Modules\YouTubeMusic\YouTubeMusicModule::class.'.tv_user_agent');
+        $ua = config('dashboard.modules.'.YouTubeMusicModule::class.'.tv_user_agent');
         $this->assertStringContainsString('SMART-TV', $ua);
 
         $this->get('/')->assertOk()
