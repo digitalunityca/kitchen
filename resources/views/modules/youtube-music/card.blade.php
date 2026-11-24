@@ -135,6 +135,8 @@
   function loadList(i, autoplay) {
     current = i; store('ytm.playlist', i); selectChip(i);
     var args = { listType: 'playlist', list: chips[i].dataset.list, index: 0 };
+    // Without stopVideo() first, YouTube keeps the old playlist's tracks and only swaps the list id.
+    player.stopVideo();
     if (autoplay) player.loadPlaylist(args); else player.cuePlaylist(args);
   }
 
