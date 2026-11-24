@@ -1,0 +1,8 @@
+# Locally-managed Cloudflare Tunnel for home-hub (used by the `cloudflared`
+# service in compose.yaml). The tunnel ID comes from HOME_HUB_TUNNEL_ID in
+# .env; its credentials are deploy/cloudflared/credentials.json (gitignored).
+# Every hostname routed to this tunnel (cloudflared tunnel route dns ...) is
+# served by the hub, so nothing here names a domain.
+credentials-file: /etc/cloudflared/credentials.json
+ingress:
+  - service: http://home-hub:8080

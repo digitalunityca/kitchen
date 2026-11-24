@@ -33,18 +33,34 @@ For the tablet to reach it all day:
 
 ### Cloudflare Tunnel (optional)
 
-A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) serves the hub on a public https hostname without opening router ports, and keeps working when the tablet's Wi-Fi can't reach the server directly.
+A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) serves the hub on a public https hostname without opening router ports, and keeps working when the tablet's Wi-Fi can't reach the server directly. home-hub has its own tunnel, so it moves with the repo and doesn't depend on other projects' tunnels.
 
-1. In Cloudflare Zero Trust › Networks › Tunnels, create a tunnel (Cloudflared, Docker). Copy the token from the install command into `.env` as `CLOUDFLARE_TUNNEL_TOKEN=`.
-2. Add a public hostname to the tunnel with service **HTTP** and URL **`home-hub:8080`** (the container name and its internal port, not 8000).
-3. Start it: `docker compose --profile tunnel up -d`. Check with `docker compose --profile tunnel logs cloudflared` ("Registered tunnel connection").
-4. Point Fully's Start URL at `https://<your-hostname>`.
+One-time setup, on a machine where `cloudflared tunnel login` has been run (`~/.cloudflared/cert.pem` exists):
 
-The `cloudflared` service only runs with `--profile tunnel`, so plain `docker compose up -d` stays LAN-only. The hub has no login: anyone with the hostname can change its settings, so put a Cloudflare Access policy (Zero Trust › Access › Applications) in front of the hostname. Laravel trusts the proxy headers (`bootstrap/app.php`), so links come out as https.
+```bash
+cloudflared tunnel create --credentials-file deploy/cloudflared/credentials.json home-hub
+cloudflared tunnel route dns home-hub kitchen.<your-domain>
+```
+
+Then in `.env`:
+
+```
+HOME_HUB_TUNNEL_ID=<the ID printed by "tunnel create">
+HOME_HUB_ALLOWED_IPS=<your home's public IP, from: curl -s https://api.ipify.org>
+APP_URL=https://kitchen.<your-domain>
+```
+
+Start it with `docker compose --profile tunnel up -d --build`, check `docker compose --profile tunnel logs cloudflared` for "Registered tunnel connection", and point Fully's Start URL at `https://kitchen.<your-domain>`.
+
+- `deploy/cloudflared/config.yml` sends every hostname routed to the tunnel to `http://home-hub:8080` (the container's internal port, not 8000). `credentials.json` next to it is secret and gitignored; copy it along with `.env` when moving servers.
+- The hub has no login. Requests through the tunnel carry `CF-Connecting-IP`, and `RestrictTunnelVisitors` lets in only the addresses in `HOME_HUB_ALLOWED_IPS` (IPs or CIDR ranges, comma-separated); everyone else gets 403. If it's empty, anyone with the hostname gets in and a warning is logged. Requests on the LAN aren't checked. If your ISP changes the home IP, update the variable and run `docker compose up -d`. A Cloudflare Access policy (Zero Trust > Access > Applications) on the hostname is a stronger option.
+- The `cloudflared` service only runs with `--profile tunnel`, so plain `docker compose up -d` stays LAN-only. Laravel trusts the proxy headers (`bootstrap/app.php`), so links come out as https.
+
+**Alternative: dashboard-managed tunnel (token).** Create the tunnel in Zero Trust > Networks > Tunnels, add a public hostname with service HTTP `home-hub:8080`, and replace the service's `command` and `volumes` in `compose.yaml` with `command: tunnel --no-autoupdate run` and `environment: { TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN} }`, with the token in `.env`.
 
 ### Moving to another server
 
-1. Copy or clone the repo to the new machine and copy `.env` over (it holds `APP_KEY`).
+1. Copy or clone the repo to the new machine and copy `.env` over (it holds `APP_KEY`), plus `deploy/cloudflared/credentials.json` if you use the tunnel.
 2. Copy the saved settings out of the old volume and into the new one:
    ```bash
    # old server

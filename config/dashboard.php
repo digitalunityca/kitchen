@@ -12,6 +12,11 @@ return [
 
     'title' => env('DASHBOARD_TITLE', 'Kitchen'),
 
+    // Visitors allowed through the Cloudflare Tunnel (comma-separated IPs or
+    // CIDR ranges, e.g. the home's public IP). Empty = anyone with the link.
+    // Requests made directly on the LAN are never checked.
+    'allowed_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('HOME_HUB_ALLOWED_IPS', ''))))),
+
     // Dark look between these hours (24h clock, tablet's local time).
     'night' => [
         'from' => (int) env('DASHBOARD_NIGHT_FROM', 21),

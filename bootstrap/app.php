@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // cloudflared container; trust its X-Forwarded-* headers so generated
         // URLs use the public https hostname.
         $middleware->trustProxies(at: '*');
+
+        // Through the tunnel, only addresses in HOME_HUB_ALLOWED_IPS get in.
+        $middleware->prepend(\App\Http\Middleware\RestrictTunnelVisitors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

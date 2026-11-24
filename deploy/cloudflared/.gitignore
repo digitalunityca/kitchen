@@ -1,0 +1,3 @@
+# Tunnel credentials: secret, never commit.
+credentials.json
+*.json

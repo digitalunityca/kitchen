@@ -16,15 +16,17 @@ services:
       retries: 3
 
   # Optional Cloudflare Tunnel: serves home-hub on a public https hostname without
-  # opening ports. Off unless started with --profile tunnel. The tunnel's public
-  # hostname in the Cloudflare dashboard must point at http://home-hub:8080.
+  # opening ports. Off unless started with --profile tunnel. Uses the tunnel
+  # named in HOME_HUB_TUNNEL_ID with deploy/cloudflared/credentials.json
+  # (see README > Cloudflare Tunnel).
   cloudflared:
     image: cloudflare/cloudflared:2026.7.3
     profiles: ["tunnel"]
-    command: tunnel --no-autoupdate run
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run ${HOME_HUB_TUNNEL_ID:-}
     restart: unless-stopped
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    volumes:
+      - ./deploy/cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ./deploy/cloudflared/credentials.json:/etc/cloudflared/credentials.json:ro
     depends_on:
       - home-hub
 
