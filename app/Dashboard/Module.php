@@ -64,6 +64,12 @@ abstract class Module
         return $this->config['row'] ?? 'auto';
     }
 
+    /** "grid" for a card on the grid, "header" for a compact control next to the title. */
+    public function placement(): string
+    {
+        return $this->config['placement'] ?? 'grid';
+    }
+
     public function config(string $key, mixed $default = null): mixed
     {
         return data_get($this->config, $key, $default);

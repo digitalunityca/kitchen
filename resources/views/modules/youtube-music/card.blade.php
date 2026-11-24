@@ -258,6 +258,18 @@ window.ytmRestoreUserAgent = (function () {
     var s = player.getPlayerState();
     if (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING) player.pauseVideo(); else player.playVideo();
   });
+  // Another card (the voice chat) needs the speaker: pause, then resume afterwards only if music was playing.
+  var pausedForOther = false;
+  document.addEventListener('dashboard:audio-claim', function () {
+    if (!ready) return;
+    var s = player.getPlayerState();
+    pausedForOther = s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING;
+    if (pausedForOther) player.pauseVideo();
+  });
+  document.addEventListener('dashboard:audio-release', function () {
+    if (pausedForOther && ready) player.playVideo();
+    pausedForOther = false;
+  });
   $('ytm-next').addEventListener('click', function () { if (ready) player.nextVideo(); });
   $('ytm-prev').addEventListener('click', function () {
     if (!ready) return;

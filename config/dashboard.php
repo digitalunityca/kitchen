@@ -11,7 +11,8 @@ use App\Modules\YouTubeMusic\YouTubeMusicModule;
 |
 | Modules render in the order listed. The grid is 3 columns x 2 rows; set
 | 'column' and 'row' with CSS grid values (e.g. '1 / span 2') to place a card.
-| Set 'enabled' => false to hide a module without deleting it.
+| Set 'enabled' => false to hide a module without deleting it, or
+| 'placement' => 'header' to show it in the header instead of the grid.
 */
 
 return [
@@ -68,12 +69,13 @@ return [
                 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
         ],
 
-        // The AI Chat tile, off until the chat service exists. Turn it on and
-        // move YouTube Music to column '1' to bring the old layout back.
+        // "Ask ChatGPT" voice chat (OpenAI Realtime). Needs OPENAI_API_KEY in .env
+        // (config/services.php). The location shapes the assistant's answers.
+        // 'placement' => 'header' shows it as a button next to the title instead
+        // of a card; set 'grid' plus 'column'/'row' to give it a card again.
         AiChatModule::class => [
-            'enabled' => false,
-            'column' => '2', 'row' => '2',
-            'url' => env('AI_CHAT_URL', '#'),
+            'placement' => 'header',
+            'location' => env('AI_CHAT_LOCATION', 'Sainte-Catherine, Quebec'),
         ],
 
     ],

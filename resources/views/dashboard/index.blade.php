@@ -20,11 +20,16 @@
       <p class="eyebrow" id="dateLong"></p>
       <h1 id="greeting"></h1>
     </div>
-    <p class="muted">{{ $title }}</p>
+    <div class="header-end">
+      @foreach ($modules->filter(fn ($m) => $m->placement() === 'header') as $module)
+        <div class="header-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
+      @endforeach
+      <p class="muted">{{ $title }}</p>
+    </div>
   </header>
 
   <main>
-    @foreach ($modules as $module)
+    @foreach ($modules->filter(fn ($m) => $m->placement() === 'grid') as $module)
       <div class="slot" data-module="{{ $module->key() }}" style="grid-column: {{ $module->column() }}; grid-row: {{ $module->row() }};">
         {!! $cards[$module->key()] !!}
       </div>
