@@ -52,7 +52,7 @@ class CreateRealtimeSession
                         'type' => 'realtime',
                         'model' => $this->settings->model,
                         'instructions' => $this->buildAssistantInstructions->handle($this->settings->location, $this->settings->familySafe),
-                        'tools' => [self::weatherTool()],
+                        'tools' => [self::weatherTool(), self::searchTool()],
                         'tool_choice' => 'auto',
                         'audio' => [
                             'input' => [
@@ -109,6 +109,28 @@ class CreateRealtimeSession
                         'description' => 'The day asked about, e.g. "today", "tomorrow", "saturday". Optional; the result always covers all 7 days.',
                     ],
                 ],
+            ],
+        ];
+    }
+
+    /**
+     * The search_web function for anything current; the tablet answers it from
+     * /modules/ai-chat/search (App\Actions\AiChat\SearchWeb).
+     *
+     * @return array<string, mixed>
+     */
+    public static function searchTool(): array
+    {
+        return [
+            'type' => 'function',
+            'name' => 'search_web',
+            'description' => 'Search the web for anything current or that may have changed: news, events, sports scores, opening hours, prices, recent facts. Returns a short answer to speak.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'query' => ['type' => 'string', 'description' => 'What to look up, as a full question, in the language the user spoke.'],
+                ],
+                'required' => ['query'],
             ],
         ];
     }

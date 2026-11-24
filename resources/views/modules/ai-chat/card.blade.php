@@ -5,7 +5,7 @@
   voice while it answers. The latest caption appears in a bubble above it.
 --}}
 <div class="aic" id="aic" data-state="idle"
-  @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" @if ($familySafe) data-moderate="{{ route('modules.ai-chat.moderate') }}" @endif data-weather="{{ route('modules.ai-chat.weather') }}" data-csrf="{{ csrf_token() }}" @endif>
+  @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" @if ($familySafe) data-moderate="{{ route('modules.ai-chat.moderate') }}" @endif data-weather="{{ route('modules.ai-chat.weather') }}" data-search="{{ route('modules.ai-chat.search') }}" data-csrf="{{ csrf_token() }}" @endif>
   <p class="aic-bubble" id="aic-bubble" role="status" aria-live="polite"></p>
   <div class="aic-stage">
     <span class="aic-ring" aria-hidden="true"></span>
@@ -150,15 +150,29 @@
   // Family-safe mode, second line of defence after the persona rules: every
   // line (yours and ChatGPT's) goes through OpenAI moderation via the hub. If
   // one is flagged, the answer stops at once and the chat ends.
-  /** The assistant asked for get_weather: answer from the hub's forecast, then let it speak. */
+  /** The assistant called a tool (get_weather, search_web): answer it from the hub, then let it speak. */
   function runTool(ev) {
-    if (ev.name !== 'get_weather') return;
-    state('thinking');
     var args = {}; try { args = JSON.parse(ev.arguments || '{}'); } catch (e) {}
-    fetch(root.dataset.weather + (args.day ? '?day=' + encodeURIComponent(args.day) : ''), { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : { available: false }; })
-      .catch(function () { return { available: false }; })
+    var request;
+    if (ev.name === 'get_weather') {
+      request = fetch(root.dataset.weather + (args.day ? '?day=' + encodeURIComponent(args.day) : ''), { headers: { 'Accept': 'application/json' } });
+    } else if (ev.name === 'search_web') {
+      say('Searching the web…', 'ChatGPT', true);
+      request = fetch(root.dataset.search, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': root.dataset.csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: String(args.query || '').slice(0, 300) })
+      });
+    } else {
+      return;
+    }
+    state('thinking'); activity();
+    request
+      .then(function (r) { return r.ok ? r.json() : { ok: false, available: false, note: 'The tool failed. Say you could not look it up right now.' }; })
+      .catch(function () { return { ok: false, available: false, note: 'The tool failed. Say you could not look it up right now.' }; })
       .then(function (result) {
+        if (!active) return;
+        activity();
         send({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: ev.call_id, output: JSON.stringify(result) } });
         send({ type: 'response.create' });
       });

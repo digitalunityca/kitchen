@@ -101,4 +101,17 @@ class AiChatTest extends TestCase
 
         $this->getJson('/modules/ai-chat/weather?day=tomorrow')->assertOk()->assertJsonPath('available', false);
     }
+
+    public function test_the_search_tool_route_validates_and_answers(): void
+    {
+        config(['services.openai.key' => 'sk-test-not-a-real-key']);
+        Http::fake([
+            'api.openai.com/v1/responses' => Http::response(['output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => 'The library opens at 10.']]]]]),
+            'api.openai.com/v1/moderations' => Http::response(['results' => [['flagged' => false, 'categories' => []]]]),
+        ]);
+
+        $this->postJson('/modules/ai-chat/search', ['query' => 'When does the library open?'])->assertOk()
+            ->assertExactJson(['ok' => true, 'answer' => 'The library opens at 10.']);
+        $this->postJson('/modules/ai-chat/search', [])->assertUnprocessable();
+    }
 }

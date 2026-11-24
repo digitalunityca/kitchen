@@ -41,6 +41,7 @@ class AiChatModule extends Module
                 (string) config('services.openai.realtime_voice', 'marin'),
                 (string) ($module?->config('location') ?? 'Canada'),
                 (bool) ($module?->config('family_safe') ?? true),
+                (string) config('services.openai.search_model', 'gpt-5-mini'),
             );
         });
     }
@@ -59,6 +60,8 @@ class AiChatModule extends Module
             ->middleware('throttle:10,1')->name('session');
         $router->post('moderate', [AiChatController::class, 'moderate'])
             ->middleware('throttle:60,1')->name('moderate');
+        $router->post('search', [AiChatController::class, 'search'])
+            ->middleware('throttle:20,1')->name('search');
         $router->get('weather', [AiChatController::class, 'weather'])
             ->middleware('throttle:30,1')->name('weather');
     }

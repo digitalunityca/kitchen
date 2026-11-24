@@ -7,6 +7,7 @@ namespace App\Modules\AiChat;
 use App\Actions\AiChat\BuildWeatherToolResult;
 use App\Actions\AiChat\CreateRealtimeSession;
 use App\Actions\AiChat\ModerateText;
+use App\Actions\AiChat\SearchWeb;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,6 +21,14 @@ class AiChatController
 
         return response()->json($buildWeatherToolResult->handle(is_string($day) ? mb_substr($day, 0, 40) : null))
             ->header('Cache-Control', 'no-store');
+    }
+
+    /** POST /modules/ai-chat/search: the result of the assistant's search_web tool. */
+    public function search(Request $request, SearchWeb $searchWeb): JsonResponse
+    {
+        $data = $request->validate(['query' => ['required', 'string', 'max:300']]);
+
+        return response()->json($searchWeb->handle($data['query']))->header('Cache-Control', 'no-store');
     }
 
     /** POST /modules/ai-chat/moderate: is this transcript OK for a family kitchen? */

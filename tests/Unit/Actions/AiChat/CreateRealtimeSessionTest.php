@@ -42,6 +42,7 @@ class CreateRealtimeSessionTest extends TestCase
             && str_contains($request['session']['instructions'], 'Sainte-Catherine, Quebec')
             && str_contains($request['session']['instructions'], 'possibly a young child')
             && $request['session']['tools'][0]['name'] === 'get_weather'
+            && $request['session']['tools'][1]['name'] === 'search_web'
             && $request['session']['tool_choice'] === 'auto');
     }
 

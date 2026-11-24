@@ -18,6 +18,8 @@ class BuildAssistantInstructionsTest extends TestCase
         $this->assertStringContainsString('Celsius', $instructions);
         $this->assertStringContainsString('substitutions', $instructions);
         $this->assertStringContainsString('get_weather', $instructions);
+        $this->assertStringContainsString('search_web', $instructions);
+        $this->assertStringContainsString('any question', $instructions);
         $this->assertStringContainsString('French', $instructions);
     }
 
