@@ -125,6 +125,20 @@ A module can:
 - push CSS and JS with `@push('styles')` and `@push('scripts')` from its card,
 - listen for `dashboard:tick` (fired every second with the current `Date`) instead of running its own timer.
 
+## Weather
+
+The weather card uses [Open-Meteo](https://open-meteo.com/), which is free and needs no API key. Set the location in `.env`, then rebuild with `docker compose --profile tunnel up -d --build`:
+
+```
+WEATHER_CITY=Ottawa
+WEATHER_LAT=45.42
+WEATHER_LON=-75.69
+```
+
+It shows the current temperature and condition, today's high and low, and the next 4 hours. Forecasts are cached for 15 minutes, and the card refreshes itself from `/modules/weather/now` (JSON) at the same interval. Until the coordinates are set, or whenever Open-Meteo fails, the card shows sample data with a "Sample data" pill.
+
+In Fully Kiosk the card also writes a one-line summary to the action bar title, for example `4° Partly cloudy · H 6° L −1° · Rain likely from 3 PM`. The rain part appears when an hour later today has a precipitation probability of 50% or more. This needs Toolbars and Appearance › Show Action Bar.
+
 ## YouTube Music
 
 The card plays YouTube Music playlists through YouTube's official embedded player and draws its own controls (play/pause, next, previous, shuffle, playlist chips). Manage playlists from a phone at `/modules/youtube-music/settings`: paste a playlist or album share link.

@@ -35,7 +35,11 @@ return [
 
         App\Modules\Weather\WeatherModule::class => [
             'column' => '2', 'row' => '1',
+            // Label on the card. Forecast from Open-Meteo for these coordinates
+            // (decimal degrees, e.g. 45.42 / -75.69); empty = sample data.
             'city' => env('WEATHER_CITY', '[YOUR CITY]'),
+            'lat' => env('WEATHER_LAT'),
+            'lon' => env('WEATHER_LON'),
         ],
 
         App\Modules\Calendar\CalendarModule::class => [

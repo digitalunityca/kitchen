@@ -59,3 +59,10 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, m
 .tile-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
 .tile-title { font-size: 28px; font-weight: 600; letter-spacing: -.02em; display: block; }
 .tile-sub { font-size: 15px; color: var(--sub); }
+
+/* Shorter screens (e.g. Fully's action bar on): tighten the frame so every card keeps its last row. */
+@media (max-height: 1160px) {
+  .wrap { padding: 20px 40px 24px; gap: 16px; }
+  main { gap: 20px; }
+  .card { padding: 24px 28px; }
+}
