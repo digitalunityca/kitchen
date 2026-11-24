@@ -36,7 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [AccessGate::COOKIE]);
 
         // Posted by the script Fully injects into youtube.com, which has no CSRF token.
-        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff']);
+        // The unload report is a sendBeacon, which cannot send a CSRF token either.
+        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff', 'diagnostics/unload']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

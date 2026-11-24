@@ -46,6 +46,22 @@
   // Shared clock: modules listen for "dashboard:tick" instead of running their own timers.
   window.Dashboard = { night: @json($night) };
 
+  // Breadcrumbs for unexpected reloads: the last taps and Fully setting writes,
+  // sent to the hub when the page unloads (storage/logs: "Dashboard page unloaded").
+  (function () {
+    var recent = [], started = Date.now();
+    Dashboard.note = function (what) { recent.push(Math.round((Date.now() - started) / 1000) + 's ' + what); if (recent.length > 12) recent.shift(); };
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('[id], [data-index], [class]');
+      if (t) Dashboard.note('tap ' + (t.id || (t.className && String(t.className).split(' ')[0]) || t.tagName));
+    }, true);
+    window.addEventListener('pagehide', function () {
+      var card = document.querySelector('.ytm');
+      var report = JSON.stringify({ ranSeconds: (Date.now() - started) / 1000, playing: !!(card && card.classList.contains('playing')), visibility: document.visibilityState, recent: recent });
+      try { navigator.sendBeacon(@json(route('diagnostics.unload')), report); } catch (e) {}
+    });
+  })();
+
   // Fully's action bar title is shared. Modules set a part (with an optional
   // shorter form): "date", then "weather", then "habs". When the whole line is
   // too long, the Habs note goes first, then the weather's rain note.
@@ -64,7 +80,7 @@
       var title = candidates.filter(function (c) { return c.length <= MAX; })[0] || candidates[candidates.length - 1];
       Dashboard.title = title;
       if (!window.fully || typeof fully.setStringSetting !== 'function') return;
-      try { if (fully.getStringSetting('actionBarTitle') !== title) fully.setStringSetting('actionBarTitle', title); } catch (e) {}
+      try { if (fully.getStringSetting('actionBarTitle') !== title) { fully.setStringSetting('actionBarTitle', title); Dashboard.note('set actionBarTitle'); } } catch (e) {}
     };
   })();
   (function () {
