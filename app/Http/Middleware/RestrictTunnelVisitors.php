@@ -1,52 +1,41 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
+use App\Actions\Access\DecideTunnelAccess;
 use App\Http\Access\AccessGate;
+use App\Http\Access\TunnelAccess;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Requests that come through the Cloudflare Tunnel carry the visitor's real
- * address in CF-Connecting-IP. Visitors from HOME_HUB_ALLOWED_IPS get straight
- * in. Everyone else needs the unlock cookie from /unlock (HOME_HUB_PIN); with
- * no PIN set they get 403. Requests that reach the hub directly on the LAN
- * have no such header and are not checked.
- */
+/** Applies the tunnel access rules (App\Actions\Access\DecideTunnelAccess) to every request. */
 class RestrictTunnelVisitors
 {
+    public function __construct(
+        private readonly DecideTunnelAccess $decideTunnelAccess,
+        private readonly LoggerInterface $log,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
-        if (! AccessGate::viaTunnel($request) || AccessGate::fromHome($request)) {
-            return $next($request);
-        }
+        return match ($this->decideTunnelAccess->handle($request)) {
+            TunnelAccess::Allow => $next($request),
+            TunnelAccess::AllowUnprotected => $this->allowUnprotected($request, $next),
+            TunnelAccess::RedirectToUnlock => redirect()->to('/unlock?'.http_build_query(['to' => $request->getRequestUri()])),
+            TunnelAccess::Forbid => abort(403),
+        };
+    }
 
-        if ($request->is('unlock')) {
-            return $next($request);
-        }
+    private function allowUnprotected(Request $request, Closure $next): Response
+    {
+        $this->log->warning('Tunnel request allowed because HOME_HUB_ALLOWED_IPS and HOME_HUB_PIN are empty.', [
+            'ip' => AccessGate::clientIp($request),
+        ]);
 
-        if (AccessGate::pinEnabled()) {
-            if (AccessGate::hasValidCookie($request)) {
-                return $next($request);
-            }
-
-            if ($request->isMethod('GET') || $request->isMethod('HEAD')) {
-                return redirect()->to('/unlock?'.http_build_query(['to' => $request->getRequestUri()]));
-            }
-
-            abort(403);
-        }
-
-        if (AccessGate::allowedIps() === []) {
-            Log::warning('Tunnel request allowed because HOME_HUB_ALLOWED_IPS and HOME_HUB_PIN are empty.', [
-                'ip' => AccessGate::clientIp($request),
-            ]);
-
-            return $next($request);
-        }
-
-        abort(403);
+        return $next($request);
     }
 }

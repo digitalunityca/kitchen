@@ -31,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             RestrictTunnelVisitors::class,
         ]);
 
-        // The unlock cookie is encrypted by App\Http\Access\AccessGate itself,
+        // The unlock cookie is encrypted by App\Actions\Access\IssueUnlockCookie itself,
         // because RestrictTunnelVisitors reads it before EncryptCookies runs.
         $middleware->encryptCookies(except: [AccessGate::COOKIE]);
 

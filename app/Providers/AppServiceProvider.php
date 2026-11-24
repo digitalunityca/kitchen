@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Access\AccessGate;
+use App\Http\Access\AccessSettings;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -15,7 +16,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Not a singleton: config changes (a new PIN) apply on the next resolve.
+        $this->app->bind(AccessSettings::class, fn (): AccessSettings => AccessSettings::fromConfig());
     }
 
     /**
