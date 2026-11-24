@@ -15,5 +15,18 @@ services:
       timeout: 5s
       retries: 3
 
+  # Optional Cloudflare Tunnel: serves home-hub on a public https hostname without
+  # opening ports. Off unless started with --profile tunnel. The tunnel's public
+  # hostname in the Cloudflare dashboard must point at http://home-hub:8080.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.3
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    restart: unless-stopped
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - home-hub
+
 volumes:
   home-hub-data:

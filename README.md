@@ -31,6 +31,17 @@ For the tablet to reach it all day:
 - The Mac must not sleep (System Settings › Energy: prevent automatic sleeping).
 - Reserve the Mac's IP address on the router, since Fully's Start URL points at it.
 
+### Cloudflare Tunnel (optional)
+
+A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) serves the hub on a public https hostname without opening router ports, and keeps working when the tablet's Wi-Fi can't reach the server directly.
+
+1. In Cloudflare Zero Trust › Networks › Tunnels, create a tunnel (Cloudflared, Docker). Copy the token from the install command into `.env` as `CLOUDFLARE_TUNNEL_TOKEN=`.
+2. Add a public hostname to the tunnel with service **HTTP** and URL **`home-hub:8080`** (the container name and its internal port, not 8000).
+3. Start it: `docker compose --profile tunnel up -d`. Check with `docker compose --profile tunnel logs cloudflared` ("Registered tunnel connection").
+4. Point Fully's Start URL at `https://<your-hostname>`.
+
+The `cloudflared` service only runs with `--profile tunnel`, so plain `docker compose up -d` stays LAN-only. The hub has no login: anyone with the hostname can change its settings, so put a Cloudflare Access policy (Zero Trust › Access › Applications) in front of the hostname. Laravel trusts the proxy headers (`bootstrap/app.php`), so links come out as https.
+
 ### Moving to another server
 
 1. Copy or clone the repo to the new machine and copy `.env` over (it holds `APP_KEY`).
