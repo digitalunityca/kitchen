@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\YouTubeMusic;
 
+use App\Actions\YouTubeMusic\RecordHandoff;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Song handoff from YouTube Premium back to the card.
@@ -19,34 +23,41 @@ class HandoffController
 {
     public const ORIGIN = 'https://www.youtube.com';
 
-    public function __construct(private HandoffStore $store) {}
-
-    public function store(Request $request): Response
+    public function store(Request $request, RecordHandoff $recordHandoff): Response
     {
-        $data = json_decode($request->getContent(), true);
-        $v = is_array($data) ? ($data['v'] ?? null) : null;
-        $t = is_array($data) ? ($data['t'] ?? null) : null;
-        $list = is_array($data) ? ($data['list'] ?? null) : null;
+        $payload = json_decode($request->getContent(), true);
 
-        if (! is_string($v) || ! preg_match('/^[\w-]{11}$/', $v)
-            || ! is_numeric($t) || $t < 0 || $t > 86400
-            || ($list !== null && (! is_string($list) || ! preg_match('/^[\w-]{10,80}$/', $list)))) {
+        $payload = is_array($payload) ? $payload : [];
+
+        $validator = Validator::make($payload, [
+            'v' => ['required', 'string', 'regex:/^[\w-]{11}$/'],
+            't' => ['required', 'numeric', 'min:0', 'max:86400'],
+            'list' => ['nullable', 'string', 'regex:/^[\w-]{10,80}$/'],
+        ])->after(function ($validator) use ($payload): void {
+            // Rules skip blank strings, so "list": "" would slip through as a playlist id.
+            if (is_string($payload['list'] ?? null) && trim($payload['list']) === '') {
+                $validator->errors()->add('list', 'The list field must be a playlist id or null.');
+            }
+        });
+
+        if ($validator->fails()) {
             return response('', 422)->header('Access-Control-Allow-Origin', self::ORIGIN);
         }
 
-        $this->store->put($v, (int) $t, $list);
+        $data = $validator->validated();
+        $recordHandoff->handle($data['v'], $data['t'] + 0, $data['list'] ?? null);
 
         return response('', 204)->header('Access-Control-Allow-Origin', self::ORIGIN);
     }
 
-    public function show(): JsonResponse
+    public function show(HandoffStore $store): JsonResponse
     {
-        return response()->json($this->store->get())->header('Cache-Control', 'no-store');
+        return response()->json($store->get())->header('Cache-Control', 'no-store');
     }
 
-    public function clear(): Response
+    public function clear(HandoffStore $store): Response
     {
-        $this->store->clear();
+        $store->clear();
 
         return response('', 204);
     }

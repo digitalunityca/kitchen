@@ -54,6 +54,9 @@ class YouTubeHandoffTest extends TestCase
         $this->report(['v' => 'not-an-id', 't' => 10])->assertStatus(422);
         $this->report(['v' => 'fPO76Jlnz6c', 't' => -5])->assertStatus(422);
         $this->report(['v' => 'fPO76Jlnz6c', 't' => 10, 'list' => '<script>'])->assertStatus(422);
+        $this->report(['v' => 'fPO76Jlnz6c', 't' => 10, 'list' => ''])->assertStatus(422);
+        $this->report(['v' => 'fPO76Jlnz6c', 't' => 86401])->assertStatus(422);
+        $this->report(['v' => 'fPO76Jlnz6c'])->assertStatus(422);
         $this->call('POST', '/modules/youtube-music/handoff', [], [], [], ['HTTP_CF_CONNECTING_IP' => self::HOME], 'nope')->assertStatus(422);
 
         $this->getJson('/modules/youtube-music/handoff')->assertExactJson([]);

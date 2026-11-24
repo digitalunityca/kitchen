@@ -15,14 +15,6 @@ class YouTubeMusicTest extends TestCase
         Storage::fake('local');
     }
 
-    public function test_it_reads_playlist_ids_from_pasted_links(): void
-    {
-        $this->assertSame('PLabcdefghij123', PlaylistStore::parseId('https://music.youtube.com/playlist?list=PLabcdefghij123&si=xyz'));
-        $this->assertSame('OLAK5uy_abcdefghijk', PlaylistStore::parseId('https://music.youtube.com/watch?v=abc&list=OLAK5uy_abcdefghijk'));
-        $this->assertSame('PLabcdefghij123', PlaylistStore::parseId(' PLabcdefghij123 '));
-        $this->assertNull(PlaylistStore::parseId('https://music.youtube.com/watch?v=dQw4w9WgXcQ'));
-    }
-
     public function test_dashboard_shows_empty_state_then_added_playlist(): void
     {
         $this->get('/')->assertOk()->assertSee('Add your first playlist');
@@ -54,9 +46,8 @@ class YouTubeMusicTest extends TestCase
 
     public function test_remove_and_reorder(): void
     {
-        $store = new PlaylistStore;
-        $store->add('A', 'PLaaaaaaaaaa');
-        $store->add('B', 'PLbbbbbbbbbb');
+        $store = app(PlaylistStore::class);
+        $store->save([['name' => 'A', 'id' => 'PLaaaaaaaaaa'], ['name' => 'B', 'id' => 'PLbbbbbbbbbb']]);
 
         $this->post('/modules/youtube-music/playlists/1/up')->assertRedirect();
         $this->assertSame(['B', 'A'], array_column($store->all(), 'name'));

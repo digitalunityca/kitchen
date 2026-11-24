@@ -1,52 +1,41 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Modules\YouTubeMusic;
 
-use App\Dashboard\ModuleRegistry;
+use App\Actions\YouTubeMusic\AddPlaylist;
+use App\Actions\YouTubeMusic\MovePlaylistUp;
+use App\Actions\YouTubeMusic\RemovePlaylist;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Modules\YouTubeMusic\Requests\AddPlaylistRequest;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class SettingsController extends Controller
 {
-    public function __construct(private ModuleRegistry $modules) {}
-
-    private function store(): PlaylistStore
+    public function edit(PlaylistStore $store): View
     {
-        return $this->modules->get('youtube-music')->store();
+        return view('modules.youtube-music.settings', ['playlists' => $store->all()]);
     }
 
-    public function edit()
+    public function add(AddPlaylistRequest $request, AddPlaylist $addPlaylist): RedirectResponse
     {
-        return view('modules.youtube-music.settings', ['playlists' => $this->store()->all()]);
-    }
-
-    public function add(Request $request)
-    {
-        $data = $request->validate([
-            'link' => ['required', 'string', 'max:500'],
-            'name' => ['nullable', 'string', 'max:60'],
-        ]);
-
-        $id = PlaylistStore::parseId($data['link']);
-        if (! $id) {
-            return back()->withInput()->withErrors(['link' => 'That link has no playlist in it. Open the playlist, tap Share, Copy link, and paste that.']);
-        }
-
-        $this->store()->add($data['name'] ?: 'Playlist '.(count($this->store()->all()) + 1), $id);
+        $addPlaylist->handle((string) $request->playlistId(), $request->validated('name'));
 
         return redirect()->route('modules.youtube-music.settings')->with('status', 'Playlist added.');
     }
 
-    public function destroy(int $index)
+    public function destroy(int $index, RemovePlaylist $removePlaylist): RedirectResponse
     {
-        $this->store()->remove($index);
+        $removePlaylist->handle($index);
 
         return redirect()->route('modules.youtube-music.settings')->with('status', 'Playlist removed.');
     }
 
-    public function moveUp(int $index)
+    public function moveUp(int $index, MovePlaylistUp $movePlaylistUp): RedirectResponse
     {
-        $this->store()->moveUp($index);
+        $movePlaylistUp->handle($index);
 
         return redirect()->route('modules.youtube-music.settings');
     }

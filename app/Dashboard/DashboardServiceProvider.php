@@ -14,6 +14,10 @@ class DashboardServiceProvider extends ServiceProvider
 
     public function boot(ModuleRegistry $registry): void
     {
+        foreach ($registry->all() as $module) {
+            $module->register($this->app);
+        }
+
         if ($this->app->routesAreCached()) {
             return;
         }

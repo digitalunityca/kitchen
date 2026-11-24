@@ -3,7 +3,10 @@
 namespace App\Modules\YouTubeMusic;
 
 use App\Dashboard\Module;
+use App\Dashboard\ModuleRegistry;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Plays YouTube / YouTube Music playlists through the official YouTube
@@ -30,7 +33,7 @@ class YouTubeMusicModule extends Module
     public function data(): array
     {
         return [
-            'playlists' => $this->store()->all(),
+            'playlists' => app(PlaylistStore::class)->all(),
             'volume' => (int) $this->config('volume', 60),
             'tvUrl' => (string) $this->config('tv_url', 'https://www.youtube.com/tv'),
             'tvUserAgent' => (string) $this->config('tv_user_agent', ''),
@@ -38,9 +41,13 @@ class YouTubeMusicModule extends Module
         ];
     }
 
-    public function store(): PlaylistStore
+    public function register(Container $app): void
     {
-        return new PlaylistStore($this->config('playlists', []));
+        $app->bind(PlaylistStore::class, fn (Container $app): PlaylistStore => new PlaylistStore(
+            Storage::disk('local'),
+            (array) $app->make(ModuleRegistry::class)->get($this->key())?->config('playlists', []),
+        ));
+        $app->bind(HandoffStore::class, fn (): HandoffStore => new HandoffStore(Storage::disk('local')));
     }
 
     public function routes(Router $router): void

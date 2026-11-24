@@ -2,6 +2,7 @@
 
 namespace App\Dashboard;
 
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\View\View;
 use Illuminate\Routing\Router;
 
@@ -34,6 +35,13 @@ abstract class Module
     {
         return 'modules.'.$this->key().'.card';
     }
+
+    /**
+     * Container bindings for the module's services (stores, settings), so
+     * controllers and actions get them injected instead of asking the registry.
+     * Bind with closures that read config when resolved, not at boot.
+     */
+    public function register(Container $app): void {}
 
     /** Extra routes for this module, mounted under /modules/{key} with name prefix "modules.{key}.". */
     public function routes(Router $router): void {}
