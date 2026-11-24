@@ -40,6 +40,17 @@ class TunnelAccessTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_health_check_allows_cors_for_the_offline_page(): void
+    {
+        config(['dashboard.allowed_ips' => ['203.0.113.7']]);
+
+        $this->withHeader('CF-Connecting-IP', '203.0.113.7')->get('/up')
+            ->assertOk()
+            ->assertHeader('Access-Control-Allow-Origin', '*');
+        $this->get('/up')->assertHeader('Access-Control-Allow-Origin', '*');
+        $this->get('/')->assertHeaderMissing('Access-Control-Allow-Origin');
+    }
+
     public function test_empty_allow_list_and_no_pin_lets_everyone_in_with_a_warning(): void
     {
         config(['dashboard.allowed_ips' => []]);

@@ -37,7 +37,7 @@ body { background:#1D1D1F url('photo.jpg') center 30% / cover no-repeat; color:v
 var DASHBOARD = 'https://kitchen.casahub.cloud/';
 var $ = function (id) { return document.getElementById(id); };
 function tick() { var now = new Date(), h = now.getHours(); $('time').textContent = (h % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0'); $('date').textContent = now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' }); }
-function check() { $('msg').textContent = 'Checking connection…'; fetch(DASHBOARD + 'up?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }).then(function () { location.href = DASHBOARD; }).catch(function () { $('msg').textContent = 'Waiting for internet'; }); }
+function check() { $('msg').textContent = 'Checking connection…'; fetch(DASHBOARD + 'up?t=' + Date.now(), { cache: 'no-store' }).then(function (res) { if (res.ok) { location.href = DASHBOARD; } else { $('msg').textContent = 'Waiting for internet'; } }).catch(function () { $('msg').textContent = 'Waiting for internet'; }); }
 tick(); setInterval(tick, 1000); setInterval(check, 30000); window.addEventListener('online', check);
 </script>
 </body>

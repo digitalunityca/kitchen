@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Access\AccessGate;
+use App\Http\Middleware\AllowHealthCheckCors;
 use App\Http\Middleware\RestrictTunnelVisitors;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,7 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Through the tunnel, addresses in HOME_HUB_ALLOWED_IPS get in; everyone
         // else needs the PIN from /unlock. Every request counts towards the
         // per-IP 'global' rate limit first (App\Providers\AppServiceProvider).
+        // /up also carries a CORS header for the tablet's offline page.
         $middleware->prepend([
+            AllowHealthCheckCors::class,
             ThrottleRequests::using('global'),
             RestrictTunnelVisitors::class,
         ]);
