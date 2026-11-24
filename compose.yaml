@@ -1,0 +1,19 @@
+services:
+  home-hub:
+    build: .
+    image: home-hub
+    restart: unless-stopped
+    ports:
+      - "${HOME_HUB_PORT:-8000}:8080"
+    env_file: .env
+    volumes:
+      # Module settings (e.g. storage/app/private/youtube-music.json) survive rebuilds.
+      - home-hub-data:/var/www/html/storage/app
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  home-hub-data:

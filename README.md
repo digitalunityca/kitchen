@@ -14,6 +14,39 @@ Point Fully's Start URL at `http://<server-ip>:8000`. No database is needed yet:
 
 Add `?theme=night` or `?theme=day` to the URL to preview a look. Otherwise the dark look runs from 21:00 to 06:00 (`DASHBOARD_NIGHT_FROM` / `DASHBOARD_NIGHT_TO`).
 
+## Run with Docker
+
+```bash
+cp .env.example .env    # then set APP_KEY: php artisan key:generate, or
+                        # docker compose run --rm home-hub php artisan key:generate --show
+docker compose up -d --build
+```
+
+The image (`Dockerfile`) installs dependencies without dev packages and serves the app with nginx + PHP-FPM ([serversideup/php](https://serversideup.net/open-source/docker-php/)) on port 8080 inside the container. `compose.yaml` publishes it on port 8000 (`HOME_HUB_PORT` changes that), reads settings from `.env`, restarts it unless you stop it, and keeps `storage/app` in the named volume `home-hub-data`, so saved playlists survive rebuilds.
+
+After pulling code changes, run `docker compose up -d --build` again. Logs: `docker compose logs -f`.
+
+For the tablet to reach it all day:
+- Docker Desktop › Settings › General › **Start Docker Desktop when you sign in to your computer** must be on, so the container comes back after a reboot.
+- The Mac must not sleep (System Settings › Energy: prevent automatic sleeping).
+- Reserve the Mac's IP address on the router, since Fully's Start URL points at it.
+
+### Moving to another server
+
+1. Copy or clone the repo to the new machine and copy `.env` over (it holds `APP_KEY`).
+2. Copy the saved settings out of the old volume and into the new one:
+   ```bash
+   # old server
+   docker compose cp home-hub:/var/www/html/storage/app/private/youtube-music.json .
+   # new server
+   docker compose up -d --build
+   docker compose cp youtube-music.json home-hub:/var/www/html/storage/app/private/
+   docker compose exec -u root home-hub chown www-data:www-data storage/app/private/youtube-music.json
+   ```
+3. Check `http://<new-ip>:8000` from a phone on the same Wi-Fi.
+4. In Fully › Settings › Web Content Settings › Start URL, change the address to `http://<new-ip>:8000`.
+5. Stop the old one with `docker compose down`.
+
 ## Modules
 
 ```
