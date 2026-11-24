@@ -20,8 +20,16 @@
       <p class="eyebrow" id="dateLong"></p>
       <h1 id="greeting"></h1>
     </div>
-    <p class="muted">{{ $title }}</p>
+    <div class="header-end">
+      @stack('header-actions')
+      <p class="muted">{{ $title }}</p>
+    </div>
   </header>
+
+  {{-- Modules with 'placement' => 'ticker': slim strips between the header and the grid. --}}
+  @foreach ($modules->filter(fn ($m) => $m->placement() === 'ticker') as $module)
+    <div class="ticker-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
+  @endforeach
 
   <main>
     @foreach ($modules->filter(fn ($m) => $m->placement() === 'grid') as $module)
@@ -42,6 +50,24 @@
 <script>
   // Shared clock: modules listen for "dashboard:tick" instead of running their own timers.
   window.Dashboard = { night: @json($night) };
+
+  // Fully's action bar title is shared: modules set their part ("weather", "habs")
+  // and it shows them in that order, dropping later parts that would not fit.
+  (function () {
+    var parts = {}, order = ['weather', 'habs'], MAX = 90;
+    Dashboard.setTitlePart = function (key, text) {
+      parts[key] = text || '';
+      var keys = order.concat(Object.keys(parts).filter(function (k) { return order.indexOf(k) < 0; }));
+      var title = '';
+      keys.forEach(function (k) {
+        if (!parts[k]) return;
+        var next = title ? title + '  ·  ' + parts[k] : parts[k];
+        if (next.length <= MAX || !title) title = next;
+      });
+      if (!window.fully || typeof fully.setStringSetting !== 'function') return;
+      try { if (fully.getStringSetting('actionBarTitle') !== title) fully.setStringSetting('actionBarTitle', title); } catch (e) {}
+    };
+  })();
   (function () {
     var $ = function (id) { return document.getElementById(id); };
     function tick() {

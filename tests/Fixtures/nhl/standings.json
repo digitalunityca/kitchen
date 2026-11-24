@@ -1,0 +1,76 @@
+{
+ "standings": [
+  {
+   "teamAbbrev": {
+    "default": "MTL"
+   },
+   "teamName": {
+    "default": "Montréal Canadiens",
+    "fr": "Canadiens de Montréal"
+   },
+   "wins": 14,
+   "losses": 7,
+   "otLosses": 4,
+   "points": 32,
+   "gamesPlayed": 25,
+   "divisionName": "Atlantic",
+   "divisionSequence": 3,
+   "conferenceName": "Eastern",
+   "conferenceSequence": 5,
+   "leagueSequence": 9,
+   "streakCode": "L",
+   "streakCount": 2,
+   "l10Wins": 5,
+   "l10Losses": 4,
+   "l10OtLosses": 1
+  },
+  {
+   "teamAbbrev": {
+    "default": "BOS"
+   },
+   "teamName": {
+    "default": "Boston Bruins",
+    "fr": "Bruins de Boston"
+   },
+   "wins": 15,
+   "losses": 7,
+   "otLosses": 1,
+   "points": 31,
+   "gamesPlayed": 23,
+   "divisionName": "Atlantic",
+   "divisionSequence": 4,
+   "conferenceName": "Eastern",
+   "conferenceSequence": 6,
+   "leagueSequence": 10,
+   "streakCode": "W",
+   "streakCount": 2,
+   "l10Wins": 6,
+   "l10Losses": 4,
+   "l10OtLosses": 0
+  },
+  {
+   "teamAbbrev": {
+    "default": "TOR"
+   },
+   "teamName": {
+    "default": "Toronto Maple Leafs",
+    "fr": "Maple Leafs de Toronto"
+   },
+   "wins": 9,
+   "losses": 14,
+   "otLosses": 3,
+   "points": 21,
+   "gamesPlayed": 26,
+   "divisionName": "Atlantic",
+   "divisionSequence": 7,
+   "conferenceName": "Eastern",
+   "conferenceSequence": 12,
+   "leagueSequence": 25,
+   "streakCode": "W",
+   "streakCount": 1,
+   "l10Wins": 1,
+   "l10Losses": 8,
+   "l10OtLosses": 1
+  }
+ ]
+}

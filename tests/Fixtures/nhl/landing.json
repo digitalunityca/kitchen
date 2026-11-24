@@ -1,0 +1,165 @@
+{
+ "id": 2026020379,
+ "gameDate": "2026-11-23",
+ "venue": {
+  "default": "Centre Bell"
+ },
+ "startTimeUTC": "2026-11-24T00:30:00Z",
+ "gameState": "OFF",
+ "periodDescriptor": {
+  "number": 3,
+  "periodType": "REG",
+  "maxRegulationPeriods": 3
+ },
+ "clock": {
+  "timeRemaining": "00:00",
+  "secondsRemaining": 0,
+  "running": false,
+  "inIntermission": false
+ },
+ "awayTeam": {
+  "id": 26,
+  "commonName": {
+   "default": "Kings"
+  },
+  "placeName": {
+   "default": "Los Angeles"
+  },
+  "abbrev": "LAK",
+  "logo": "https://assets.nhle.com/logos/nhl/svg/LAK_light.svg",
+  "darkLogo": "https://assets.nhle.com/logos/nhl/svg/LAK_dark.svg",
+  "score": 2,
+  "sog": 22
+ },
+ "homeTeam": {
+  "id": 8,
+  "commonName": {
+   "default": "Canadiens"
+  },
+  "placeName": {
+   "default": "Montréal"
+  },
+  "abbrev": "MTL",
+  "logo": "https://assets.nhle.com/logos/nhl/svg/MTL_light.svg",
+  "darkLogo": "https://assets.nhle.com/logos/nhl/svg/MTL_dark.svg",
+  "score": 1,
+  "sog": 30
+ },
+ "summary": {
+  "scoring": [
+   {
+    "periodDescriptor": {
+     "number": 1,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "strength": "pp",
+      "name": {
+       "default": "A. Laferriere"
+      },
+      "teamAbbrev": {
+       "default": "LAK"
+      },
+      "goalsToDate": 5,
+      "awayScore": 1,
+      "homeScore": 0,
+      "timeInPeriod": "14:43",
+      "goalModifier": "none",
+      "isHome": false,
+      "assists": [
+       {
+        "name": {
+         "default": "Q. Byfield"
+        },
+        "assistsToDate": 3
+       },
+       {
+        "name": {
+         "default": "A. Panarin"
+        },
+        "assistsToDate": 12
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "periodDescriptor": {
+     "number": 2,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": [
+     {
+      "strength": "ev",
+      "name": {
+       "default": "A. Newhook"
+      },
+      "teamAbbrev": {
+       "default": "MTL"
+      },
+      "goalsToDate": 7,
+      "awayScore": 1,
+      "homeScore": 1,
+      "timeInPeriod": "07:28",
+      "goalModifier": "none",
+      "isHome": true,
+      "assists": [
+       {
+        "name": {
+         "default": "A. Texier"
+        },
+        "assistsToDate": 4
+       },
+       {
+        "name": {
+         "default": "D. Larkin"
+        },
+        "assistsToDate": 5
+       }
+      ]
+     },
+     {
+      "strength": "ev",
+      "name": {
+       "default": "T. Moore"
+      },
+      "teamAbbrev": {
+       "default": "LAK"
+      },
+      "goalsToDate": 4,
+      "awayScore": 2,
+      "homeScore": 1,
+      "timeInPeriod": "14:57",
+      "goalModifier": "none",
+      "isHome": false,
+      "assists": [
+       {
+        "name": {
+         "default": "E. Haula"
+        },
+        "assistsToDate": 5
+       },
+       {
+        "name": {
+         "default": "J. Armia"
+        },
+        "assistsToDate": 6
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "periodDescriptor": {
+     "number": 3,
+     "periodType": "REG",
+     "maxRegulationPeriods": 3
+    },
+    "goals": []
+   }
+  ]
+ }
+}

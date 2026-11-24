@@ -3,6 +3,7 @@
 use App\Modules\AiChat\AiChatModule;
 use App\Modules\Calendar\CalendarModule;
 use App\Modules\Clock\ClockModule;
+use App\Modules\Habs\HabsModule;
 use App\Modules\Weather\WeatherModule;
 use App\Modules\YouTubeMusic\YouTubeMusicModule;
 
@@ -68,6 +69,10 @@ return [
             'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
                 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
         ],
+
+        // Montreal Canadiens: a strip under the header on game days, and a
+        // hockey button in the header for scores and stats any day.
+        HabsModule::class => [],
 
         // "Ask ChatGPT" voice chat (OpenAI Realtime). Needs OPENAI_API_KEY in .env
         // (config/services.php). The location shapes the assistant's answers.

@@ -119,6 +119,6 @@ class WeatherTest extends TestCase
         Http::fake();
 
         $this->get('/')->assertOk()->assertSee('Sample data')->assertSee('4°');
-        Http::assertNothingSent();
+        Http::assertNotSent(fn (Request $r) => str_contains($r->url(), 'open-meteo'));
     }
 }

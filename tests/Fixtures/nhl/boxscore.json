@@ -1,0 +1,57 @@
+{
+ "id": 2026020379,
+ "playerByGameStats": {
+  "awayTeam": {
+   "goalies": [
+    {
+     "name": {
+      "default": "A. Forsberg"
+     },
+     "saves": 0,
+     "shotsAgainst": 0,
+     "goalsAgainst": 0,
+     "starter": false,
+     "toi": "00:00"
+    },
+    {
+     "name": {
+      "default": "D. Kuemper"
+     },
+     "saves": 29,
+     "shotsAgainst": 30,
+     "goalsAgainst": 1,
+     "decision": "W",
+     "starter": true,
+     "toi": "60:00",
+     "savePctg": 0.966667
+    }
+   ]
+  },
+  "homeTeam": {
+   "goalies": [
+    {
+     "name": {
+      "default": "J. Fowler"
+     },
+     "saves": 0,
+     "shotsAgainst": 0,
+     "goalsAgainst": 0,
+     "starter": false,
+     "toi": "00:00"
+    },
+    {
+     "name": {
+      "default": "J. Dobes"
+     },
+     "saves": 20,
+     "shotsAgainst": 22,
+     "goalsAgainst": 2,
+     "decision": "L",
+     "starter": true,
+     "toi": "58:07",
+     "savePctg": 0.909091
+    }
+   ]
+  }
+ }
+}

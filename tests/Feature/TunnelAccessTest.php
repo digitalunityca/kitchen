@@ -58,6 +58,6 @@ class TunnelAccessTest extends TestCase
 
         $this->withHeader('CF-Connecting-IP', '192.0.2.1')->get('/')->assertOk();
 
-        Log::shouldHaveReceived('warning')->once();
+        Log::shouldHaveReceived('warning')->withArgs(fn (string $message): bool => str_starts_with($message, 'Tunnel request allowed'))->once();
     }
 }

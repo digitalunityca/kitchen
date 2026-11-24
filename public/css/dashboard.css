@@ -21,6 +21,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 header { display: flex; justify-content: space-between; align-items: flex-end; }
 .eyebrow { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; color: var(--sub); }
 h1 { margin: 4px 0 0; font-size: 34px; font-weight: 600; letter-spacing: -.02em; }
+.header-end { display: flex; align-items: center; gap: 16px; }
+.ticker-slot { display: flex; min-width: 0; overflow: hidden; margin: -8px; padding: 8px; }
+.ticker-slot:empty { display: none; }
 .muted { margin: 0; font-size: 15px; font-weight: 500; color: var(--sub); }
 
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 24px; }
