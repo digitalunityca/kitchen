@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+  Offline page for the kitchen tablet.
+  Lives on the tablet at file:///sdcard/Download/home-hub-offline/offline.html
+  (next to photo.jpg) and is shown by Fully Kiosk when the dashboard can't load.
+  Polls https://kitchen.casahub.cloud/up every 30 s and returns to the dashboard once it answers.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kitchen</title>
+<style>
+:root { --text:#fff; --sub:rgba(255,255,255,.78); }
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; }
+body { background:#1D1D1F url('photo.jpg') center 30% / cover no-repeat; color:var(--text); font-family:-apple-system, "SF Pro Display", Roboto, system-ui, sans-serif; overflow:hidden; -webkit-user-select:none; user-select:none; }
+.card { position:fixed; top:32px; right:32px; width:360px; padding:26px 28px 24px; border-radius:28px; background:rgba(0,0,0,.34); backdrop-filter:blur(22px) saturate(140%); -webkit-backdrop-filter:blur(22px) saturate(140%); display:flex; flex-direction:column; gap:6px; }
+.status { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; color:var(--sub); margin-bottom:10px; }
+.dot { width:8px; height:8px; border-radius:50%; background:#FF9F0A; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.35; } }
+.msg { font-size:30px; font-weight:600; letter-spacing:-.02em; line-height:1.15; }
+.sub { font-size:16px; line-height:1.4; color:var(--sub); }
+.time { margin-top:18px; font-size:72px; font-weight:200; letter-spacing:-.04em; line-height:1; font-variant-numeric:tabular-nums; }
+.date { font-size:18px; font-weight:500; color:var(--sub); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="status" role="status"><span class="dot"></span><span id="msg">Waiting for internet</span></div>
+  <div class="msg">The internet went out for ice cream.</div>
+  <div class="sub">It promised to be right back. The kitchen screen returns on its own.</div>
+  <div class="time" id="time"></div>
+  <div class="date" id="date"></div>
+</div>
+<script>
+var DASHBOARD = 'https://kitchen.casahub.cloud/';
+var $ = function (id) { return document.getElementById(id); };
+function tick() { var now = new Date(), h = now.getHours(); $('time').textContent = (h % 12 || 12) + ':' + String(now.getMinutes()).padStart(2, '0'); $('date').textContent = now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' }); }
+function check() { $('msg').textContent = 'Checking connection…'; fetch(DASHBOARD + 'up?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }).then(function () { location.href = DASHBOARD; }).catch(function () { $('msg').textContent = 'Waiting for internet'; }); }
+tick(); setInterval(tick, 1000); setInterval(check, 30000); window.addEventListener('online', check);
+</script>
+</body>
+</html>

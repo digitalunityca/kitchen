@@ -75,6 +75,16 @@ Stronger options in Cloudflare, on top of the above:
 
 **Alternative: dashboard-managed tunnel (token).** Create the tunnel in Zero Trust > Networks > Tunnels, add a public hostname with service HTTP `home-hub:8080`, and replace the service's `command` and `volumes` in `compose.yaml` with `command: tunnel --no-autoupdate run` and `environment: { TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN} }`, with the token in `.env`.
 
+### Offline page on the tablet
+
+`deploy/offline/offline.html` is a standalone page (a family photo with a frosted clock card) that Fully shows when the dashboard can't load. It checks `https://kitchen.casahub.cloud/up` every 30 s and goes back to the dashboard once that answers.
+
+1. Make `deploy/offline/photo.jpg`: a 1920x1200 JPEG. It's git-ignored, as is any `IMG_*.jpg`, so family photos stay out of the repo.
+2. Push both files: `adb push deploy/offline/offline.html deploy/offline/photo.jpg /sdcard/Download/home-hub-offline/`
+3. In Fully › Settings › Web Content Settings › Custom Error URL (PLUS), enter `file:///sdcard/Download/home-hub-offline/offline.html`.
+
+Fully only switches to it on connection failures, for example when the home internet is down. When the tunnel or this server is down but the internet works, Cloudflare answers with its own Error 1033 page (HTTP 530), and Fully shows that page instead.
+
 ### Moving to another server
 
 1. Copy or clone the repo to the new machine and copy `.env` over (it holds `APP_KEY`), plus `deploy/cloudflared/credentials.json` if you use the tunnel.
