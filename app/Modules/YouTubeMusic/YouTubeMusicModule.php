@@ -11,7 +11,9 @@ use Illuminate\Routing\Router;
  *
  * Why not music.youtube.com itself: it refuses to load inside a frame, and
  * Fire OS has no Google Play, so the app needs a Play Services sideload.
- * The "Open YouTube Music" button loads the full site in Fully instead.
+ * The "Open YouTube Premium" button loads the YouTube TV app in Fully
+ * instead, switching Fully to a TV user agent only for that trip, because
+ * the IFrame Player refuses to play under a TV user agent.
  */
 class YouTubeMusicModule extends Module
 {
@@ -30,6 +32,8 @@ class YouTubeMusicModule extends Module
         return [
             'playlists' => $this->store()->all(),
             'volume' => (int) $this->config('volume', 60),
+            'tvUrl' => (string) $this->config('tv_url', 'https://www.youtube.com/tv'),
+            'tvUserAgent' => (string) $this->config('tv_user_agent', ''),
         ];
     }
 

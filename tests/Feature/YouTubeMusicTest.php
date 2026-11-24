@@ -34,6 +34,16 @@ class YouTubeMusicTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Dinner jazz')->assertSee('data-list="PLabcdefghij123"', false);
     }
 
+    public function test_premium_button_carries_the_tv_user_agent_from_config(): void
+    {
+        $ua = config('dashboard.modules.'.\App\Modules\YouTubeMusic\YouTubeMusicModule::class.'.tv_user_agent');
+        $this->assertStringContainsString('SMART-TV', $ua);
+
+        $this->get('/')->assertOk()
+            ->assertSee('href="https://www.youtube.com/tv"', false)
+            ->assertSee('data-tv-ua="'.e($ua).'"', false);
+    }
+
     public function test_it_rejects_links_without_a_playlist(): void
     {
         $this->from('/modules/youtube-music/settings')

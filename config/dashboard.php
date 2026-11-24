@@ -41,6 +41,12 @@ return [
                 // ['name' => 'Kitchen mix', 'id' => 'PLxxxxxxxx'],
             ],
             'volume' => 60,
+            // "Open YouTube Premium" loads the YouTube TV app (youtube.com/tv), which
+            // only serves TV browsers. In Fully Kiosk the button switches Fully's user
+            // agent to this one for the trip; the dashboard switches it back on return.
+            'tv_url' => 'https://www.youtube.com/tv',
+            'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
+                'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
         ],
 
         // The AI Chat tile, off until the chat service exists. Turn it on and

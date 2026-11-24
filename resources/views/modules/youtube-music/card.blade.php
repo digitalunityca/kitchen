@@ -11,7 +11,7 @@
   <div class="ytm-side">
     <div class="row">
       <p class="label"><span class="ytm-dot"></span>YouTube Music</p>
-      <a class="pill" href="https://www.youtube.com/tv" aria-label="Open YouTube Premium (the YouTube TV app)">Open YouTube Premium ↗</a>
+      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">Open YouTube Premium ↗</a>
     </div>
 
     @if (count($playlists))
@@ -95,10 +95,43 @@
 </style>
 @endpush
 
+@push('scripts')
+<script>
+// Fully Kiosk: the YouTube TV app needs a TV user agent, but the IFrame Player
+// above won't play under one. So "Open YouTube Premium" switches Fully to the TV
+// user agent, and the dashboard switches it back whenever it loads.
+// Fully settings: userAgent "0" = default, "custom" = use customUserAgent.
+window.ytmRestoreUserAgent = (function () {
+  var link = document.getElementById('ytm-premium'), tvUa = link.dataset.tvUa;
+  if (!window.fully || !tvUa) return false;
+
+  link.addEventListener('click', function (e) {
+    e.preventDefault();
+    fully.setStringSetting('customUserAgent', tvUa);
+    fully.setStringSetting('userAgent', 'custom');
+    location.href = link.href;
+  });
+
+  if (fully.getStringSetting('userAgent') === 'custom' && fully.getStringSetting('customUserAgent') === tvUa) {
+    fully.setStringSetting('userAgent', '0');
+  }
+  // This page itself was loaded with the TV agent: reload once under the normal one.
+  // The timestamp guard stops a reload loop if Fully ever ignores the change.
+  if (navigator.userAgent === tvUa) {
+    var last = 0;
+    try { last = parseInt(sessionStorage.getItem('ytm.uaReload'), 10) || 0; sessionStorage.setItem('ytm.uaReload', Date.now()); } catch (err) {}
+    if (Date.now() - last > 15000) { location.reload(); return true; }
+  }
+  return false;
+})();
+</script>
+@endpush
+
 @if (count($playlists))
 @push('scripts')
 <script>
 (function () {
+  if (window.ytmRestoreUserAgent) return; // reloading under the normal user agent
   var card = document.querySelector('.ytm'), $ = function (id) { return document.getElementById(id); };
   var chips = [].slice.call(document.querySelectorAll('.ytm-chip'));
   var player = null, ready = false, current = 0, shuffle = false, toastTimer;
