@@ -17,6 +17,10 @@ return [
     // Requests made directly on the LAN are never checked.
     'allowed_ips' => array_values(array_filter(array_map('trim', explode(',', (string) env('HOME_HUB_ALLOWED_IPS', ''))))),
 
+    // Tunnel visitors outside allowed_ips can unlock the hub with this numeric
+    // PIN (README > Access). Empty = they get 403. Changing it signs everyone out.
+    'pin' => (string) env('HOME_HUB_PIN', ''),
+
     // Dark look between these hours (24h clock, tablet's local time).
     'night' => [
         'from' => (int) env('DASHBOARD_NIGHT_FROM', 21),

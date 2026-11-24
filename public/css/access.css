@@ -1,0 +1,42 @@
+/* PIN and limit pages: same look as dashboard.css, dark when the device is. */
+:root {
+  --bg: #F5F5F7; --card: #FFFFFF; --text: #1D1D1F; --sub: #6E6E73; --line: #E8E8ED;
+  --accent: #0071E3; --accent-hover: #0077ED; --fill: #F2F2F4; --error: #D70015;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000; --card: #1C1C1E; --text: #F5F5F7; --sub: #A1A1A6; --line: #2C2C2E;
+    --accent: #0A84FF; --accent-hover: #409CFF; --fill: #2C2C2E; --error: #FF453A; --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, sans-serif;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+  -webkit-font-smoothing: antialiased;
+}
+.card {
+  width: 100%; max-width: 380px; background: var(--card); border-radius: 24px; box-shadow: var(--shadow);
+  padding: 40px 32px 32px; text-align: center;
+}
+.icon {
+  width: 56px; height: 56px; margin: 0 auto 20px; border-radius: 16px; background: var(--fill);
+  display: flex; align-items: center; justify-content: center; color: var(--accent);
+}
+h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+p { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: var(--sub); }
+form { margin-top: 28px; display: flex; flex-direction: column; gap: 12px; }
+input {
+  width: 100%; font: inherit; font-size: 28px; font-weight: 500; letter-spacing: .4em; text-align: center;
+  padding: 14px 16px 14px calc(16px + .4em); border-radius: 14px; border: 1px solid var(--line);
+  background: var(--fill); color: var(--text); outline: none; -webkit-text-security: disc;
+}
+input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0, 113, 227, .18); }
+button {
+  font: inherit; font-size: 17px; font-weight: 500; color: #fff; background: var(--accent); border: 0;
+  border-radius: 14px; padding: 14px; cursor: pointer;
+}
+button:hover { background: var(--accent-hover); }
+.error { color: var(--error); font-size: 14px; margin: 0; }

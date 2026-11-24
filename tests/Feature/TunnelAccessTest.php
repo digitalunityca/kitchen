@@ -12,6 +12,7 @@ class TunnelAccessTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        config(['dashboard.pin' => '']);
     }
 
     public function test_lan_requests_are_not_checked(): void
@@ -39,7 +40,7 @@ class TunnelAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_empty_allow_list_lets_everyone_in_with_a_warning(): void
+    public function test_empty_allow_list_and_no_pin_lets_everyone_in_with_a_warning(): void
     {
         config(['dashboard.allowed_ips' => []]);
         Log::spy();

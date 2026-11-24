@@ -49,14 +49,29 @@ Then in `.env`:
 ```
 HOME_HUB_TUNNEL_ID=<the ID printed by "tunnel create">
 HOME_HUB_ALLOWED_IPS=<your home's public IP, from: curl -s https://api.ipify.org>
+HOME_HUB_PIN=<digits for opening the hub away from home; see Access>
 APP_URL=https://kitchen.<your-domain>
 ```
 
 Start it with `docker compose --profile tunnel up -d --build`, check `docker compose --profile tunnel logs cloudflared` for "Registered tunnel connection", and point Fully's Start URL at `https://kitchen.<your-domain>`.
 
 - `deploy/cloudflared/config.yml` sends every hostname routed to the tunnel to `http://home-hub:8080` (the container's internal port, not 8000). `credentials.json` next to it is secret and gitignored; copy it along with `.env` when moving servers.
-- The hub has no login. Requests through the tunnel carry `CF-Connecting-IP`, and `RestrictTunnelVisitors` lets in only the addresses in `HOME_HUB_ALLOWED_IPS` (IPs or CIDR ranges, comma-separated); everyone else gets 403. If it's empty, anyone with the hostname gets in and a warning is logged. Requests on the LAN aren't checked. If your ISP changes the home IP, update the variable and run `docker compose up -d`. A Cloudflare Access policy (Zero Trust > Access > Applications) on the hostname is a stronger option.
+- Who gets in through the tunnel is covered in [Access](#access) below.
 - The `cloudflared` service only runs with `--profile tunnel`, so plain `docker compose up -d` stays LAN-only. Laravel trusts the proxy headers (`bootstrap/app.php`), so links come out as https.
+
+#### Access
+
+Requests through the tunnel carry the visitor's address in `CF-Connecting-IP`; `RestrictTunnelVisitors` (`app/Http/Middleware`) decides what happens. Requests made directly on the LAN have no such header and aren't checked.
+
+- **Home IP**: addresses in `HOME_HUB_ALLOWED_IPS` (IPs or CIDR ranges, comma-separated) get straight in, with no PIN. That's how the tablet loads the hostname. If your ISP changes the home IP, update the variable and run `docker compose --profile tunnel up -d`.
+- **PIN**: anyone else is sent to `/unlock` and asked for `HOME_HUB_PIN` (digits). The right PIN sets an encrypted, HttpOnly, Secure, SameSite=Lax cookie for 30 days and returns to the page they asked for. The cookie is tied to the PIN, so changing `HOME_HUB_PIN` signs everyone out. Writes (POST etc.) without the cookie get 403.
+- **No PIN set**: visitors outside the home IP get 403 (`/unlock` says it's only available from home). If both `HOME_HUB_ALLOWED_IPS` and `HOME_HUB_PIN` are empty, anyone with the hostname gets in and a warning is logged.
+- **Rate limits** (keyed on `CF-Connecting-IP`, else the request IP; `app/Providers/AppServiceProvider.php`): every request counts towards 120 per minute per IP; `POST /unlock` allows 5 per minute; 10 wrong PINs lock that IP out of `/unlock` for 15 minutes. Over the limit, visitors get a 429 page.
+
+Stronger options in Cloudflare, on top of the above:
+
+- A rate-limiting rule (Security > WAF > Rate limiting rules), e.g. path equals `/unlock` and method `POST`, 5 requests per minute per IP, action Block, stops guessing before it reaches the hub.
+- Cloudflare Access (Zero Trust > Access > Applications, self-hosted, hostname `kitchen.<your-domain>`) with a policy allowing your email addresses through the One-time PIN login, plus a Bypass policy for the home IP so the tablet keeps working without a login.
 
 **Alternative: dashboard-managed tunnel (token).** Create the tunnel in Zero Trust > Networks > Tunnels, add a public hostname with service HTTP `home-hub:8080`, and replace the service's `command` and `volumes` in `compose.yaml` with `command: tunnel --no-autoupdate run` and `environment: { TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN} }`, with the token in `.env`.
 
