@@ -41,7 +41,10 @@
 
     // The summary goes first in Fully's action bar title (Dashboard.setTitlePart).
     function setTitle() {
-      if (window.Dashboard && Dashboard.setTitlePart) Dashboard.setTitlePart('weather', weather.real ? weather.summary : '');
+      if (!window.Dashboard || !Dashboard.setTitlePart) return;
+      var full = weather.real ? weather.summary : '';
+      // The short form drops the rain note ("⛅ 4° Partly cloudy · H 6° L −1°").
+      Dashboard.setTitlePart('weather', full, full.split(' · ').slice(0, 2).join(' · '));
     }
 
     function render(w) {

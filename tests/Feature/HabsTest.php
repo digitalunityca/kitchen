@@ -135,10 +135,12 @@ class HabsTest extends TestCase
             ->assertSee('9:30 PM · Ball Arena · TV TSN2, RDS');
     }
 
-    public function test_the_header_button_is_the_canadiens_logo(): void
+    public function test_the_side_menu_holds_the_canadiens_logo_then_the_chatgpt_mic(): void
     {
         $this->get('/')->assertOk()
-            ->assertSeeInOrder(['id="habs-open"', 'MTL_light.svg', 'MTL_dark.svg'], false);
+            ->assertSeeInOrder(['<nav class="side-menu"', 'id="habs-open"', 'MTL_light.svg', 'MTL_dark.svg', 'id="aic-fab"', '</nav>'], false)
+            ->assertDontSee('<p class="muted">', false)
+            ->assertDontSee('<header>', false);
     }
 
     public function test_the_stats_sheet_says_so_when_the_nhl_is_unreachable(): void

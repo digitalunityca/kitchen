@@ -1,8 +1,8 @@
 {{--
-  "Ask ChatGPT": a blue mic button floating bottom right. Tap to talk, tap again
+  "Ask ChatGPT": a blue mic button in the side menu. Tap to talk, tap again
   to end. The button itself shows the conversation: a spinner while connecting,
   rings that follow your voice while you speak, a glow that follows ChatGPT's
-  voice while it answers. The latest caption appears in a bubble above it.
+  voice while it answers. The latest caption appears in a bubble to its left.
 --}}
 <div class="aic" id="aic" data-state="idle"
   @if ($configured) data-session="{{ route('modules.ai-chat.session') }}" @if ($familySafe) data-moderate="{{ route('modules.ai-chat.moderate') }}" @endif data-weather="{{ route('modules.ai-chat.weather') }}" data-search="{{ route('modules.ai-chat.search') }}" data-csrf="{{ csrf_token() }}" @endif>
@@ -58,14 +58,14 @@
 
   /* Caption bubble: grows with the answer up to 460 px wide and half the screen tall, then scrolls to the newest words. */
   .aic-bubble {
-    position: absolute; right: 44px; bottom: 74px; margin: 0; width: max-content; max-width: min(460px, calc(100vw - 120px));
+    position: absolute; right: calc(100% + 26px); top: 50%; margin: 0; width: max-content; max-width: min(460px, calc(100vw - 160px));
     max-height: 50vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 12px 16px;
-    border-radius: 18px 18px 4px 18px; background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 6px 20px rgba(0,0,0,.08);
+    border-radius: 18px 4px 18px 18px; background: var(--card); color: var(--text); box-shadow: var(--shadow), 0 6px 20px rgba(0,0,0,.08);
     font-size: 17px; line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere;
-    opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease; pointer-events: none;
+    opacity: 0; transform: translate(6px, -50%); transition: opacity .35s ease, transform .35s ease; pointer-events: none;
   }
   .aic-bubble::-webkit-scrollbar { display: none; }
-  .aic-bubble.show { opacity: 1; transform: none; }
+  .aic-bubble.show { opacity: 1; transform: translate(0, -50%); }
   .aic-bubble small { position: sticky; top: -12px; display: block; margin: -12px -16px 2px; padding: 12px 16px 4px; background: inherit; border-radius: 18px 18px 0 0; font-size: 12px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .04em; }
   body.night .aic-bubble { background: #2C2C2E; }
 

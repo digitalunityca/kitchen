@@ -17,11 +17,9 @@ body {
 }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 
-.wrap { height: 100vh; padding: 36px 40px 40px; display: flex; flex-direction: column; gap: 24px; }
-header { display: flex; justify-content: space-between; align-items: flex-end; }
+.wrap { height: 100vh; padding: 28px 124px 28px 40px; display: flex; flex-direction: column; gap: 24px; }
 .eyebrow { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; color: var(--sub); }
 h1 { margin: 4px 0 0; font-size: 34px; font-weight: 600; letter-spacing: -.02em; }
-.header-end { display: flex; align-items: center; gap: 16px; }
 .ticker-slot { display: flex; min-width: 0; overflow: hidden; margin: -8px; padding: 8px; }
 .ticker-slot:empty { display: none; }
 .muted { margin: 0; font-size: 15px; font-weight: 500; color: var(--sub); }
@@ -58,9 +56,16 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, m
 .ev b { display: block; font-size: 17px; font-weight: 500; }
 .ev small { font-size: 14px; color: var(--sub); }
 
-/* Floating buttons (bottom right, above the cards; clear of Fully's left-edge swipe) */
-.floating { position: fixed; right: 24px; bottom: 24px; z-index: 40; display: flex; flex-direction: column; gap: 16px; }
-.floating:empty { display: none; }
+/* Side menu: a frosted pill on the right, vertically centred, holding round buttons. */
+.side-menu {
+  position: fixed; right: 20px; top: 50%; transform: translateY(-50%); z-index: 40;
+  display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 10px;
+  border-radius: 999px; background: rgba(255,255,255,.62); box-shadow: 0 6px 24px rgba(0,0,0,.10);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6);
+}
+body.night .side-menu { background: rgba(44,44,46,.62); box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 6px 24px rgba(0,0,0,.5); }
+.side-menu:empty { display: none; }
+.menu-slot { position: relative; display: flex; }
 
 /* Link tiles */
 .tile-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
@@ -69,7 +74,7 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, m
 
 /* Shorter screens (e.g. Fully's action bar on): tighten the frame so every card keeps its last row. */
 @media (max-height: 1160px) {
-  .wrap { padding: 20px 40px 24px; gap: 16px; }
+  .wrap { padding: 24px 120px 24px 36px; gap: 16px; }
   main { gap: 20px; }
   .card { padding: 24px 28px; }
 }

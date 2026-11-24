@@ -14,19 +14,9 @@
 @stack('styles')
 </head>
 <body>
+{{-- No header: the day and date are in Fully's top bar, the greeting is on the clock card. --}}
 <div class="wrap">
-  <header>
-    <div>
-      <p class="eyebrow" id="dateLong"></p>
-      <h1 id="greeting"></h1>
-    </div>
-    <div class="header-end">
-      @stack('header-actions')
-      <p class="muted">{{ $title }}</p>
-    </div>
-  </header>
-
-  {{-- Modules with 'placement' => 'ticker': slim strips between the header and the grid. --}}
+  {{-- Modules with 'placement' => 'ticker': slim strips above the grid. --}}
   @foreach ($modules->filter(fn ($m) => $m->placement() === 'ticker') as $module)
     <div class="ticker-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
   @endforeach
@@ -40,44 +30,53 @@
   </main>
 </div>
 
-{{-- Modules with 'placement' => 'floating': round buttons above the cards, bottom right. --}}
-<div class="floating">
-  @foreach ($modules->filter(fn ($m) => $m->placement() === 'floating') as $module)
-    <div class="floating-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
+{{--
+  The side menu: a frosted pill on the right holding round buttons. Modules add
+  a button either with 'placement' => 'menu' (their whole card is the button) or
+  by pushing to the 'menu-items' stack alongside their normal card.
+--}}
+<nav class="side-menu" aria-label="Menu">
+  @stack('menu-items')
+  @foreach ($modules->filter(fn ($m) => $m->placement() === 'menu') as $module)
+    <div class="menu-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
   @endforeach
-</div>
+</nav>
 
 <script>
   // Shared clock: modules listen for "dashboard:tick" instead of running their own timers.
   window.Dashboard = { night: @json($night) };
 
-  // Fully's action bar title is shared: modules set their part ("weather", "habs")
-  // and it shows them in that order, dropping later parts that would not fit.
+  // Fully's action bar title is shared. Modules set a part (with an optional
+  // shorter form): "date", then "weather", then "habs". When the whole line is
+  // too long, the Habs note goes first, then the weather's rain note.
   (function () {
-    var parts = {}, order = ['weather', 'habs'], MAX = 90;
-    Dashboard.setTitlePart = function (key, text) {
-      parts[key] = text || '';
-      var keys = order.concat(Object.keys(parts).filter(function (k) { return order.indexOf(k) < 0; }));
-      var title = '';
-      keys.forEach(function (k) {
-        if (!parts[k]) return;
-        var next = title ? title + '  ·  ' + parts[k] : parts[k];
-        if (next.length <= MAX || !title) title = next;
-      });
+    var parts = {}, MAX = 96;
+    function join(list) { return list.filter(Boolean).join('  ·  '); }
+    Dashboard.setTitlePart = function (key, text, shortText) {
+      parts[key] = { full: text || '', short: shortText || text || '' };
+      var p = function (k, form) { return parts[k] ? parts[k][form] : ''; };
+      var candidates = [
+        join([p('date', 'full'), p('weather', 'full'), p('habs', 'full')]),
+        join([p('date', 'full'), p('weather', 'full')]),
+        join([p('date', 'full'), p('weather', 'short')]),
+        join([p('date', 'full')]),
+      ];
+      var title = candidates.filter(function (c) { return c.length <= MAX; })[0] || candidates[candidates.length - 1];
+      Dashboard.title = title;
       if (!window.fully || typeof fully.setStringSetting !== 'function') return;
       try { if (fully.getStringSetting('actionBarTitle') !== title) fully.setStringSetting('actionBarTitle', title); } catch (e) {}
     };
   })();
   (function () {
-    var $ = function (id) { return document.getElementById(id); };
+    var lastDate = '';
     function tick() {
       var now = new Date(), h = now.getHours(), n = Dashboard.night;
       var isNight = n.from > n.to ? (h >= n.from || h < n.to) : (h >= n.from && h < n.to);
       if (/[?&]theme=night/.test(location.search)) isNight = true;
       if (/[?&]theme=day/.test(location.search)) isNight = false;
       document.body.classList.toggle('night', isNight);
-      $('greeting').textContent = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-      $('dateLong').textContent = now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
+      var date = now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
+      if (date !== lastDate) { lastDate = date; Dashboard.setTitlePart('date', date); } // also rolls over at midnight
       document.dispatchEvent(new CustomEvent('dashboard:tick', { detail: now }));
     }
     document.addEventListener('DOMContentLoaded', function () { tick(); setInterval(tick, 1000); });

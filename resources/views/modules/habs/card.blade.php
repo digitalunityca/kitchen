@@ -19,8 +19,8 @@
   </div>
 </div>
 
-@push('header-actions')
-<button type="button" class="habs-open" id="habs-open" aria-label="Canadiens scores and stats">
+@push('menu-items')
+<button type="button" class="habs-open menu-button" id="habs-open" aria-label="Canadiens scores and stats">
   <img class="habs-logo-light" src="https://assets.nhle.com/logos/nhl/svg/MTL_light.svg" alt="" width="36" height="36">
   <img class="habs-logo-dark" src="https://assets.nhle.com/logos/nhl/svg/MTL_dark.svg" alt="" width="36" height="36">
 </button>
@@ -38,7 +38,7 @@
 
   /* The strip: slim, white, scrolls slowly; static when reduced motion is on. */
   .habs-strip {
-    width: 100%; max-width: 100%; min-width: 0; height: 48px; margin-top: -8px; display: flex; contain: paint; align-items: center; overflow: hidden; border-radius: 14px;
+    width: 100%; max-width: 100%; min-width: 0; height: 48px; display: flex; contain: paint; align-items: center; overflow: hidden; border-radius: 14px;
     background: var(--card); box-shadow: var(--shadow); color: var(--text); font-size: 17px; text-align: left;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
             mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
@@ -57,9 +57,9 @@
   @keyframes habs-scroll { to { transform: translateX(-50%); } }
   @keyframes habs-blink { 50% { opacity: .3; } }
 
-  .habs-open { width: 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--card); box-shadow: var(--shadow); transition: transform .15s ease; }
+  .habs-open { width: 64px; height: 64px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--card); box-shadow: var(--shadow); transition: transform .15s ease; }
   .habs-open:active { transform: scale(.94); }
-  .habs-open img { width: 36px; height: 36px; object-fit: contain; }
+  .habs-open img { width: 42px; height: 42px; object-fit: contain; }
 
   /* The stats sheet over the dashboard. */
   .habs-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 40px; animation: habs-fade .2s ease-out; }

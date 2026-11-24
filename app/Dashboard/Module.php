@@ -64,7 +64,7 @@ abstract class Module
         return $this->config['row'] ?? 'auto';
     }
 
-    /** "grid" for a card on the grid, "floating" for a round button in the bottom-right corner. */
+    /** "grid" for a card on the grid, "ticker" for a strip above it, "menu" for a button in the side menu. */
     public function placement(): string
     {
         return $this->config['placement'] ?? 'grid';

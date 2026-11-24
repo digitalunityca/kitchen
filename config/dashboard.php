@@ -13,7 +13,7 @@ use App\Modules\YouTubeMusic\YouTubeMusicModule;
 | Modules render in the order listed. The grid is 3 columns x 2 rows; set
 | 'column' and 'row' with CSS grid values (e.g. '1 / span 2') to place a card.
 | Set 'enabled' => false to hide a module without deleting it, or
-| 'placement' => 'floating' to show it as a corner button instead of a card.
+| 'placement' => 'menu' to show it as a button in the side menu instead of a card.
 */
 
 return [
@@ -76,7 +76,7 @@ return [
 
         // "Ask ChatGPT" voice chat (OpenAI Realtime). Needs OPENAI_API_KEY in .env
         // (config/services.php). The location shapes the assistant's answers.
-        // Shown as a blue mic button floating in the bottom-right corner.
+        // A blue mic button in the side menu on the right.
         AiChatModule::class => [
             'location' => env('AI_CHAT_LOCATION', 'Sainte-Catherine, Quebec'),
             // Children use the tablet: kid-safe persona rules plus an OpenAI
