@@ -21,7 +21,8 @@
 
 @push('header-actions')
 <button type="button" class="habs-open" id="habs-open" aria-label="Canadiens scores and stats">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3l6.5 12.5a2 2 0 0 0 1.8 1h2.2"/><path d="M20 3l-4 7.7"/><ellipse cx="17" cy="19" rx="3.5" ry="1.6"/></svg>
+  <img class="habs-logo-light" src="https://assets.nhle.com/logos/nhl/svg/MTL_light.svg" alt="" width="36" height="36">
+  <img class="habs-logo-dark" src="https://assets.nhle.com/logos/nhl/svg/MTL_dark.svg" alt="" width="36" height="36">
 </button>
 @endpush
 
@@ -56,14 +57,16 @@
   @keyframes habs-scroll { to { transform: translateX(-50%); } }
   @keyframes habs-blink { 50% { opacity: .3; } }
 
-  .habs-open { width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--card); color: #AF1E2D; box-shadow: var(--shadow); }
-  body.night .habs-open { color: #FF6B6B; }
+  .habs-open { width: 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--card); box-shadow: var(--shadow); transition: transform .15s ease; }
+  .habs-open:active { transform: scale(.94); }
+  .habs-open img { width: 36px; height: 36px; object-fit: contain; }
 
   /* The stats sheet over the dashboard. */
   .habs-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 40px; animation: habs-fade .2s ease-out; }
   .habs-overlay[hidden] { display: none; }
   @keyframes habs-fade { from { opacity: 0; } }
   .habs-sheet { width: min(1180px, 100%); max-height: 100%; overflow: auto; background: var(--bg); border-radius: 28px; padding: 24px 28px 28px; box-shadow: 0 30px 80px rgba(0,0,0,.3); }
+  body.night .habs-sheet { background: #0E0E10; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.6); }
   .habs-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .habs-sheet-title { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
   .habs-close { width: 48px; height: 48px; border-radius: 999px; background: var(--fill); display: flex; align-items: center; justify-content: center; }
@@ -97,6 +100,36 @@
   .habs-chip.habs-w b { background: #34C759; } .habs-chip.habs-l b { background: #8E8E93; }
   .habs-next { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
   .habs-next small { display: block; color: var(--sub); font-size: 13px; }
+
+  /* Tabs: Apple-style segmented control. */
+  .habs-segmented { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--fill); gap: 2px; margin-bottom: 16px; }
+  .habs-segmented button { padding: 8px 22px; border-radius: 9px; font-size: 15px; font-weight: 500; color: var(--sub); }
+  .habs-segmented button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .habs-segmented.habs-small { margin: 0; }
+  .habs-segmented.habs-small button { padding: 6px 14px; font-size: 14px; }
+  .habs-tab[hidden] { display: none; }
+  .habs-tab[data-panel="game"] .habs-panel { max-width: none; }
+  .habs-standings-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .habs-standings { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; }
+  .habs-standings[hidden] { display: none; }
+  .habs-standings th { font-size: 12px; color: var(--sub); font-weight: 600; padding: 6px; text-align: center; }
+  .habs-standings td { padding: 5px 6px; text-align: center; border-top: 1px solid var(--line); }
+  .habs-standings td:first-child { color: var(--sub); width: 32px; }
+  .habs-standings .habs-cell-logo { width: 34px; padding: 3px 0; }
+  .habs-standings .habs-cell-logo .habs-logo { width: 28px; height: 28px; vertical-align: middle; }
+  .habs-standings .habs-team-name { text-align: left; font-weight: 500; }
+  .habs-standings tr.habs-us td { background: rgba(175, 30, 45, .08); }
+  body.night .habs-standings tr.habs-us td { background: rgba(255, 107, 107, .14); }
+  .habs-standings tr.habs-us .habs-team-name { color: #AF1E2D; font-weight: 700; }
+  body.night .habs-standings tr.habs-us .habs-team-name { color: #FF6B6B; }
+  .habs-standings tr.habs-cut td { border-bottom: 2px dashed var(--accent); }
+  .habs-cut-note { font-size: 13px; margin-top: 10px; }
+  .habs-even { grid-template-columns: 1fr 1fr; }
+  .habs-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .habs-row:first-of-type { border-top: 0; }
+  .habs-date { width: 92px; color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .habs-row-main { flex: 1; font-weight: 500; }
+  .habs-row-main small { display: block; color: var(--sub); font-weight: 400; font-size: 13px; }
 
   @media (prefers-reduced-motion: reduce) {
     .habs-track { animation: none; }
@@ -132,10 +165,39 @@
     body.innerHTML = '<p class="habs-muted">Loading…</p>';
     fetch(root.dataset.sheet, { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then(function (html) { body.innerHTML = html; })
+      .then(function (html) { body.innerHTML = html; setupTabs(); })
       .catch(function () { body.innerHTML = '<p class="habs-empty">Can’t reach the NHL right now.</p>'; });
   }
   function close() { overlay.hidden = true; clearTimeout(idleTimer); }
+
+  // Tabs remember the last choice for this browser session; otherwise Game on
+  // game days and Standings on other days (data-default from the server).
+  function remember(key, value) { try { if (value === undefined) return sessionStorage.getItem(key); sessionStorage.setItem(key, value); } catch (e) { return null; } }
+  function select(group, attr, value) {
+    group.querySelectorAll('[' + attr + ']').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute(attr) === value ? 'true' : 'false'); });
+  }
+  function showTab(name) {
+    var tabs = body.querySelector('.habs-tabs'); if (!tabs) return;
+    select(tabs.querySelector('.habs-segmented'), 'data-tab', name);
+    tabs.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.dataset.panel !== name; });
+    remember('habs-tab', name);
+  }
+  function showTable(scope) {
+    var head = body.querySelector('.habs-standings-head'); if (!head) return;
+    select(head, 'data-table', scope);
+    body.querySelectorAll('.habs-standings').forEach(function (t) { t.hidden = t.dataset.scope !== scope; });
+    remember('habs-table', scope);
+  }
+  function setupTabs() {
+    var tabs = body.querySelector('.habs-tabs'); if (!tabs) return;
+    showTab(remember('habs-tab') || tabs.dataset.default);
+    showTable(remember('habs-table') || 'division');
+  }
+  body.addEventListener('click', function (e) {
+    var tab = e.target.closest('[data-tab]'), table = e.target.closest('[data-table]');
+    if (tab) showTab(tab.dataset.tab);
+    if (table) showTable(table.dataset.table);
+  });
 
   document.addEventListener('click', function (e) {
     if (e.target.closest('#habs-strip') || e.target.closest('#habs-open')) open();

@@ -68,26 +68,77 @@ class HabsTest extends TestCase
         $this->getJson('/modules/habs/ticker?habs=upcoming')->assertOk()->assertJsonPath('title', '🏒 Habs 7 PM');
     }
 
-    public function test_the_stats_sheet_shows_the_latest_game_standing_last_five_and_next_games(): void
+    private function withGameAndStandings(): void
     {
-        $this->at('2026-11-24 15:00');
         $this->nhl += [
             'gamecenter/2026020379/landing' => $this->nhlFixture('landing'),
             'gamecenter/2026020379/right-rail' => $this->nhlFixture('right-rail'),
             'gamecenter/2026020379/boxscore' => $this->nhlFixture('boxscore'),
             'standings/now' => $this->nhlFixture('standings'),
         ];
+    }
+
+    public function test_the_stats_sheet_game_tab_shows_the_latest_game(): void
+    {
+        $this->at('2026-11-24 15:00');
+        $this->withGameAndStandings();
 
         $this->get('/modules/habs/sheet')->assertOk()
+            ->assertSeeInOrder(['data-tab="game"', 'data-tab="standings"', 'data-tab="schedule"'], false)
             ->assertSee('Final')
             ->assertSee('A. Newhook')
             ->assertSee('Q. Byfield, A. Panarin')
-            ->assertSee('J. Dobes</b> 20/22 saves', false)
+            ->assertSee('J. Dobes</b> 20/22 saves', false);
+    }
+
+    public function test_the_default_tab_is_game_on_game_days_and_standings_otherwise(): void
+    {
+        $this->withGameAndStandings();
+
+        $this->at('2026-11-24 15:00');
+        $this->get('/modules/habs/sheet')->assertSee('data-default="standings"', false);
+
+        $this->at('2026-11-25 12:00');
+        $this->get('/modules/habs/sheet')->assertSee('data-default="game"', false);
+    }
+
+    public function test_the_standings_tab_has_division_conference_and_league_tables_with_the_habs_highlighted(): void
+    {
+        $this->at('2026-11-24 15:00');
+        $this->withGameAndStandings();
+
+        $response = $this->get('/modules/habs/sheet')->assertOk()
             ->assertSee('14-7-4')
-            ->assertSee('Atlantic #3 · Eastern #5')
+            ->assertSee('data-table="division">Atlantic', false)
+            ->assertSee('data-table="conference">Eastern', false)
+            ->assertSee('data-scope="league"', false)
+            ->assertSee('https://assets.nhle.com/logos/nhl/svg/OTT_light.svg', false);
+
+        $division = (string) str($response->getContent())->betweenFirst('data-scope="division"', '</table>');
+        $this->assertSame(8, substr_count($division, '<tr class='), 'all eight Atlantic teams');
+        $this->assertSame(1, substr_count($division, 'habs-us'));
+        $this->assertMatchesRegularExpression('/<tr class="habs-us habs-cut">\s*<td>3<\/td>/', $division, 'the Canadiens are 3rd, right on the playoff line');
+        $this->assertSame(16, substr_count((string) str($response->getContent())->betweenFirst('data-scope="conference"', '</table>'), '<tr class='));
+        $this->assertSame(32, substr_count((string) str($response->getContent())->betweenFirst('data-scope="league"', '</table>'), '<tr class='));
+    }
+
+    public function test_the_schedule_tab_lists_the_last_five_results_and_next_five_games(): void
+    {
+        $this->at('2026-11-24 15:00');
+        $this->withGameAndStandings();
+
+        $this->get('/modules/habs/sheet')->assertOk()
             ->assertSee('Last 5')
+            ->assertSee('Next 5')
+            ->assertSee('vs Kings')
             ->assertSee('at Avalanche')
-            ->assertSee('Tomorrow 9:30 PM');
+            ->assertSee('9:30 PM · Ball Arena · TV TSN2, RDS');
+    }
+
+    public function test_the_header_button_is_the_canadiens_logo(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSeeInOrder(['id="habs-open"', 'MTL_light.svg', 'MTL_dark.svg'], false);
     }
 
     public function test_the_stats_sheet_says_so_when_the_nhl_is_unreachable(): void
