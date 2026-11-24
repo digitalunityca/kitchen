@@ -1,26 +1,31 @@
-@php($inHeader = $module->placement() === 'header')
-@if ($configured)
-<button type="button" class="aic {{ $inHeader ? 'aic-pill' : 'card' }}" id="aic-open" aria-label="Ask ChatGPT by voice"
-  data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}">
-@else
-<div class="aic aic-off {{ $inHeader ? 'aic-pill' : 'card' }}" aria-label="Ask ChatGPT (not set up)">
-@endif
-  <span class="aic-icon {{ $inHeader ? '' : 'tile-icon' }}" aria-hidden="true">
-    <svg width="{{ $inHeader ? 22 : 32 }}" height="{{ $inHeader ? 22 : 32 }}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
-  </span>
-  @if ($inHeader)
-    <span class="aic-pill-text"><b>Ask ChatGPT</b>@unless ($configured)<small>Add OPENAI_API_KEY to turn this on</small>@endunless</span>
+@php($floating = $module->placement() === 'floating')
+@php($sparkle = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M12 7.6l1 2.1 2.1 1-2.1 1-1 2.1-1-2.1-2.1-1 2.1-1z" fill="currentColor" stroke-width="1"/></svg>')
+@if ($floating)
+  @if ($configured)
+  <button type="button" class="aic-fab" id="aic-open" aria-label="Ask ChatGPT by voice"
+    data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}">{!! $sparkle !!}</button>
   @else
-  <div class="row" style="align-items:flex-end">
-    <div>
-      <span class="tile-title">Ask ChatGPT</span>
-      <span class="tile-sub">{{ $configured ? 'Tap and talk: recipes, swaps, timings' : 'Add OPENAI_API_KEY to turn this on' }}</span>
-    </div>
-  </div>
+  <button type="button" class="aic-fab aic-off" id="aic-off" aria-label="Ask ChatGPT (not set up)">{!! $sparkle !!}</button>
+  <p class="aic-tip" id="aic-tip" hidden>Ask ChatGPT: add OPENAI_API_KEY to turn this on</p>
   @endif
-@if ($configured)
-</button>
+@else
+  @if ($configured)
+  <button type="button" class="card aic" id="aic-open" aria-label="Ask ChatGPT by voice"
+    data-session="{{ route('modules.ai-chat.session') }}" data-csrf="{{ csrf_token() }}">
+  @else
+  <div class="card aic aic-off" aria-label="Ask ChatGPT (not set up)">
+  @endif
+    <span class="tile-icon aic-icon" aria-hidden="true" style="color:#fff">{!! $sparkle !!}</span>
+    <div class="row" style="align-items:flex-end">
+      <div>
+        <span class="tile-title">Ask ChatGPT</span>
+        <span class="tile-sub">{{ $configured ? 'Tap and talk: recipes, swaps, timings' : 'Add OPENAI_API_KEY to turn this on' }}</span>
+      </div>
+    </div>
+  @if ($configured) </button> @else </div> @endif
+@endif
 
+@if ($configured)
 <div class="aic-panel" id="aic-panel" hidden role="dialog" aria-modal="true" aria-label="Voice chat">
   <button type="button" class="aic-close" id="aic-close" aria-label="Close voice chat">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -34,8 +39,6 @@
   <p class="aic-hint" id="aic-hint">Just talk. Interrupt any time. Tap the orb to mute.</p>
   <audio id="aic-audio" autoplay playsinline></audio>
 </div>
-@else
-</div>
 @endif
 
 @once
@@ -44,14 +47,21 @@
   .aic { text-align: left; }
   .aic.card { width: 100%; }
   .aic-icon { background: linear-gradient(135deg, #0071E3, #8E5CF7); }
-  .aic-pill { display: flex; align-items: center; gap: 12px; padding: 7px 22px 7px 7px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); transition: background-color .6s ease, transform .15s ease; }
-  .aic-pill:active { transform: scale(.97); }
-  .aic-pill .aic-icon { width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center; }
-  .aic-pill-text { display: flex; flex-direction: column; line-height: 1.2; }
-  .aic-pill-text b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
-  .aic-pill-text small { font-size: 12px; color: var(--sub); }
   .aic-off .aic-icon { background: var(--sub); }
   .aic-off.card { opacity: .75; }
+  .aic-fab {
+    width: 64px; height: 64px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    background: var(--card); color: var(--accent); box-shadow: 0 2px 6px rgba(0,0,0,.08), 0 10px 28px rgba(0,0,0,.14);
+    transition: background-color .6s ease, transform .15s ease;
+  }
+  .aic-fab:active { transform: scale(.94); }
+  body.night .aic-fab { background: #2C2C2E; box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 10px 28px rgba(0,0,0,.6); }
+  .aic-fab.aic-off { color: var(--sub); }
+  .aic-tip {
+    position: absolute; right: 0; bottom: 76px; margin: 0; white-space: nowrap; padding: 10px 14px; border-radius: 14px;
+    background: var(--text); color: var(--bg); font-size: 14px; font-weight: 500; box-shadow: var(--shadow);
+  }
+  .floating-slot { position: relative; }
   .aic-panel {
     position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px;
     padding: 48px 64px; background: rgba(0, 0, 0, .86); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); color: #F5F5F7;
@@ -79,6 +89,19 @@
 </style>
 @endpush
 @endonce
+
+@unless ($configured)
+@if ($floating)
+@push('scripts')
+<script>
+(function () {
+  var b = document.getElementById('aic-off'), tip = document.getElementById('aic-tip'), t = 0;
+  b.addEventListener('click', function () { tip.hidden = false; clearTimeout(t); t = setTimeout(function () { tip.hidden = true; }, 4000); });
+})();
+</script>
+@endpush
+@endif
+@endunless
 
 @if ($configured)
 @push('scripts')

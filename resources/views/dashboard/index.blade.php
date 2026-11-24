@@ -20,12 +20,7 @@
       <p class="eyebrow" id="dateLong"></p>
       <h1 id="greeting"></h1>
     </div>
-    <div class="header-end">
-      @foreach ($modules->filter(fn ($m) => $m->placement() === 'header') as $module)
-        <div class="header-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
-      @endforeach
-      <p class="muted">{{ $title }}</p>
-    </div>
+    <p class="muted">{{ $title }}</p>
   </header>
 
   <main>
@@ -35,6 +30,13 @@
       </div>
     @endforeach
   </main>
+</div>
+
+{{-- Modules with 'placement' => 'floating': round buttons above the cards, bottom right. --}}
+<div class="floating">
+  @foreach ($modules->filter(fn ($m) => $m->placement() === 'floating') as $module)
+    <div class="floating-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
+  @endforeach
 </div>
 
 <script>

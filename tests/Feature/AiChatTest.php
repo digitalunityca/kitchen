@@ -26,7 +26,7 @@ class AiChatTest extends TestCase
     {
         $this->get('/')->assertOk()
             ->assertSee('Ask ChatGPT')
-            ->assertSee('Add OPENAI_API_KEY to turn this on')
+            ->assertSee('add OPENAI_API_KEY to turn this on')
             ->assertDontSee('id="aic-panel"', false);
 
         $this->postJson('/modules/ai-chat/session')->assertStatus(503)->assertJsonPath('error', 'not_configured');
@@ -39,6 +39,7 @@ class AiChatTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('id="aic-open"', false)
             ->assertSee('id="aic-panel"', false)
+            ->assertSee('class="aic-fab"', false)
             ->assertSee('data-session="'.route('modules.ai-chat.session').'"', false)
             ->assertSee('dashboard:audio-claim', false)
             ->assertDontSee('sk-test-not-a-real-key');
@@ -84,6 +85,6 @@ class AiChatTest extends TestCase
         ]);
         $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
 
-        $this->get('/')->assertOk()->assertSee('Tap and talk: recipes, swaps, timings')->assertSee('class="aic card"', false);
+        $this->get('/')->assertOk()->assertSee('Tap and talk: recipes, swaps, timings')->assertSee('class="card aic"', false)->assertDontSee('class="aic-fab"', false);
     }
 }

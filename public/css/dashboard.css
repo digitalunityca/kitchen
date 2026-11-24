@@ -21,7 +21,6 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 header { display: flex; justify-content: space-between; align-items: flex-end; }
 .eyebrow { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; color: var(--sub); }
 h1 { margin: 4px 0 0; font-size: 34px; font-weight: 600; letter-spacing: -.02em; }
-.header-end { display: flex; align-items: center; gap: 20px; }
 .muted { margin: 0; font-size: 15px; font-weight: 500; color: var(--sub); }
 
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 24px; }
@@ -55,6 +54,10 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, m
 .ev i { width: 4px; height: 36px; border-radius: 2px; }
 .ev b { display: block; font-size: 17px; font-weight: 500; }
 .ev small { font-size: 14px; color: var(--sub); }
+
+/* Floating buttons (bottom right, above the cards; clear of Fully's left-edge swipe) */
+.floating { position: fixed; right: 24px; bottom: 24px; z-index: 40; display: flex; flex-direction: column; gap: 16px; }
+.floating:empty { display: none; }
 
 /* Link tiles */
 .tile-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }
