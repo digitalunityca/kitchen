@@ -2,6 +2,7 @@
 <div class="vol" id="vol" data-default="{{ $default }}">
   <div class="vol-slider" id="vol-slider" role="slider" aria-label="Volume" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $default }}" tabindex="0">
     <div class="vol-track"><i id="vol-fill"></i></div>
+    <span class="vol-thumb" aria-hidden="true"></span>
   </div>
   <button type="button" class="vol-mute" id="vol-mute" aria-label="Mute">
     <svg class="i-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -16,6 +17,15 @@
   .vol-slider { position: relative; width: 64px; height: 168px; display: flex; justify-content: center; padding: 10px 0; touch-action: none; cursor: pointer; }
   .vol-track { position: relative; width: 12px; height: 100%; border-radius: 6px; background: rgba(120,120,128,.24); overflow: hidden; transition: width .3s ease; }
   .vol-track i { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: var(--accent); transition: height .06s linear; }
+  /* The blue knob sits on top of the filled part (--level is 0–1). */
+  .vol-thumb {
+    position: absolute; left: 50%; width: 22px; height: 22px; margin-left: -11px; border-radius: 999px;
+    bottom: calc(10px + (100% - 20px) * var(--level, .5) - 11px);
+    background: var(--accent); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    transition: bottom .06s linear, transform .3s ease; pointer-events: none;
+  }
+  body.night .vol-thumb { border-color: #2C2C2E; }
+  .vol.dim .vol-thumb { transform: scale(.6); }
   .vol-mute { width: 48px; height: 48px; border-radius: 999px; display: flex; align-items: center; justify-content: center; transition: opacity .3s ease; }
   .vol-mute .i-off, .vol.muted .vol-mute .i-on { display: none; }
   .vol.muted .vol-mute .i-off { display: block; }
@@ -23,7 +33,7 @@
   /* Idle for 4 s: a slim line, still draggable. */
   .vol.dim .vol-track { width: 4px; }
   .vol.dim .vol-mute { opacity: .45; }
-  @media (prefers-reduced-motion: reduce) { .vol-track, .vol-track i, .vol-mute { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .vol-track, .vol-track i, .vol-mute, .vol-thumb { transition: none; } }
 </style>
 @endpush
 
@@ -42,6 +52,7 @@
   }
   function show(v) {
     fill.style.height = v + '%';
+    slider.style.setProperty('--level', String(v / 100));
     slider.setAttribute('aria-valuenow', String(v));
     root.classList.toggle('muted', v === 0);
     document.getElementById('vol-mute').setAttribute('aria-label', v === 0 ? 'Unmute' : 'Mute');

@@ -32,7 +32,7 @@ final class DemoGames
                 'periodDescriptor' => ['number' => 2, 'periodType' => 'REG'],
             ],
             'final' => [
-                'gameState' => 'OFF', 'startTimeUTC' => $now->subDay()->setTime(19, 0)->utc()->toIso8601ZuluString(),
+                'gameState' => 'OFF', 'startTimeUTC' => $now->subHours(3)->utc()->toIso8601ZuluString(),
                 'homeTeam' => $team('TOR', 'Maple Leafs', 2), 'awayTeam' => $team('MTL', 'Canadiens', 3),
                 'periodDescriptor' => ['number' => 4, 'periodType' => 'OT'], 'gameOutcome' => ['lastPeriodType' => 'OT'],
             ],
