@@ -33,9 +33,31 @@ class LoadCalendarEvents
         }
 
         // Expanding a year of recurring events is the slow part, so keep the result 5 minutes.
-        $key = 'calendar.events.'.sha1(json_encode([$calendars, $from->toIso8601String(), $to->toIso8601String()]));
+        $key = 'calendar.events.v2.'.sha1(json_encode([$calendars, $from->toIso8601String(), $to->toIso8601String()]));
 
-        return $this->cache->remember($key, now()->addMinutes(5), fn (): array => $this->merge($calendars, $from, $to));
+        // The cache only stores plain values (it refuses to unserialize objects), so dates travel as strings.
+        $cached = $this->cache->remember($key, now()->addMinutes(5), fn (): array => self::toPlain($this->merge($calendars, $from, $to)));
+
+        return self::fromPlain($cached);
+    }
+
+    /** @param  array{sample: bool, calendars: list<array<string, mixed>>, events: list<array<string, mixed>>}  $loaded */
+    private static function toPlain(array $loaded): array
+    {
+        $loaded['events'] = array_map(fn (array $e): array => ['start' => $e['start']->toIso8601String(), 'end' => $e['end']->toIso8601String()] + $e, $loaded['events']);
+
+        return $loaded;
+    }
+
+    /** @param  array{sample: bool, calendars: list<array<string, mixed>>, events: list<array<string, mixed>>}  $loaded */
+    private static function fromPlain(array $loaded): array
+    {
+        $loaded['events'] = array_map(fn (array $e): array => [
+            'start' => CarbonImmutable::parse($e['start'])->setTimezone(ParseIcs::TIMEZONE),
+            'end' => CarbonImmutable::parse($e['end'])->setTimezone(ParseIcs::TIMEZONE),
+        ] + $e, $loaded['events']);
+
+        return $loaded;
     }
 
     /**

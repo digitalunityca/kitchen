@@ -215,4 +215,15 @@ class CalendarTest extends TestCase
         $this->post("/modules/calendar/calendars/{$id}", ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => '⚽', 'reminder' => ''])->assertRedirect();
         $this->assertNull(collect($this->getJson('/modules/calendar/events')->json('events'))->firstWhere('title', 'Plain')['remind']);
     }
+
+    public function test_cached_events_survive_a_real_cache_store(): void
+    {
+        // Production uses the file store, which refuses to unserialize objects (cache.serializable_classes = false).
+        config(['cache.default' => 'file', 'cache.stores.file.path' => storage_path('framework/testing/cache-'.uniqid())]);
+        $this->addFamily();
+
+        $this->getJson('/modules/calendar/events')->assertOk();
+        $this->getJson('/modules/calendar/events')->assertOk()->assertJsonPath('events.0.title', 'Swimming lessons');
+        $this->get('/')->assertOk();
+    }
 }
