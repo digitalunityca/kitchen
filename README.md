@@ -2,6 +2,8 @@
 
 The kitchen dashboard for the Fire HD 10 running Fully Kiosk. One Laravel app serves the page at `/`, and every card on it is a module.
 
+**How it all fits together (structure, modules, Fully settings, what was built): [docs/PROJECT.md](docs/PROJECT.md).**
+
 ## Run it
 
 ```bash
