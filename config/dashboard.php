@@ -51,6 +51,7 @@ return [
             'lon' => env('WEATHER_LON'),
         ],
 
+        // Calendars from iCal links, added on /modules/calendar/settings.
         CalendarModule::class => [
             'column' => '3', 'row' => '1 / span 2',
         ],
