@@ -55,6 +55,18 @@
   // Shared clock: modules listen for "dashboard:tick" instead of running their own timers.
   window.Dashboard = { night: @json($night) };
 
+  // The on-screen keyboard shrinks the page to about half its height. Flag it on <body>
+  // (class "keyboard") so open sheets can switch to a compact layout instead of being crushed.
+  (function () {
+    var tallest = window.innerHeight;
+    function check() {
+      tallest = Math.max(tallest, window.innerHeight);
+      document.body.classList.toggle('keyboard', window.innerHeight < tallest * 0.75);
+    }
+    window.addEventListener('resize', check);
+    document.addEventListener('DOMContentLoaded', check);
+  })();
+
   // Breadcrumbs for unexpected reloads: the last taps and Fully setting writes,
   // sent to the hub when the page unloads (storage/logs: "Dashboard page unloaded").
   (function () {

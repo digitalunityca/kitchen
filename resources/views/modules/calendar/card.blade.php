@@ -133,6 +133,13 @@
   .calx-search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: var(--text); outline: none; -webkit-appearance: none; }
   .calx-search input::-webkit-search-cancel-button { display: none; }
   .calx-search button { color: var(--sub); font-size: 14px; padding: 4px; }
+  /* Typing a search (keyboard open): no month grid, the results get the whole width above the keyboard. */
+  body.keyboard .calx-overlay { padding: 8px 16px; }
+  body.keyboard .calx-sheet { padding: 10px 16px 12px; border-radius: 20px; }
+  body.keyboard .calx-head { margin-bottom: 8px; }
+  body.keyboard .calx-main { grid-template-columns: 1fr; }
+  body.keyboard .calx-month, body.keyboard .calx-sample { display: none; }
+  .calx-month { overflow: hidden; }
   .calx-head .cal-pick-btn { height: 44px; background: var(--card); box-shadow: var(--shadow); }
   .calx-head .cal-menu { top: 52px; }
   .calx-settings { font-size: 15px; color: var(--accent); text-decoration: none; flex: none; }

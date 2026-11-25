@@ -88,6 +88,9 @@ body.night .menu-divider { background: rgba(255,255,255,.14); }
   .card { padding: 24px 28px; }
 }
 
+/* While the on-screen keyboard is open: hide the side menu and use the whole (short) screen for the sheet. */
+body.keyboard .side-menu { display: none; }
+
 /* Kids' homework sheet: nearly full screen, covering the side menu while open (its close button stays inside). */
 body .kid-overlay { padding: 16px; z-index: 80; }
 body .kid-sheet { width: 100%; }
