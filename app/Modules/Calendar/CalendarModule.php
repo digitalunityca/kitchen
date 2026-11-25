@@ -6,6 +6,7 @@ use App\Actions\Calendar\BuildCalendarData;
 use App\Actions\Calendar\LoadCalendarEvents;
 use App\Actions\Calendar\ParseIcs;
 use App\Dashboard\Module;
+use App\Http\Middleware\RequireSettingsPin;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Storage;
@@ -73,10 +74,13 @@ class CalendarModule extends Module
     {
         $router->get('events', [CalendarController::class, 'events'])->middleware('throttle:30,1')->name('events');
         $router->get('card', [CalendarController::class, 'card'])->middleware('throttle:30,1')->name('card');
-        $router->get('settings', [CalendarController::class, 'settings'])->name('settings');
-        $router->post('calendars', [CalendarController::class, 'store'])->middleware('throttle:10,1')->name('calendars.store');
-        $router->post('calendars/{id}', [CalendarController::class, 'update'])->where('id', '[a-z0-9]{8}')->name('calendars.update');
-        $router->post('calendars/{id}/delete', [CalendarController::class, 'destroy'])->where('id', '[a-z0-9]{8}')->name('calendars.destroy');
-        $router->post('calendars/{id}/up', [CalendarController::class, 'moveUp'])->where('id', '[a-z0-9]{8}')->name('calendars.up');
+        // Managing calendars needs the settings PIN.
+        $router->middleware(RequireSettingsPin::class)->group(function (Router $router): void {
+            $router->get('settings', [CalendarController::class, 'settings'])->name('settings');
+            $router->post('calendars', [CalendarController::class, 'store'])->middleware('throttle:10,1')->name('calendars.store');
+            $router->post('calendars/{id}', [CalendarController::class, 'update'])->where('id', '[a-z0-9]{8}')->name('calendars.update');
+            $router->post('calendars/{id}/delete', [CalendarController::class, 'destroy'])->where('id', '[a-z0-9]{8}')->name('calendars.destroy');
+            $router->post('calendars/{id}/up', [CalendarController::class, 'moveUp'])->where('id', '[a-z0-9]{8}')->name('calendars.up');
+        });
     }
 }

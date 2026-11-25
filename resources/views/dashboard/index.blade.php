@@ -36,8 +36,8 @@
   by pushing to the 'menu-items' stack alongside their normal card.
 --}}
 <nav class="side-menu" aria-label="Menu">
-  <button type="button" class="menu-button menu-home" id="menu-home" aria-label="Home">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+  <button type="button" class="menu-button menu-home" id="menu-settings" aria-label="Settings">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
   </button>
   <span class="menu-divider" aria-hidden="true"></span>
   @stack('menu-items')
@@ -102,13 +102,27 @@
     document.addEventListener('DOMContentLoaded', function () { tick(); setInterval(tick, 1000); });
   })();
 </script>
+{{-- Settings sheet: the ⚙ opens /settings (PIN first) in a frame over the dashboard, so music keeps playing. --}}
+<div class="settings-overlay" id="settings-overlay" hidden role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="settings-sheet">
+    <button type="button" class="settings-close" id="settings-close" aria-label="Close settings">✕</button>
+    <iframe id="settings-frame" title="Settings"></iframe>
+  </div>
+</div>
 <script>
-  // Home: back to the dashboard from any page; on the dashboard it closes open sheets (dashboard:home).
-  document.getElementById('menu-home').addEventListener('click', function () {
-    if (location.pathname !== '/' || location.search) { location.href = '/'; return; }
-    window.scrollTo(0, 0);
-    document.dispatchEvent(new CustomEvent('dashboard:home')); // the stats sheet closes, a voice chat ends
-  });
+  (function () {
+    var overlay = document.getElementById('settings-overlay'), frame = document.getElementById('settings-frame');
+    function close() {
+      overlay.hidden = true; frame.src = 'about:blank';
+      document.dispatchEvent(new CustomEvent('dashboard:home')); // also tidies open sheets on the dashboard
+    }
+    document.getElementById('menu-settings').addEventListener('click', function () {
+      document.dispatchEvent(new CustomEvent('dashboard:home'));
+      frame.src = @json(route('settings', [], false)); overlay.hidden = false;
+    });
+    document.getElementById('settings-close').addEventListener('click', close);
+    window.addEventListener('message', function (e) { if (e.origin === location.origin && e.data === 'settings:close') close(); });
+  })();
 </script>
 @stack('scripts')
 </body>

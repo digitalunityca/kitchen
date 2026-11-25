@@ -4,6 +4,7 @@ namespace App\Modules\YouTubeMusic;
 
 use App\Dashboard\Module;
 use App\Dashboard\ModuleRegistry;
+use App\Http\Middleware\RequireSettingsPin;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Storage;
@@ -52,12 +53,15 @@ class YouTubeMusicModule extends Module
 
     public function routes(Router $router): void
     {
-        $router->get('settings', [SettingsController::class, 'edit'])->name('settings');
-        $router->post('playlists', [SettingsController::class, 'add'])->name('playlists.store');
-        $router->post('playlists/{index}/delete', [SettingsController::class, 'destroy'])
-            ->whereNumber('index')->name('playlists.destroy');
-        $router->post('playlists/{index}/up', [SettingsController::class, 'moveUp'])
-            ->whereNumber('index')->name('playlists.up');
+        // Managing playlists needs the settings PIN.
+        $router->middleware(RequireSettingsPin::class)->group(function (Router $router): void {
+            $router->get('settings', [SettingsController::class, 'edit'])->name('settings');
+            $router->post('playlists', [SettingsController::class, 'add'])->name('playlists.store');
+            $router->post('playlists/{index}/delete', [SettingsController::class, 'destroy'])
+                ->whereNumber('index')->name('playlists.destroy');
+            $router->post('playlists/{index}/up', [SettingsController::class, 'moveUp'])
+                ->whereNumber('index')->name('playlists.up');
+        });
 
         // Song handoff from YouTube Premium (see HandoffController).
         $router->post('handoff', [HandoffController::class, 'store'])

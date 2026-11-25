@@ -68,12 +68,13 @@
   .cal-weeks { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; text-align: center; }
   .cal-weeks .dow { padding-bottom: 2px; }
   .cal-d { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--text); }
-  .cal-d > span:first-child { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
-  .cal-d.past { color: var(--sub); }
-  .cal-d.today > span:first-child { background: var(--accent); color: #fff; font-weight: 600; }
-  .cal-d.selected > span:first-child { box-shadow: 0 0 0 2px var(--text); }
-  .cal-d .dots { display: flex; gap: 3px; height: 5px; }
-  .cal-d .dots i { width: 5px; height: 5px; border-radius: 999px; }
+  /* Day numbers sit in a ring coloured by the calendars with events that day (dayRing). */
+  .ring { width: 40px; height: 40px; padding: 3px; border-radius: 999px; display: flex; flex: none; }
+  .ring .num { flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--card); }
+  .cal-d.past .num { color: var(--sub); }
+  .cal-d.today .num, .calx-cell.today .num { background: var(--accent); color: #fff; font-weight: 600; }
+  .cal-d.selected .ring, .calx-cell.selected .ring { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--text); }
+  body.night .ring .num { background: var(--card); }
   .cal-events { flex: 1; overflow: hidden; }
   .cal-back { font-size: 14px; color: var(--accent); padding: 0; margin-left: 8px; font-weight: 500; }
   /* Colour bars come from --c; finished events step back (muted, hollow bar), running ones say "Now". */
@@ -144,12 +145,8 @@
   .calx-dow { font-size: 12px; font-weight: 600; color: var(--sub); text-align: center; padding: 2px 0 4px; align-self: end; }
   .calx-cell { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px; padding: 4px 0; border-radius: 12px; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--text); }
   .calx-cell.out { color: var(--sub); opacity: .5; }
-  .calx-cell > span:first-child { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
-  .calx-cell.today > span:first-child { color: var(--accent); font-weight: 700; }
-  .calx-cell.selected > span:first-child { background: var(--text); color: var(--bg); font-weight: 600; }
-  .calx-cell.today.selected > span:first-child { background: var(--accent); color: #fff; }
-  .calx-dots { display: flex; gap: 3px; height: 6px; }
-  .calx-dots i { width: 6px; height: 6px; border-radius: 999px; }
+  .calx-cell .ring { width: 42px; height: 42px; }
+  .calx-cell.out .ring { opacity: .6; }
   .calx-side { background: var(--card); border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow); overflow: auto; min-height: 0; }
   .calx-side h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
   .calx-side h4 { margin: 14px 0 4px; font-size: 14px; color: var(--sub); font-weight: 600; }
@@ -196,7 +193,19 @@
       try { if (list === undefined) return JSON.parse(localStorage.getItem('calendar-hidden') || '[]'); localStorage.setItem('calendar-hidden', JSON.stringify(list)); } catch (e) { return []; }
       document.dispatchEvent(new CustomEvent('calendar:filter'));
     }
-    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, phase: phase, title: title, lead: lead, badge: badge, hidden: hidden };
+    /** A day number inside a ring split into one coloured segment per calendar with events that day. */
+    function dayRing(n, colors, past) {
+      var style = '';
+      if (colors.length) {
+        var step = 100 / colors.length;
+        style = ' style="background:conic-gradient(' + colors.map(function (c, i) {
+          var col = past ? 'color-mix(in srgb, ' + c + ' 40%, transparent)' : c;
+          return col + ' ' + (i * step) + '% ' + ((i + 1) * step) + '%';
+        }).join(', ') + ')"';
+      }
+      return '<span class="ring"' + style + '><span class="num">' + n + '</span></span>';
+    }
+    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, phase: phase, title: title, lead: lead, badge: badge, dayRing: dayRing, hidden: hidden };
   })();
 
   // The card: two weeks (Sunday start) with dots, then Today / Tomorrow / Next, or a tapped day.
@@ -221,9 +230,9 @@
       var html = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<span class="dow">' + x + '</span>'; }).join('');
       for (var i = 0; i < 14; i++) {
         var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), key = U.ymd(d), colors = [];
-        (byDay[key] || []).forEach(function (ev) { if (on(ev) && colors.indexOf(ev.color) < 0 && colors.length < 3) colors.push(ev.color); });
+        (byDay[key] || []).forEach(function (ev) { if (on(ev) && colors.indexOf(ev.color) < 0 && colors.length < 4) colors.push(ev.color); });
         html += '<button type="button" class="cal-d' + (key < data.today ? ' past' : '') + (key === data.today ? ' today' : '') + (key === selected ? ' selected' : '') + '" data-day="' + key + '">' +
-          '<span>' + d.getDate() + '</span><span class="dots">' + colors.map(function (c) { return '<i style="background:' + U.esc(c) + '"></i>'; }).join('') + '</span></button>';
+          U.dayRing(d.getDate(), colors, key < data.today) + '</button>';
       }
       document.getElementById('cal-weeks').innerHTML = html;
     }
@@ -409,7 +418,7 @@
         var colors = [];
         (byDay[key] || []).forEach(function (ev) { if (on(ev) && colors.indexOf(ev.color) < 0 && colors.length < 4) colors.push(ev.color); });
         html += '<button type="button" class="calx-cell' + (d.getMonth() !== m ? ' out' : '') + (key === data.today ? ' today' : '') + (key === selected ? ' selected' : '') + '" data-day="' + key + '">' +
-          '<span>' + d.getDate() + '</span><span class="calx-dots">' + colors.map(function (c) { return '<i style="background:' + esc(c) + '"></i>'; }).join('') + '</span></button>';
+          window.CalendarUi.dayRing(d.getDate(), colors, key < data.today) + '</button>';
       }
       document.getElementById('calx-grid').innerHTML = html;
     }

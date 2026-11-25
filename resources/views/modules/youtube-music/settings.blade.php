@@ -74,7 +74,8 @@
   </div>
 
   <p style="color:var(--sub);font-size:14px">Private playlists won’t play on the kitchen screen. Set them to Public or Unlisted. Your personal mixes (Supermix, My Mix) are made for your account and usually can’t be embedded. Save one as a playlist first.</p>
-  <p><a href="{{ route('dashboard') }}">← Back to the dashboard</a></p>
+  <p><a href="{{ route('settings') }}">← Settings</a> · <a href="{{ route('dashboard') }}">Back to the dashboard</a></p>
 </div>
+@include('settings.close-script')
 </body>
 </html>

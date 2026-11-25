@@ -163,7 +163,8 @@
     <p><b>Outlook</b>: Settings › Calendar › Shared calendars › Publish a calendar › copy the ICS link.</p>
   </div>
 
-  <p><a href="{{ route('dashboard') }}">← Back to the dashboard</a></p>
+  <p><a href="{{ route('settings') }}">← Settings</a> · <a href="{{ route('dashboard') }}">Back to the dashboard</a></p>
 </div>
+@include('settings.close-script')
 </body>
 </html>

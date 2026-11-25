@@ -15,6 +15,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        // No PIN unless a test sets one (a developer's .env may have HOME_HUB_PIN).
+        config(['dashboard.pin' => '']);
+
         // The dashboard renders the Canadiens strip, so no test may reach the real
         // NHL API. Tests answer it through $nhl; anything else is a 503 (strip hidden).
         Http::fake(['api-web.nhle.com/*' => function (Request $request) {
