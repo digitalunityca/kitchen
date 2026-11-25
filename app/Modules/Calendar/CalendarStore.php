@@ -16,7 +16,7 @@ class CalendarStore
     private const FILE = 'calendars.json';
 
     /** Icons offered on the settings page (any emoji can be typed too). */
-    public const ICONS = ['⚽', '🏒', '🎵', '🏫', '💼', '🩺', '🎂'];
+    public const ICONS = ['⚽', '🏒', '🎵', '🏫', '💼', '💅', '💄', '🩺', '🎂'];
 
     /** Reminder choices in minutes before an event (null = none). */
     public const REMINDERS = [10 => '10 minutes', 15 => '15 minutes', 30 => '30 minutes', 60 => '1 hour', 1440 => '1 day'];
