@@ -4,9 +4,7 @@
     <span class="row" style="gap:8px">
       @if ($sample)<a class="pill" href="{{ route('modules.calendar.settings') }}">Sample data</a>@endif
       <span class="cal-pick">
-        <button type="button" class="cal-icon-btn" id="cal-pick" aria-haspopup="true" aria-expanded="false" aria-label="Choose calendars to show">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11M4 12h11M4 17h11"/><path d="m17 10 2.5 2.5L22 10"/></svg>
-        </button>
+        <button type="button" class="cal-pick-btn" id="cal-pick" aria-haspopup="true" aria-expanded="false" aria-label="Choose calendars to show"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
         <span class="cal-menu" id="cal-menu" hidden role="menu"></span>
       </span>
       <button type="button" class="cal-icon-btn" id="cal-open" aria-label="Open the month view">
@@ -31,7 +29,11 @@
         <input type="search" id="calx-q" placeholder="Search events" autocomplete="off" aria-label="Search events">
         <button type="button" id="calx-clear" hidden aria-label="Clear search">✕</button>
       </label>
-      <div class="calx-toggles" id="calx-toggles" role="group" aria-label="Calendars"></div>
+      <span class="calx-spacer"></span>
+      <span class="cal-pick">
+        <button type="button" class="cal-pick-btn" id="calx-pick" aria-haspopup="true" aria-expanded="false" aria-label="Choose calendars to show"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><span class="pick-label">Calendars</span></button>
+        <span class="cal-menu" id="calx-menu" hidden role="menu"></span>
+      </span>
       <a class="calx-settings" href="{{ route('modules.calendar.settings') }}">Calendars…</a>
       <button type="button" class="calx-close" id="calx-close" aria-label="Close">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -57,6 +59,12 @@
 <style>
   .cal { justify-content: flex-start; gap: 14px; }
   .cal-month { font: inherit; font-size: 15px; font-weight: 600; color: var(--sub); padding: 0; }
+  /* The calendars dropdown button: menu lines and a separate down chevron (same on the card and in the month view). */
+  .cal-pick-btn { height: 40px; padding: 0 10px 0 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; background: var(--fill); color: var(--text); }
+  .cal-pick-btn .pick-chevron { transition: transform .2s ease; }
+  .cal-pick-btn[aria-expanded="true"] .pick-chevron { transform: rotate(180deg); }
+  .cal-pick-btn .pick-label { font-size: 15px; font-weight: 500; margin-left: 4px; }
+  .calx-spacer { flex: 1; }
   .cal-icon-btn { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--fill); color: var(--text); }
   .cal-pick { position: relative; }
   .cal-menu { position: absolute; right: 0; top: 46px; z-index: 30; min-width: 220px; display: flex; flex-direction: column; padding: 6px; border-radius: 16px; background: var(--card); box-shadow: 0 10px 30px rgba(0,0,0,.18), 0 0 0 1px var(--line); }
@@ -125,11 +133,8 @@
   .calx-search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; color: var(--text); outline: none; -webkit-appearance: none; }
   .calx-search input::-webkit-search-cancel-button { display: none; }
   .calx-search button { color: var(--sub); font-size: 14px; padding: 4px; }
-  .calx-toggles { flex: 1; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-  .calx-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); font-size: 15px; font-weight: 500; }
-  .calx-chip i { width: 10px; height: 10px; border-radius: 999px; }
-  .calx-chip[aria-pressed="false"] { opacity: .45; }
-  .calx-chip[aria-pressed="false"] i { background: var(--sub) !important; }
+  .calx-head .cal-pick-btn { height: 44px; background: var(--card); box-shadow: var(--shadow); }
+  .calx-head .cal-menu { top: 52px; }
   .calx-settings { font-size: 15px; color: var(--accent); text-decoration: none; flex: none; }
   .calx-close, .calx-back { width: 44px; height: 44px; flex: none; border-radius: 999px; background: var(--fill); display: flex; align-items: center; justify-content: center; color: var(--text); }
   .calx-sample { margin: 0 0 10px; color: var(--sub); font-size: 14px; }
@@ -400,11 +405,12 @@
         (ev.location ? '<small>' + mark(ev.location, term) + '</small>' : '') + '</span></button>';
     }
 
+    /** The calendars dropdown in the month view: the same checkbox list as on the card. */
     function renderToggles() {
-      var off = hidden();
-      document.getElementById('calx-toggles').innerHTML = data.calendars.map(function (c) {
-        return '<button type="button" class="calx-chip" data-cal="' + esc(c.id) + '" aria-pressed="' + (off.indexOf(c.id) < 0) + '"><i style="background:' + esc(c.color) + '"></i>' + esc((c.icon ? c.icon + ' ' : '') + c.name) + '</button>';
-      }).join('');
+      var off = hidden(), menuEl = document.getElementById('calx-menu');
+      menuEl.innerHTML = data.calendars.map(function (c) {
+        return '<label><input type="checkbox" data-cal="' + esc(c.id) + '"' + (off.indexOf(c.id) < 0 ? ' checked' : '') + '><i style="background:' + esc(c.color) + '"></i>' + esc((c.icon ? c.icon + ' ' : '') + c.name) + '</label>';
+      }).join('') || '<label>No calendars yet</label>';
     }
     function renderMonth() {
       var y = month.getFullYear(), m = month.getMonth();
@@ -496,12 +502,20 @@
     document.getElementById('calx-next').addEventListener('click', function () { shiftMonth(1); });
     document.getElementById('calx-today').addEventListener('click', function () { select(data.today); });
     document.getElementById('calx-grid').addEventListener('click', function (e) { var c = e.target.closest('[data-day]'); if (c) select(c.dataset.day); });
-    document.getElementById('calx-toggles').addEventListener('click', function (e) {
-      var chip = e.target.closest('[data-cal]'); if (!chip) return;
-      var off = hidden(), i = off.indexOf(chip.dataset.cal);
-      if (i >= 0) off.splice(i, 1); else off.push(chip.dataset.cal);
-      hidden(off); renderToggles(); renderMonth();
-      if (q.value.trim()) renderSearch(); else renderDay();
+    var pickBtn = document.getElementById('calx-pick'), pickMenu = document.getElementById('calx-menu');
+    function closePick() { pickMenu.hidden = true; pickBtn.setAttribute('aria-expanded', 'false'); }
+    pickBtn.addEventListener('click', function (e) { e.stopPropagation(); if (data) renderToggles(); pickMenu.hidden = !pickMenu.hidden; pickBtn.setAttribute('aria-expanded', String(!pickMenu.hidden)); });
+    pickMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+    pickMenu.addEventListener('change', function (e) {
+      var box = e.target.closest('[data-cal]'); if (!box) return;
+      var off = hidden().filter(function (id) { return id !== box.dataset.cal; });
+      if (!box.checked) off.push(box.dataset.cal);
+      hidden(off);
+    });
+    overlay.addEventListener('click', closePick);
+    document.addEventListener('calendar:filter', function () {
+      if (!data) return;
+      renderMonth(); if (q.value.trim()) renderSearch(); else renderDay();
     });
     side.addEventListener('click', function (e) {
       if (e.target.closest('#calx-back')) { back(); return; }
