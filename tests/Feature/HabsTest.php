@@ -149,4 +149,11 @@ class HabsTest extends TestCase
 
         $this->get('/modules/habs/sheet')->assertOk()->assertSee('Can’t reach the NHL right now');
     }
+
+    public function test_the_stats_sheet_opens_full_size_with_a_centred_spinner(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('<div class="habs-sheet-body" id="habs-sheet-body"><div class="habs-loading" role="status" aria-label="Loading">', false)
+            ->assertSee('.habs-sheet { width: 100%; height: 100%;', false);
+    }
 }

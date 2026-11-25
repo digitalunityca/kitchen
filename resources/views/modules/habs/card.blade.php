@@ -15,7 +15,7 @@
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
-    <div class="habs-sheet-body" id="habs-sheet-body"><p class="habs-muted">Loading…</p></div>
+    <div class="habs-sheet-body" id="habs-sheet-body"><div class="habs-loading" role="status" aria-label="Loading"><span></span></div></div>
   </div>
 </div>
 
@@ -62,10 +62,15 @@
   .habs-open img { width: 42px; height: 42px; object-fit: contain; }
 
   /* The stats sheet over the dashboard. */
-  .habs-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 40px; animation: habs-fade .2s ease-out; }
+  .habs-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 32px 120px 32px 36px; animation: habs-fade .2s ease-out; }
   .habs-overlay[hidden] { display: none; }
   @keyframes habs-fade { from { opacity: 0; } }
-  .habs-sheet { width: min(1180px, 100%); max-height: 100%; overflow: auto; background: var(--bg); border-radius: 28px; padding: 24px 28px 28px; box-shadow: 0 30px 80px rgba(0,0,0,.3); }
+  /* Opens at its full size straight away (whatever is loading or which tab is shown); content scrolls inside. */
+  .habs-sheet { width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); border-radius: 28px; padding: 24px 28px 28px; box-shadow: 0 30px 80px rgba(0,0,0,.3); }
+  .habs-sheet-body { flex: 1; min-height: 0; overflow: auto; }
+  .habs-loading { height: 100%; display: flex; align-items: center; justify-content: center; }
+  .habs-loading span { width: 36px; height: 36px; border-radius: 999px; border: 3px solid var(--line); border-top-color: var(--sub); animation: habs-spin .8s linear infinite; }
+  @keyframes habs-spin { to { transform: rotate(360deg); } }
   body.night .habs-sheet { background: #0E0E10; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.6); }
   .habs-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .habs-sheet-title { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
@@ -136,6 +141,7 @@
     .habs-run[aria-hidden] { display: none; }
     .habs-live i { animation: none; }
     .habs-overlay { animation: none; }
+    .habs-loading span { animation-duration: 2s; }
   }
 </style>
 @endpush
@@ -162,7 +168,7 @@
   function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(close, IDLE_MS); }
   function open() {
     overlay.hidden = false; resetIdle();
-    body.innerHTML = '<p class="habs-muted">Loading…</p>';
+    body.innerHTML = '<div class="habs-loading" role="status" aria-label="Loading"><span></span></div>';
     fetch(root.dataset.sheet, { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (html) { body.innerHTML = html; setupTabs(); })
