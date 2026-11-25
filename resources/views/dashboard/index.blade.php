@@ -46,6 +46,11 @@
   @endforeach
 </nav>
 
+{{-- Modules with 'placement' => 'overlay': no card, only menu buttons and sheets over the dashboard. --}}
+@foreach ($modules->filter(fn ($m) => $m->placement() === 'overlay') as $module)
+  {!! $cards[$module->key()] !!}
+@endforeach
+
 <script>
   // Shared clock: modules listen for "dashboard:tick" instead of running their own timers.
   window.Dashboard = { night: @json($night) };

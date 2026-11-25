@@ -64,7 +64,7 @@ abstract class Module
         return $this->config['row'] ?? 'auto';
     }
 
-    /** "grid" for a card on the grid, "ticker" for a strip above it, "menu" for a button in the side menu. */
+    /** "grid" for a card on the grid, "ticker" for a strip above it, "menu" for a button in the side menu, "overlay" for no card (menu buttons and sheets only). */
     public function placement(): string
     {
         return $this->config['placement'] ?? 'grid';

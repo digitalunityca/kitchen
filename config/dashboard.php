@@ -4,6 +4,7 @@ use App\Modules\AiChat\AiChatModule;
 use App\Modules\Calendar\CalendarModule;
 use App\Modules\Clock\ClockModule;
 use App\Modules\Habs\HabsModule;
+use App\Modules\Homework\HomeworkModule;
 use App\Modules\Volume\VolumeModule;
 use App\Modules\Weather\WeatherModule;
 use App\Modules\YouTubeMusic\YouTubeMusicModule;
@@ -70,6 +71,15 @@ return [
             'tv_url' => 'https://www.youtube.com/tv',
             'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
                 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
+        ],
+
+        // One avatar button per kid in the side menu (under Home) for their homework.
+        // 'badge' is the initial or an emoji shown on the button.
+        HomeworkModule::class => [
+            'kids' => [
+                ['name' => 'Theo', 'badge' => 'T', 'color' => '#FF9500'],
+                ['name' => 'Arthur', 'badge' => 'A', 'color' => '#34C759'],
+            ],
         ],
 
         // Montreal Canadiens: a strip under the header on game days, and a

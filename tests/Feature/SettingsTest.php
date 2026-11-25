@@ -85,4 +85,12 @@ class SettingsTest extends TestCase
             ->assertSee('id="settings-frame"', false);
         $this->assertFileExists(public_path('img/settings-gear.png'));
     }
+
+    public function test_the_settings_sheet_stays_hidden_in_night_mode(): void
+    {
+        $css = (string) file_get_contents(public_path('css/dashboard.css'));
+
+        $this->assertSame(1, substr_count($css, '.settings-overlay {'), 'one rule, so [hidden] always wins');
+        $this->assertStringNotContainsString('body.night .settings-overlay', $css);
+    }
 }

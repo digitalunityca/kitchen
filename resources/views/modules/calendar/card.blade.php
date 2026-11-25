@@ -74,7 +74,6 @@
   .cal-d.past .num { color: var(--sub); }
   .cal-d.today .num, .calx-cell.today .num { background: var(--accent); color: #fff; font-weight: 600; }
   .cal-d.selected .ring, .calx-cell.selected .ring { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--text); }
-  body.night .ring .num { background: var(--card); }
   .cal-events { flex: 1; overflow: hidden; }
   .cal-back { font-size: 14px; color: var(--accent); padding: 0; margin-left: 8px; font-weight: 500; }
   /* Colour bars come from --c; finished events step back (muted, hollow bar), running ones say "Now". */
