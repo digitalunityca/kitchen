@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Calendars from iCal links (Google, iCloud, Outlook…), added on
  * /modules/calendar/settings. The card shows today, tomorrow and the next event
- * after that; its icon opens a sheet with the next 60 days, calendar filters and
- * event details.
+ * after that; its icon opens a month view with day lists, search, calendar toggles
+ * and event details.
  * Sample events show until the first calendar is added.
  */
 class CalendarModule extends Module
@@ -55,7 +55,7 @@ class CalendarModule extends Module
 
     public function routes(Router $router): void
     {
-        $router->get('sheet', [CalendarController::class, 'sheet'])->middleware('throttle:30,1')->name('sheet');
+        $router->get('events', [CalendarController::class, 'events'])->middleware('throttle:30,1')->name('events');
         $router->get('settings', [CalendarController::class, 'settings'])->name('settings');
         $router->post('calendars', [CalendarController::class, 'store'])->middleware('throttle:10,1')->name('calendars.store');
         $router->post('calendars/{id}', [CalendarController::class, 'update'])->where('id', '[a-z0-9]{8}')->name('calendars.update');

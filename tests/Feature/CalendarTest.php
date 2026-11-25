@@ -76,21 +76,33 @@ class CalendarTest extends TestCase
             ->assertSee('background:#FF9500', false);
     }
 
-    public function test_the_sheet_lists_two_weeks_with_filters_and_safe_details(): void
+    public function test_the_calendar_data_covers_six_months_back_to_twelve_ahead(): void
     {
         $this->addFamily();
         $id = app(CalendarStore::class)->all()[0]['id'];
 
-        $this->get('/modules/calendar/sheet')->assertOk()
-            ->assertSee('data-cal-chip="'.$id.'"', false)
-            ->assertSeeInOrder(['Today', 'Swimming lessons', 'Friday, November 27', 'Pedagogical day', 'Saturday, November 28', 'Pedagogical day'])
-            ->assertSee('Bring goggles.<br />', false)
-            ->assertSee('Pickup at 6 PM.')
-            ->assertSee('Ana, bob@example.com')
-            ->assertSee('Tuesday, November 24 · 10:00 PM – Wednesday, November 25 · 1:00 AM');
+        $data = $this->getJson('/modules/calendar/events')->assertOk()
+            ->assertJsonPath('sample', false)
+            ->assertJsonPath('today', '2026-11-24')
+            ->assertJsonPath('from', '2026-05-01')
+            ->assertJsonPath('to', '2027-11-30')
+            ->assertJsonPath('calendars.0', ['id' => $id, 'name' => 'Family', 'color' => '#FF9500'])
+            ->json();
+
+        $swims = array_values(array_filter($data['events'], fn ($e) => $e['title'] === 'Swimming lessons'));
+        $this->assertSame('2026-11-03T17:00', $swims[0]['start'], 'the first lesson, three weeks back');
+        $this->assertNotContains('2026-11-26T17:00', array_column($swims, 'start'), 'the EXDATE');
+        $this->assertSame("Bring goggles.\nPickup at 6 PM.", $swims[0]['notes']);
+        $this->assertSame($id, $swims[0]['calendarId']);
+
+        $holiday = collect($data['events'])->firstWhere('title', 'Pedagogical day');
+        $this->assertSame(['2026-11-27', '2026-11-28'], $holiday['days']);
+        $party = collect($data['events'])->firstWhere('title', 'New Year party');
+        $this->assertSame(['2026-11-24'], $party['days']);
+        $this->assertSame(['Ana', 'bob@example.com'], $party['attendees']);
     }
 
-    public function test_hidden_calendars_leave_the_card_and_sheet(): void
+    public function test_hidden_calendars_leave_the_card_and_the_calendar_data(): void
     {
         $this->addFamily();
         $id = app(CalendarStore::class)->all()[0]['id'];
@@ -98,7 +110,7 @@ class CalendarTest extends TestCase
         $this->post("/modules/calendar/calendars/{$id}", ['visible' => 0])->assertRedirect();
 
         $this->get('/')->assertDontSee('Swimming lessons');
-        $this->get('/modules/calendar/sheet')->assertDontSee('Swimming lessons');
+        $this->getJson('/modules/calendar/events')->assertJsonPath('calendars', [])->assertJsonPath('events', []);
     }
 
     public function test_rename_recolour_reorder_and_remove(): void
@@ -136,6 +148,6 @@ class CalendarTest extends TestCase
         $html = $this->get('/')->assertOk()->assertSee('Tue Dec 15 · 5:00 – 6:00 PM')->getContent();
         preg_match('/Next<\/p>\s*<button type="button" class="ev" data-event="([a-f0-9]{12})"/', $html, $m);
 
-        $this->get('/modules/calendar/sheet')->assertSee('data-detail="'.$m[1].'"', false);
+        $this->assertContains($m[1], array_column($this->getJson('/modules/calendar/events')->json('events'), 'id'), 'the sheet can show its details');
     }
 }

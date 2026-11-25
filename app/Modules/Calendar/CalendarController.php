@@ -5,38 +5,23 @@ declare(strict_types=1);
 namespace App\Modules\Calendar;
 
 use App\Actions\Calendar\AddCalendar;
-use App\Actions\Calendar\LoadCalendarEvents;
+use App\Actions\Calendar\BuildCalendarData;
 use App\Actions\Calendar\MoveCalendarUp;
-use App\Actions\Calendar\ParseIcs;
 use App\Actions\Calendar\RemoveCalendar;
 use App\Actions\Calendar\UpdateCalendar;
 use App\Http\Controllers\Controller;
 use App\Modules\Calendar\Requests\AddCalendarRequest;
 use App\Modules\Calendar\Requests\UpdateCalendarRequest;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response;
 
 class CalendarController extends Controller
 {
-    /** Days shown in the calendar sheet. */
-    public const SHEET_DAYS = 60;
-
-    /**
-     * GET /modules/calendar/sheet: the next 60 days, filterable by calendar, with each event's
-     * details. The card's "Next" event may be further out, so its details come along too.
-     */
-    public function sheet(LoadCalendarEvents $loadCalendarEvents): Response
+    /** GET /modules/calendar/events: the calendar sheet's data (6 months back, 12 ahead). */
+    public function events(BuildCalendarData $buildCalendarData): JsonResponse
     {
-        $from = now(ParseIcs::TIMEZONE)->toImmutable()->startOfDay();
-        $loaded = $loadCalendarEvents->handle($from, $from->addDays(CalendarModule::NEXT_DAYS), visibleOnly: true);
-        $days = LoadCalendarEvents::byDay($loaded['events'], $from, CalendarModule::NEXT_DAYS);
-
-        return response()->view('modules.calendar.sheet', $loaded + [
-            'days' => array_slice($days, 0, self::SHEET_DAYS, true),
-            'extra' => array_slice($days, self::SHEET_DAYS, null, true),
-            'today' => $from,
-        ])->header('Cache-Control', 'no-store');
+        return response()->json($buildCalendarData->handle(now()->toImmutable()))->header('Cache-Control', 'no-store');
     }
 
     public function settings(CalendarStore $store): View
