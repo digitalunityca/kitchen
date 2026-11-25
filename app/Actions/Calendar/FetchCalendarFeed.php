@@ -54,9 +54,24 @@ class FetchCalendarFeed
         return $body;
     }
 
-    /** iCloud and others hand out webcal:// links; they are plain HTTPS. */
+    /**
+     * The feed address for a pasted link: webcal:// links (iCloud) are plain HTTPS,
+     * and a Google Calendar embed link (…/calendar/embed?src=ID) becomes that
+     * calendar's public iCal feed.
+     */
     public static function httpUrl(string $url): string
     {
-        return (string) preg_replace('#^webcals?://#i', 'https://', trim($url));
+        $url = (string) preg_replace('#^webcals?://#i', 'https://', trim($url));
+
+        if (preg_match('#^https://calendar\.google\.com/calendar/(?:u/\d+/)?embed\?#i', $url)) {
+            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+            $src = is_array($query['src'] ?? null) ? ($query['src'][0] ?? '') : (string) ($query['src'] ?? '');
+
+            if ($src !== '') {
+                return 'https://calendar.google.com/calendar/ical/'.rawurlencode($src).'/public/basic.ics';
+            }
+        }
+
+        return $url;
     }
 }

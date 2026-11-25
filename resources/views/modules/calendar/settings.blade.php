@@ -118,6 +118,7 @@
       <li>Under “Settings for my calendars”, pick the calendar › Integrate calendar.</li>
       <li>Copy <b>Secret address in iCal format</b>.</li>
     </ol>
+    <p style="color:var(--sub);font-size:14px">A public Google calendar’s embed link (calendar.google.com/calendar/embed?src=…) also works.</p>
     <p><b>iCloud</b> (iPhone)</p>
     <ol>
       <li>Calendar app › Calendars › tap ⓘ next to the calendar.</li>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Actions\Calendar;
 
 use App\Actions\Calendar\BuildCalendarData;
+use App\Actions\Calendar\FetchCalendarFeed;
 use App\Actions\Calendar\ParseIcs;
 use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase;
@@ -31,5 +32,15 @@ class BuildCalendarDataTest extends TestCase
 
         $this->assertSame(['2026-05-01', '2026-05-02'], BuildCalendarData::days($camp, $from, $to));
         $this->assertSame(['2026-11-24'], BuildCalendarData::days($timed, $from, $to));
+    }
+
+    public function test_pasted_links_become_feed_addresses(): void
+    {
+        $this->assertSame('https://p103-caldav.icloud.com/published/2/abc', FetchCalendarFeed::httpUrl(' webcal://p103-caldav.icloud.com/published/2/abc '));
+        $this->assertSame(
+            'https://calendar.google.com/calendar/ical/abc123%40group.calendar.google.com/public/basic.ics',
+            FetchCalendarFeed::httpUrl('https://calendar.google.com/calendar/embed?src=abc123%40group.calendar.google.com&ctz=America%2FToronto'),
+        );
+        $this->assertSame('https://calendar.google.com/calendar/ical/x/basic.ics', FetchCalendarFeed::httpUrl('https://calendar.google.com/calendar/ical/x/basic.ics'));
     }
 }
