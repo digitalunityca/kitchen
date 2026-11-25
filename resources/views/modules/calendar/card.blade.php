@@ -75,6 +75,15 @@
   .cal-back { font-size: 14px; color: var(--accent); padding: 0; margin-left: 8px; font-weight: 500; }
   /* Colour bars come from --c; finished events step back (muted, hollow bar), running ones say "Now". */
   .cal .ev i, .calx-ev i { background: var(--c); }
+  /* Leading column, shared width so titles line up: a big icon over both lines, or the colour dot. */
+  .ev-lead { width: 32px; flex: none; display: flex; align-items: center; justify-content: center; align-self: center; }
+  .ev-icon { font-size: 28px; line-height: 1; }
+  .ev-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--c); }
+  .cal .ev { gap: 12px; }
+  .cal .ev > i { display: none; }
+  .ev.past .ev-icon, .calx-ev.past .ev-icon { opacity: .5; }
+  .ev.past .ev-dot, .calx-ev.past .ev-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+  .calx-ev .ev-lead { margin-left: -4px; }
   .cal .ev.past, .calx-ev.past { color: var(--sub); }
   .cal .ev.past b, .calx-ev.past b { color: var(--sub); font-weight: 400; }
   .cal .ev.past i, .calx-ev.past i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
@@ -158,12 +167,14 @@
       return !ev.allDay && s <= now ? 'now' : '';
     }
     function title(ev) { return (ev.icon ? ev.icon + ' ' : '') + ev.title; }
+    /** The leading column: the calendar's icon spanning both lines, or its colour dot. */
+    function lead(ev) { return '<span class="ev-lead">' + (ev.icon ? '<span class="ev-icon">' + esc(ev.icon) + '</span>' : '<span class="ev-dot"></span>') + '</span>'; }
     function badge(ev) { return phase(ev) === 'now' ? '<em class="cal-now">Now</em>' : ''; }
     function hidden(list) {
       try { if (list === undefined) return JSON.parse(localStorage.getItem('calendar-hidden') || '[]'); localStorage.setItem('calendar-hidden', JSON.stringify(list)); } catch (e) { return []; }
       document.dispatchEvent(new CustomEvent('calendar:filter'));
     }
-    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, phase: phase, title: title, badge: badge, hidden: hidden };
+    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, phase: phase, title: title, lead: lead, badge: badge, hidden: hidden };
   })();
 
   // The card: two weeks (Sunday start) with dots, then Today / Tomorrow / Next, or a tapped day.
@@ -197,7 +208,7 @@
     function row(ev, withDate) {
       var loc = ev.location ? ' · ' + ev.location.split(',')[0] : '';
       var date = withDate ? U.parse(ev.start).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }).replace(/\./g, '') + ' · ' : '';
-      return '<button type="button" class="ev ' + U.phase(ev) + '" data-event="' + U.esc(ev.id) + '" data-day="' + U.esc(ev.days[0] || '') + '" style="--c:' + U.esc(ev.color) + '"><i></i><div><b>' + U.esc(U.title(ev)) + U.badge(ev) + '</b><small>' + U.esc(date + U.timeLabel(ev) + loc) + '</small></div></button>';
+      return '<button type="button" class="ev ' + U.phase(ev) + '" data-event="' + U.esc(ev.id) + '" data-day="' + U.esc(ev.days[0] || '') + '" style="--c:' + U.esc(ev.color) + '">' + U.lead(ev) + '<div><b>' + U.esc(ev.title) + U.badge(ev) + '</b><small>' + U.esc(date + U.timeLabel(ev) + loc) + '</small></div></button>';
     }
     function section(title, events, extra) {
       return '<p class="cal-day">' + title + (extra || '') + '</p>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">Nothing planned</p>');
@@ -301,8 +312,8 @@
     }
     function row(ev, term) {
       var U = window.CalendarUi;
-      return '<button type="button" class="calx-ev ' + U.phase(ev) + '" data-id="' + esc(ev.id) + '" style="--c:' + esc(ev.color) + '"><i></i>' +
-        '<span class="t">' + esc(timeLabel(ev)) + '</span><span><b>' + (ev.icon ? esc(ev.icon) + ' ' : '') + mark(ev.title, term) + U.badge(ev) + '</b>' +
+      return '<button type="button" class="calx-ev ' + U.phase(ev) + '" data-id="' + esc(ev.id) + '" style="--c:' + esc(ev.color) + '"><i></i>' + U.lead(ev) +
+        '<span class="t">' + esc(timeLabel(ev)) + '</span><span><b>' + mark(ev.title, term) + U.badge(ev) + '</b>' +
         (ev.location ? '<small>' + mark(ev.location, term) + '</small>' : '') + '</span></button>';
     }
 
