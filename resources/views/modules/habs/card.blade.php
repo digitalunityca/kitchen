@@ -203,6 +203,7 @@
     if (e.target.closest('#habs-strip') || e.target.closest('#habs-open')) open();
   });
   document.getElementById('habs-close').addEventListener('click', close);
+  document.addEventListener('dashboard:home', close);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   overlay.addEventListener('pointerdown', resetIdle);
   overlay.addEventListener('scroll', resetIdle, true);

@@ -36,6 +36,10 @@
   by pushing to the 'menu-items' stack alongside their normal card.
 --}}
 <nav class="side-menu" aria-label="Menu">
+  <button type="button" class="menu-button menu-home" id="menu-home" aria-label="Home">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+  </button>
+  <span class="menu-divider" aria-hidden="true"></span>
   @stack('menu-items')
   @foreach ($modules->filter(fn ($m) => $m->placement() === 'menu') as $module)
     <div class="menu-slot" data-module="{{ $module->key() }}">{!! $cards[$module->key()] !!}</div>
@@ -97,6 +101,14 @@
     }
     document.addEventListener('DOMContentLoaded', function () { tick(); setInterval(tick, 1000); });
   })();
+</script>
+<script>
+  // Home: back to the dashboard from any page; on the dashboard it closes open sheets (dashboard:home).
+  document.getElementById('menu-home').addEventListener('click', function () {
+    if (location.pathname !== '/' || location.search) { location.href = '/'; return; }
+    window.scrollTo(0, 0);
+    document.dispatchEvent(new CustomEvent('dashboard:home')); // the stats sheet closes, a voice chat ends
+  });
 </script>
 @stack('scripts')
 </body>

@@ -66,6 +66,10 @@ main { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, m
 body.night .side-menu { background: rgba(44,44,46,.62); box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 6px 24px rgba(0,0,0,.5); }
 .side-menu:empty { display: none; }
 .menu-slot { position: relative; display: flex; }
+.menu-home { width: 56px; height: 56px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+.menu-home:active { background: var(--fill); }
+.menu-divider { width: 32px; height: 1px; background: var(--line); margin: -4px 0; }
+body.night .menu-divider { background: rgba(255,255,255,.14); }
 
 /* Link tiles */
 .tile-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; }

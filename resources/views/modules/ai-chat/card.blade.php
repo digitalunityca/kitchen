@@ -275,6 +275,7 @@
 
   fab.addEventListener('click', function () { if (active) end(); else start(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden && active) end(); });
+  document.addEventListener('dashboard:home', function () { if (active) end(); });
 })();
 @else
 (function () {

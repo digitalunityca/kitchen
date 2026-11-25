@@ -138,7 +138,7 @@ class HabsTest extends TestCase
     public function test_the_side_menu_holds_the_canadiens_logo_then_the_chatgpt_mic(): void
     {
         $this->get('/')->assertOk()
-            ->assertSeeInOrder(['<nav class="side-menu"', 'id="habs-open"', 'MTL_light.svg', 'MTL_dark.svg', 'id="aic-fab"', '</nav>'], false)
+            ->assertSeeInOrder(['<nav class="side-menu"', 'id="menu-home"', 'class="menu-divider"', 'id="habs-open"', 'MTL_light.svg', 'MTL_dark.svg', 'id="aic-fab"', '</nav>'], false)
             ->assertDontSee('<p class="muted">', false)
             ->assertDontSee('<header>', false);
     }
