@@ -76,11 +76,13 @@ class SettingsTest extends TestCase
         $this->get('/settings')->assertOk();
     }
 
-    public function test_the_side_menu_has_settings_instead_of_home(): void
+    public function test_settings_open_from_fullys_bar_button_and_the_menu_keeps_home(): void
     {
-        $this->get('/')->assertOk()
-            ->assertSeeInOrder(['<nav class="side-menu"', 'id="menu-settings"', 'class="menu-divider"', 'id="habs-open"'], false)
-            ->assertDontSee('id="menu-home"', false)
+        $this->get('/?settings=1')->assertOk()
+            ->assertSeeInOrder(['<nav class="side-menu"', 'id="menu-home"', 'class="menu-divider"', 'id="habs-open"'], false)
+            ->assertDontSee('id="menu-settings"', false)
+            ->assertSee('window.openSettings = open', false)
             ->assertSee('id="settings-frame"', false);
+        $this->assertFileExists(public_path('img/settings-gear.png'));
     }
 }
