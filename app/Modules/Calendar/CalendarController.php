@@ -9,6 +9,7 @@ use App\Actions\Calendar\BuildCalendarData;
 use App\Actions\Calendar\MoveCalendarUp;
 use App\Actions\Calendar\RemoveCalendar;
 use App\Actions\Calendar\UpdateCalendar;
+use App\Dashboard\ModuleRegistry;
 use App\Http\Controllers\Controller;
 use App\Modules\Calendar\Requests\AddCalendarRequest;
 use App\Modules\Calendar\Requests\UpdateCalendarRequest;
@@ -22,6 +23,14 @@ class CalendarController extends Controller
     public function events(BuildCalendarData $buildCalendarData): JsonResponse
     {
         return response()->json($buildCalendarData->handle(now()->toImmutable()))->header('Cache-Control', 'no-store');
+    }
+
+    /** GET /modules/calendar/card: the card's data, polled every 5 minutes so it stays current without a reload. */
+    public function card(ModuleRegistry $modules): JsonResponse
+    {
+        $data = (array) $modules->get('calendar')?->data();
+
+        return response()->json(array_intersect_key($data, array_flip(['today', 'weekStart', 'calendars', 'events', 'next'])))->header('Cache-Control', 'no-store');
     }
 
     public function settings(CalendarStore $store): View

@@ -185,4 +185,17 @@ class CalendarTest extends TestCase
         $this->post("/modules/calendar/calendars/{$id}", ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => ''])->assertRedirect();
         $this->getJson('/modules/calendar/events')->assertJsonPath('calendars.0.icon', '');
     }
+
+    public function test_the_card_data_can_be_polled_and_picks_up_new_calendars_at_once(): void
+    {
+        $this->getJson('/modules/calendar/card')->assertOk()->assertJsonPath('calendars.0.name', 'Family')->assertJsonPath('calendars.1.name', 'School');
+
+        $this->addFamily();
+
+        $this->getJson('/modules/calendar/card')->assertOk()
+            ->assertJsonPath('weekStart', '2026-11-22')
+            ->assertJsonCount(1, 'calendars')
+            ->assertJsonPath('events.0.title', 'Swimming lessons')
+            ->assertJsonPath('next.0.title', 'Pedagogical day');
+    }
 }

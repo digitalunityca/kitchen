@@ -72,6 +72,7 @@ class CalendarModule extends Module
     public function routes(Router $router): void
     {
         $router->get('events', [CalendarController::class, 'events'])->middleware('throttle:30,1')->name('events');
+        $router->get('card', [CalendarController::class, 'card'])->middleware('throttle:30,1')->name('card');
         $router->get('settings', [CalendarController::class, 'settings'])->name('settings');
         $router->post('calendars', [CalendarController::class, 'store'])->middleware('throttle:10,1')->name('calendars.store');
         $router->post('calendars/{id}', [CalendarController::class, 'update'])->where('id', '[a-z0-9]{8}')->name('calendars.update');

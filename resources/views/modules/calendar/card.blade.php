@@ -1,4 +1,4 @@
-<section class="card cal" aria-label="Calendar" id="cal" data-events="{{ route('modules.calendar.events') }}">
+<section class="card cal" aria-label="Calendar" id="cal" data-events="{{ route('modules.calendar.events') }}" data-card="{{ route('modules.calendar.card') }}">
   <div class="row">
     <button type="button" class="label cal-month" id="cal-month" aria-label="Open the month view"></button>
     <span class="row" style="gap:8px">
@@ -170,8 +170,13 @@
   // The calendars dropdown filters it (same setting as the month view's chips).
   (function () {
     var U = window.CalendarUi, card = document.getElementById('cal'), list = document.getElementById('cal-list'), menu = document.getElementById('cal-menu'), pick = document.getElementById('cal-pick');
-    var data = JSON.parse(document.getElementById('cal-data').textContent), selected = null, byDay = {};
-    data.events.forEach(function (ev) { ev.days.forEach(function (k) { (byDay[k] = byDay[k] || []).push(ev); }); });
+    var data = null, selected = null, byDay = {};
+    function load(d) {
+      data = d; byDay = {};
+      data.events.forEach(function (ev) { ev.days.forEach(function (k) { (byDay[k] = byDay[k] || []).push(ev); }); });
+      if (selected && (selected < data.weekStart || !(selected in byDay) && selected > add(13))) selected = null;
+    }
+    load(JSON.parse(document.getElementById('cal-data').textContent));
     function on(ev) { return U.hidden().indexOf(ev.calendarId) < 0; }
     function add(days) { var d = U.parse(data.today); d.setDate(d.getDate() + days); return U.ymd(d); }
 
@@ -248,6 +253,14 @@
     document.addEventListener('click', function () { if (!menu.hidden) { menu.hidden = true; pick.setAttribute('aria-expanded', 'false'); } });
     document.addEventListener('calendar:filter', function () { render(); renderMenu(); });
     document.addEventListener('dashboard:home', function () { selected = null; menu.hidden = true; render(); });
+    // Stay current without a reload: new events, new calendars and a new day every 5 minutes.
+    // The selected day and an open month view are left as they are.
+    setInterval(function () {
+      fetch(card.dataset.card, { cache: 'no-store', headers: { Accept: 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (d) { load(d); render(); if (menu.hidden) renderMenu(); })
+        .catch(function () {}); // keep what's on screen
+    }, 5 * 60 * 1000);
     // Events turn "Now" and then past as time goes by (checked once a minute).
     var lastMinute = -1;
     document.addEventListener('dashboard:tick', function (e) { var m = e.detail.getMinutes(); if (m !== lastMinute) { lastMinute = m; renderList(); } });
