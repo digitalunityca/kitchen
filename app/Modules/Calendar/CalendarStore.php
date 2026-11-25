@@ -8,12 +8,15 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 
 /**
  * The connected calendars, kept in storage/app/private/calendars.json (never in
- * git). Each has an id, name, colour, iCal feed URL and a visible flag. The
+ * git). Each has an id, name, colour, optional icon (an emoji shown before its events), iCal feed URL and a visible flag. The
  * URLs are secret links, so they are never logged and are masked in the UI.
  */
 class CalendarStore
 {
     private const FILE = 'calendars.json';
+
+    /** Icons offered on the settings page (any emoji can be typed too). */
+    public const ICONS = ['⚽', '🏒', '🎵', '🏫', '💼', '🩺', '🎂'];
 
     public const COLORS = ['#0071E3', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#5AC8FA', '#FF2D55', '#8E8E93'];
 

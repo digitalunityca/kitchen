@@ -108,7 +108,7 @@ class CalendarTest extends TestCase
             ->assertJsonPath('today', '2026-11-24')
             ->assertJsonPath('from', '2026-05-01')
             ->assertJsonPath('to', '2027-11-30')
-            ->assertJsonPath('calendars.0', ['id' => $id, 'name' => 'Family', 'color' => '#FF9500'])
+            ->assertJsonPath('calendars.0', ['id' => $id, 'name' => 'Family', 'color' => '#FF9500', 'icon' => ''])
             ->json();
 
         $swims = array_values(array_filter($data['events'], fn ($e) => $e['title'] === 'Swimming lessons'));
@@ -171,5 +171,18 @@ class CalendarTest extends TestCase
         $this->assertSame(['Swimming lessons'], array_column($next, 'title'));
         $this->assertSame('2026-12-15T17:00', $next[0]['start']);
         $this->assertContains($next[0]['id'], array_column($this->getJson('/modules/calendar/events')->json('events'), 'id'), 'the month view can show its details');
+    }
+
+    public function test_a_calendar_can_have_an_icon_shown_before_its_events(): void
+    {
+        $this->post('/modules/calendar/calendars', ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => '⚽', 'url' => self::FEED])->assertRedirect();
+        $id = app(CalendarStore::class)->all()[0]['id'];
+
+        $this->get('/modules/calendar/settings')->assertSee('⚽ Theo Soccer');
+        $data = $this->getJson('/modules/calendar/events')->assertJsonPath('calendars.0.icon', '⚽')->json();
+        $this->assertSame('⚽', $data['events'][0]['icon']);
+
+        $this->post("/modules/calendar/calendars/{$id}", ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => ''])->assertRedirect();
+        $this->getJson('/modules/calendar/events')->assertJsonPath('calendars.0.icon', '');
     }
 }

@@ -73,6 +73,12 @@
   .cal-d .dots i { width: 5px; height: 5px; border-radius: 999px; }
   .cal-events { flex: 1; overflow: hidden; }
   .cal-back { font-size: 14px; color: var(--accent); padding: 0; margin-left: 8px; font-weight: 500; }
+  /* Colour bars come from --c; finished events step back (muted, hollow bar), running ones say "Now". */
+  .cal .ev i, .calx-ev i { background: var(--c); }
+  .cal .ev.past, .calx-ev.past { color: var(--sub); }
+  .cal .ev.past b, .calx-ev.past b { color: var(--sub); font-weight: 400; }
+  .cal .ev.past i, .calx-ev.past i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+  .cal-now { font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #FF3B30; border-radius: 6px; padding: 2px 6px; margin-left: 8px; vertical-align: 2px; letter-spacing: .03em; text-transform: uppercase; }
   .cal-more { font-size: 14px; color: var(--accent); text-align: left; padding: 4px 0; }
   .cal-day { margin: 6px 0 2px; font-size: 15px; font-weight: 600; }
   .cal-none { margin: 2px 0 6px; color: var(--sub); font-size: 14px; }
@@ -144,11 +150,20 @@
     function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
     function clock(d) { var h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); }
     function timeLabel(ev) { if (ev.allDay) return 'All day'; var s = parse(ev.start), e = parse(ev.end); return clock(s) + (e > s ? ' – ' + clock(e) : ''); }
+    /** "past" once a timed event ends or an all-day event's last day is over; "now" while a timed event runs. */
+    function phase(ev) {
+      var now = new Date(), s = parse(ev.start), e = parse(ev.end);
+      if (ev.allDay) e = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+      if (e <= now) return 'past';
+      return !ev.allDay && s <= now ? 'now' : '';
+    }
+    function title(ev) { return (ev.icon ? ev.icon + ' ' : '') + ev.title; }
+    function badge(ev) { return phase(ev) === 'now' ? '<em class="cal-now">Now</em>' : ''; }
     function hidden(list) {
       try { if (list === undefined) return JSON.parse(localStorage.getItem('calendar-hidden') || '[]'); localStorage.setItem('calendar-hidden', JSON.stringify(list)); } catch (e) { return []; }
       document.dispatchEvent(new CustomEvent('calendar:filter'));
     }
-    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, hidden: hidden };
+    return { esc: esc, parse: parse, ymd: ymd, clock: clock, timeLabel: timeLabel, phase: phase, title: title, badge: badge, hidden: hidden };
   })();
 
   // The card: two weeks (Sunday start) with dots, then Today / Tomorrow / Next, or a tapped day.
@@ -177,7 +192,7 @@
     function row(ev, withDate) {
       var loc = ev.location ? ' · ' + ev.location.split(',')[0] : '';
       var date = withDate ? U.parse(ev.start).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }).replace(/\./g, '') + ' · ' : '';
-      return '<button type="button" class="ev" data-event="' + U.esc(ev.id) + '" data-day="' + U.esc(ev.days[0] || '') + '"><i style="background:' + U.esc(ev.color) + '"></i><div><b>' + U.esc(ev.title) + '</b><small>' + U.esc(date + U.timeLabel(ev) + loc) + '</small></div></button>';
+      return '<button type="button" class="ev ' + U.phase(ev) + '" data-event="' + U.esc(ev.id) + '" data-day="' + U.esc(ev.days[0] || '') + '" style="--c:' + U.esc(ev.color) + '"><i></i><div><b>' + U.esc(U.title(ev)) + U.badge(ev) + '</b><small>' + U.esc(date + U.timeLabel(ev) + loc) + '</small></div></button>';
     }
     function section(title, events, extra) {
       return '<p class="cal-day">' + title + (extra || '') + '</p>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">Nothing planned</p>');
@@ -204,7 +219,7 @@
     function renderMenu() {
       var off = U.hidden();
       menu.innerHTML = data.calendars.map(function (c) {
-        return '<label><input type="checkbox" data-cal="' + U.esc(c.id) + '"' + (off.indexOf(c.id) < 0 ? ' checked' : '') + '><i style="background:' + U.esc(c.color) + '"></i>' + U.esc(c.name) + '</label>';
+        return '<label><input type="checkbox" data-cal="' + U.esc(c.id) + '"' + (off.indexOf(c.id) < 0 ? ' checked' : '') + '><i style="background:' + U.esc(c.color) + '"></i>' + U.esc((c.icon ? c.icon + ' ' : '') + c.name) + '</label>';
       }).join('') || '<label>No calendars yet</label>';
     }
     function render() { renderWeeks(); renderList(); }
@@ -233,6 +248,9 @@
     document.addEventListener('click', function () { if (!menu.hidden) { menu.hidden = true; pick.setAttribute('aria-expanded', 'false'); } });
     document.addEventListener('calendar:filter', function () { render(); renderMenu(); });
     document.addEventListener('dashboard:home', function () { selected = null; menu.hidden = true; render(); });
+    // Events turn "Now" and then past as time goes by (checked once a minute).
+    var lastMinute = -1;
+    document.addEventListener('dashboard:tick', function (e) { var m = e.detail.getMinutes(); if (m !== lastMinute) { lastMinute = m; renderList(); } });
     // Past midnight the server data is a day old: reload the card's data with the page's next refresh.
   })();
 
@@ -269,15 +287,16 @@
       return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + term.length)) + '</mark>' + esc(text.slice(i + term.length));
     }
     function row(ev, term) {
-      return '<button type="button" class="calx-ev" data-id="' + esc(ev.id) + '"><i style="background:' + esc(ev.color) + '"></i>' +
-        '<span class="t">' + esc(timeLabel(ev)) + '</span><span><b>' + mark(ev.title, term) + '</b>' +
+      var U = window.CalendarUi;
+      return '<button type="button" class="calx-ev ' + U.phase(ev) + '" data-id="' + esc(ev.id) + '" style="--c:' + esc(ev.color) + '"><i></i>' +
+        '<span class="t">' + esc(timeLabel(ev)) + '</span><span><b>' + (ev.icon ? esc(ev.icon) + ' ' : '') + mark(ev.title, term) + U.badge(ev) + '</b>' +
         (ev.location ? '<small>' + mark(ev.location, term) + '</small>' : '') + '</span></button>';
     }
 
     function renderToggles() {
       var off = hidden();
       document.getElementById('calx-toggles').innerHTML = data.calendars.map(function (c) {
-        return '<button type="button" class="calx-chip" data-cal="' + esc(c.id) + '" aria-pressed="' + (off.indexOf(c.id) < 0) + '"><i style="background:' + esc(c.color) + '"></i>' + esc(c.name) + '</button>';
+        return '<button type="button" class="calx-chip" data-cal="' + esc(c.id) + '" aria-pressed="' + (off.indexOf(c.id) < 0) + '"><i style="background:' + esc(c.color) + '"></i>' + esc((c.icon ? c.icon + ' ' : '') + c.name) + '</button>';
       }).join('');
     }
     function renderMonth() {
@@ -321,7 +340,7 @@
       if (ev.allDay) { var last = new Date(e.getFullYear(), e.getMonth(), e.getDate() - 1); when = longDate(s) + (ymd(last) !== ymd(s) ? ' – ' + longDate(last) : '') + ' · All day'; }
       else when = longDate(s) + ' · ' + clock(s) + ' – ' + (ymd(s) === ymd(e) ? clock(e) : longDate(e) + ' · ' + clock(e));
       side.innerHTML = '<div class="calx-detail-head"><button type="button" class="calx-back" id="calx-back" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>' +
-        '<article class="calx-detail" style="--c:' + esc(ev.color) + '"><h2>' + esc(ev.title) + '</h2><p class="calx-meta">' + esc(ev.calendar) + '</p><dl>' +
+        '<article class="calx-detail" style="--c:' + esc(ev.color) + '"><h2>' + esc(window.CalendarUi.title(ev)) + '</h2><p class="calx-meta">' + esc(ev.calendar) + '</p><dl>' +
         '<dt>When</dt><dd>' + esc(when) + '</dd>' +
         (ev.location ? '<dt>Where</dt><dd>' + esc(ev.location) + '</dd>' : '') +
         (ev.notes ? '<dt>Notes</dt><dd>' + esc(ev.notes) + '</dd>' : '') +

@@ -10,12 +10,12 @@ use Carbon\CarbonImmutable;
 /** What the card shows until the first calendar is connected (with a "Sample data" pill). */
 final class SampleEvents
 {
-    /** @return list<array{id: string, name: string, color: string}> */
+    /** @return list<array{id: string, name: string, color: string, icon: string}> */
     public static function calendars(): array
     {
         return [
-            ['id' => 'sample-family', 'name' => 'Family', 'color' => '#0071E3'],
-            ['id' => 'sample-school', 'name' => 'School', 'color' => '#34C759'],
+            ['id' => 'sample-family', 'name' => 'Family', 'color' => '#0071E3', 'icon' => ''],
+            ['id' => 'sample-school', 'name' => 'School', 'color' => '#34C759', 'icon' => ''],
         ];
     }
 
@@ -36,6 +36,7 @@ final class SampleEvents
             'calendarId' => $calendar === 'School' ? 'sample-school' : 'sample-family',
             'calendar' => $calendar,
             'color' => $calendar === 'School' ? '#34C759' : '#0071E3',
+            'icon' => '',
         ];
 
         return array_values(array_filter([

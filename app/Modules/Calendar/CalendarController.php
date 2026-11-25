@@ -26,12 +26,12 @@ class CalendarController extends Controller
 
     public function settings(CalendarStore $store): View
     {
-        return view('modules.calendar.settings', ['calendars' => $store->all(), 'colors' => CalendarStore::COLORS]);
+        return view('modules.calendar.settings', ['calendars' => $store->all(), 'colors' => CalendarStore::COLORS, 'icons' => CalendarStore::ICONS]);
     }
 
     public function store(AddCalendarRequest $request, AddCalendar $addCalendar): RedirectResponse
     {
-        $addCalendar->handle($request->validated('name'), $request->validated('color'), $request->validated('url'));
+        $addCalendar->handle($request->validated('name'), $request->validated('color'), $request->validated('url'), $request->validated('icon'));
 
         return redirect()->route('modules.calendar.settings')->with('status', 'Calendar added.');
     }
@@ -39,6 +39,10 @@ class CalendarController extends Controller
     public function update(string $id, UpdateCalendarRequest $request, UpdateCalendar $updateCalendar): RedirectResponse
     {
         $changes = $request->validated();
+
+        if (array_key_exists('icon', $changes)) {
+            $changes['icon'] = trim((string) $changes['icon']);
+        }
 
         if (array_key_exists('visible', $changes)) {
             $changes['visible'] = (bool) $changes['visible'];

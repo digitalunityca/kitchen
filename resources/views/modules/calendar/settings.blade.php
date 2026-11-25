@@ -25,6 +25,11 @@
   .swatches input { position: absolute; opacity: 0; }
   .swatches span { display: block; width: 34px; height: 34px; border-radius: 999px; border: 3px solid transparent; box-shadow: 0 0 0 1px var(--line); }
   .swatches input:checked + span { border-color: var(--card); box-shadow: 0 0 0 2px var(--text); }
+  .icons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .icons label { margin: 0; }
+  .icons input { position: absolute; opacity: 0; }
+  .icons span { display: flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px; background: var(--fill); font-size: 22px; color: var(--text); }
+  .icons input:checked + span { box-shadow: 0 0 0 2px var(--accent); }
   ul { list-style: none; margin: 0; padding: 0; }
   li { padding: 14px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
   li:first-child { border-top: 0; }
@@ -59,6 +64,15 @@
       @error('name') <p class="err">{{ $message }}</p> @enderror
     </div>
     <div>
+      <label>Icon before each event (optional)</label>
+      <div class="icons">
+        <label><input type="radio" name="icon" value="" @checked(old('icon', '') === '')><span>None</span></label>
+        @foreach ($icons as $icon)
+          <label><input type="radio" name="icon" value="{{ $icon }}" @checked(old('icon') === $icon)><span>{{ $icon }}</span></label>
+        @endforeach
+      </div>
+    </div>
+    <div>
       <label>Colour</label>
       <div class="swatches">
         @foreach ($colors as $i => $color)
@@ -82,7 +96,7 @@
           <li class="{{ $c['visible'] ? '' : 'off' }}">
             <div class="line">
               <span class="dot" style="background:{{ $c['color'] }}"></span>
-              <div class="name">{{ $c['name'] }}<small>{{ \App\Modules\Calendar\CalendarStore::mask($c['url']) }}</small></div>
+              <div class="name">@if (($c['icon'] ?? '') !== ''){{ $c['icon'] }} @endif{{ $c['name'] }}<small>{{ \App\Modules\Calendar\CalendarStore::mask($c['url']) }}</small></div>
               @if ($i > 0)
                 <form method="post" action="{{ route('modules.calendar.calendars.up', $c['id']) }}">@csrf<button class="ghost" aria-label="Move up">↑</button></form>
               @endif
@@ -90,10 +104,16 @@
               <form method="post" action="{{ route('modules.calendar.calendars.destroy', $c['id']) }}">@csrf<button class="ghost danger">Remove</button></form>
             </div>
             <details>
-              <summary>Rename or change colour</summary>
+              <summary>Rename, icon or colour</summary>
               <form method="post" action="{{ route('modules.calendar.calendars.update', $c['id']) }}">
                 @csrf
                 <input type="text" name="name" value="{{ $c['name'] }}" maxlength="40" required aria-label="Name">
+                <div class="icons">
+                  <label><input type="radio" name="icon" value="" @checked(($c['icon'] ?? '') === '')><span>None</span></label>
+                  @foreach ($icons as $icon)
+                    <label><input type="radio" name="icon" value="{{ $icon }}" @checked(($c['icon'] ?? '') === $icon)><span>{{ $icon }}</span></label>
+                  @endforeach
+                </div>
                 <div class="swatches">
                   @foreach ($colors as $color)
                     <label><input type="radio" name="color" value="{{ $color }}" @checked($c['color'] === $color)><span style="background:{{ $color }}"></span></label>

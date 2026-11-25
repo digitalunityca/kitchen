@@ -15,6 +15,7 @@ class AddCalendarRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:40'],
+            'icon' => ['nullable', 'string', 'max:8'],
             'color' => ['required', Rule::in(CalendarStore::COLORS)],
             'url' => ['required', 'string', 'max:2000', 'regex:#^(https?|webcals?)://#i'],
         ];

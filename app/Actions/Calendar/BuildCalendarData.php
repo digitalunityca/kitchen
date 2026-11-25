@@ -51,6 +51,7 @@ class BuildCalendarData
             'calendarId' => $e['calendarId'],
             'calendar' => $e['calendar'],
             'color' => $e['color'],
+            'icon' => (string) ($e['icon'] ?? ''),
             'title' => $e['title'],
             'location' => $e['location'],
             'notes' => self::plainText($e['description']),

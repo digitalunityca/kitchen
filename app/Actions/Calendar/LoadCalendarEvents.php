@@ -56,6 +56,7 @@ class LoadCalendarEvents
                     'calendarId' => $calendar['id'],
                     'calendar' => $calendar['name'],
                     'color' => $calendar['color'],
+                    'icon' => (string) ($calendar['icon'] ?? ''),
                 ];
             }
         }
@@ -64,7 +65,7 @@ class LoadCalendarEvents
 
         return [
             'sample' => false,
-            'calendars' => array_map(fn (array $c): array => ['id' => $c['id'], 'name' => $c['name'], 'color' => $c['color']], $calendars),
+            'calendars' => array_map(fn (array $c): array => ['id' => $c['id'], 'name' => $c['name'], 'color' => $c['color'], 'icon' => (string) ($c['icon'] ?? '')], $calendars),
             'events' => $events,
         ];
     }

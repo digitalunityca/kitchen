@@ -15,6 +15,7 @@ class UpdateCalendarRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:40'],
+            'icon' => ['nullable', 'string', 'max:8'],
             'color' => ['sometimes', Rule::in(CalendarStore::COLORS)],
             'visible' => ['sometimes', 'boolean'],
         ];
