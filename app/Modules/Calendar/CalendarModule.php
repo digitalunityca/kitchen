@@ -2,6 +2,7 @@
 
 namespace App\Modules\Calendar;
 
+use App\Actions\Calendar\BuildCalendarData;
 use App\Actions\Calendar\LoadCalendarEvents;
 use App\Actions\Calendar\ParseIcs;
 use App\Dashboard\Module;
@@ -36,20 +37,35 @@ class CalendarModule extends Module
     /** How far ahead the card looks for the "Next" event after tomorrow. */
     public const NEXT_DAYS = 365;
 
-    /** @return array{sample: bool, today: list<array<string, mixed>>, tomorrow: list<array<string, mixed>>, next: array<string, mixed>|null} */
+    /**
+     * The card's data, filtered and drawn in the browser so the calendars
+     * dropdown works instantly: this week and next (Sunday start) with every
+     * event, plus each calendar's first event after tomorrow for "Next".
+     *
+     * @return array{sample: bool, calendars: list<array<string, mixed>>, today: string, weekStart: string, events: list<array<string, mixed>>, next: list<array<string, mixed>>}
+     */
     public function data(): array
     {
-        $from = now(ParseIcs::TIMEZONE)->toImmutable()->startOfDay();
-        $loaded = app(LoadCalendarEvents::class)->handle($from, $from->addDays(self::NEXT_DAYS));
-        $days = LoadCalendarEvents::byDay($loaded['events'], $from, self::NEXT_DAYS);
-        $later = array_slice($days, 2, null, true);
-        $nextDay = array_key_first(array_filter($later));
+        $today = now(ParseIcs::TIMEZONE)->toImmutable()->startOfDay();
+        $weekStart = $today->subDays($today->dayOfWeek);
+        $windowEnd = $weekStart->addDays(14);
+        $loaded = app(LoadCalendarEvents::class)->handle($weekStart, $today->addDays(self::NEXT_DAYS));
+        $afterTomorrow = $today->addDays(2);
+
+        $window = array_values(array_filter($loaded['events'], fn (array $e): bool => $e['start'] < $windowEnd && $e['end'] > $weekStart));
+        $next = collect($loaded['events'])
+            ->filter(fn (array $e): bool => $e['start'] >= $afterTomorrow)
+            ->groupBy('calendarId')
+            ->map(fn ($events) => $events->first())
+            ->values()->all();
 
         return [
             'sample' => $loaded['sample'],
-            'today' => array_values($days)[0],
-            'tomorrow' => array_values($days)[1],
-            'next' => $nextDay === null ? null : $later[$nextDay][0],
+            'calendars' => $loaded['calendars'],
+            'today' => $today->toDateString(),
+            'weekStart' => $weekStart->toDateString(),
+            'events' => array_map(fn (array $e): array => BuildCalendarData::compact($e, $weekStart, $windowEnd), $window),
+            'next' => array_map(fn (array $e): array => BuildCalendarData::compact($e, $afterTomorrow, $today->addDays(self::NEXT_DAYS)), $next),
         ];
     }
 

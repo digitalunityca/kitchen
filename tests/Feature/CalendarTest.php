@@ -32,7 +32,8 @@ class CalendarTest extends TestCase
 
     public function test_without_calendars_the_card_shows_sample_events(): void
     {
-        $this->get('/')->assertOk()->assertSee('>Sample data</a>', false)->assertSee('School drop-off')->assertSee('Tomorrow');
+        $this->get('/')->assertOk()->assertSee('>Sample data</a>', false);
+        $this->assertContains('School drop-off', array_column($this->cardData()['events'], 'title'));
     }
 
     public function test_adding_a_calendar_checks_the_link_and_keeps_it_secret(): void
@@ -66,14 +67,35 @@ class CalendarTest extends TestCase
         $this->assertSame([], app(CalendarStore::class)->all());
     }
 
-    public function test_the_card_shows_today_and_tomorrow_with_calendar_colours(): void
+    /** The JSON the calendar card draws itself from. */
+    private function cardData(): array
+    {
+        preg_match('#<script type="application/json" id="cal-data">(.*?)</script>#s', $this->get('/')->assertOk()->getContent(), $m);
+
+        return json_decode($m[1], true);
+    }
+
+    public function test_the_card_gets_this_week_and_next_with_calendar_colours(): void
     {
         $this->addFamily();
+        $data = $this->cardData();
 
-        $this->get('/')->assertOk()
-            ->assertDontSee('School drop-off')
-            ->assertSeeInOrder(['Today', 'Swimming lessons', '5:00 – 6:00 PM', 'Centre aquatique', 'New Year party', '10:00 PM – 1:00 AM', 'Tomorrow', 'Nothing planned'])
-            ->assertSee('background:#FF9500', false);
+        $this->assertSame(['2026-11-24', '2026-11-22'], [$data['today'], $data['weekStart']], 'weeks start on Sunday');
+        $this->assertSame(['Family'], array_column($data['calendars'], 'name'));
+        $titles = array_map(fn ($e) => $e['days'][0].' '.$e['title'], $data['events']);
+        $this->assertSame([
+            '2026-11-24 Swimming lessons', '2026-11-24 New Year party', '2026-11-27 Pedagogical day',
+            '2026-12-01 Swimming lessons', '2026-12-03 Swimming lessons',
+        ], $titles);
+        $this->assertSame('#FF9500', $data['events'][0]['color']);
+        $this->assertDontSeeTitleOutsideTheWindow($data);
+    }
+
+    private function assertDontSeeTitleOutsideTheWindow(array $data): void
+    {
+        foreach ($data['events'] as $event) {
+            $this->assertTrue($event['days'][0] >= '2026-11-22' && $event['days'][0] < '2026-12-06');
+        }
     }
 
     public function test_the_calendar_data_covers_six_months_back_to_twelve_ahead(): void
@@ -138,16 +160,16 @@ class CalendarTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Swimming lessons');
     }
 
-    public function test_the_card_shows_the_next_event_after_tomorrow_and_its_details_open(): void
+    public function test_the_card_gets_each_calendars_next_event_after_tomorrow(): void
     {
         $this->addFamily();
-
-        $this->get('/')->assertOk()->assertSeeInOrder(['Tomorrow', 'Nothing planned', 'Next', 'Pedagogical day', 'Fri Nov 27 · All day'], false);
+        $this->assertSame(['Pedagogical day'], array_column($this->cardData()['next'], 'title'));
 
         $this->travelTo(CarbonImmutable::parse('2026-12-10 12:00', ParseIcs::TIMEZONE));
-        $html = $this->get('/')->assertOk()->assertSee('Tue Dec 15 · 5:00 – 6:00 PM')->getContent();
-        preg_match('/Next<\/p>\s*<button type="button" class="ev" data-event="([a-f0-9]{12})"/', $html, $m);
+        $next = $this->cardData()['next'];
 
-        $this->assertContains($m[1], array_column($this->getJson('/modules/calendar/events')->json('events'), 'id'), 'the sheet can show its details');
+        $this->assertSame(['Swimming lessons'], array_column($next, 'title'));
+        $this->assertSame('2026-12-15T17:00', $next[0]['start']);
+        $this->assertContains($next[0]['id'], array_column($this->getJson('/modules/calendar/events')->json('events'), 'id'), 'the month view can show its details');
     }
 }

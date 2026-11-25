@@ -34,20 +34,31 @@ class BuildCalendarData
             'from' => $from->toDateString(),
             'to' => $to->subDay()->toDateString(),
             'calendars' => $loaded['calendars'],
-            'events' => array_map(fn (array $e): array => [
-                'id' => $e['id'],
-                'calendarId' => $e['calendarId'],
-                'calendar' => $e['calendar'],
-                'color' => $e['color'],
-                'title' => $e['title'],
-                'location' => $e['location'],
-                'notes' => self::plainText($e['description']),
-                'attendees' => $e['attendees'],
-                'allDay' => $e['allDay'],
-                'start' => $e['start']->format('Y-m-d\TH:i'),
-                'end' => $e['end']->format('Y-m-d\TH:i'),
-                'days' => self::days($e, $from, $to),
-            ], $loaded['events']),
+            'events' => array_map(fn (array $e): array => self::compact($e, $from, $to), $loaded['events']),
+        ];
+    }
+
+    /**
+     * One event as the browser gets it.
+     *
+     * @param  array<string, mixed>  $e
+     * @return array<string, mixed>
+     */
+    public static function compact(array $e, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return [
+            'id' => $e['id'],
+            'calendarId' => $e['calendarId'],
+            'calendar' => $e['calendar'],
+            'color' => $e['color'],
+            'title' => $e['title'],
+            'location' => $e['location'],
+            'notes' => self::plainText($e['description']),
+            'attendees' => $e['attendees'],
+            'allDay' => $e['allDay'],
+            'start' => $e['start']->format('Y-m-d\TH:i'),
+            'end' => $e['end']->format('Y-m-d\TH:i'),
+            'days' => self::days($e, $from, $to),
         ];
     }
 
