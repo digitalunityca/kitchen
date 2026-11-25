@@ -32,7 +32,7 @@
   @endforeach
 </div>
 
-@foreach (collect($days)->flatten(1)->unique('id') as $event)
+@foreach (collect($days)->flatten(1)->merge(collect($extra)->flatten(1)->take(1))->unique('id') as $event)
   <article class="calx-detail" data-detail="{{ $event['id'] }}" style="--c: {{ $event['color'] }}" hidden>
     <h2>{{ $event['title'] }}</h2>
     <p class="calx-meta">{{ $event['calendar'] }}</p>

@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Calendars from iCal links (Google, iCloud, Outlook…), added on
- * /modules/calendar/settings. The card shows today and tomorrow; its icon
- * opens a sheet with the next 14 days, calendar filters and event details.
+ * /modules/calendar/settings. The card shows today, tomorrow and the next event
+ * after that; its icon opens a sheet with the next 60 days, calendar filters and
+ * event details.
  * Sample events show until the first calendar is added.
  */
 class CalendarModule extends Module
@@ -32,14 +33,24 @@ class CalendarModule extends Module
         $app->bind(CalendarStore::class, fn (): CalendarStore => new CalendarStore(Storage::disk('local')));
     }
 
-    /** @return array{sample: bool, today: list<array<string, mixed>>, tomorrow: list<array<string, mixed>>} */
+    /** How far ahead the card looks for the "Next" event after tomorrow. */
+    public const NEXT_DAYS = 365;
+
+    /** @return array{sample: bool, today: list<array<string, mixed>>, tomorrow: list<array<string, mixed>>, next: array<string, mixed>|null} */
     public function data(): array
     {
         $from = now(ParseIcs::TIMEZONE)->toImmutable()->startOfDay();
-        $loaded = app(LoadCalendarEvents::class)->handle($from, $from->addDays(2));
-        $days = array_values(LoadCalendarEvents::byDay($loaded['events'], $from, 2));
+        $loaded = app(LoadCalendarEvents::class)->handle($from, $from->addDays(self::NEXT_DAYS));
+        $days = LoadCalendarEvents::byDay($loaded['events'], $from, self::NEXT_DAYS);
+        $later = array_slice($days, 2, null, true);
+        $nextDay = array_key_first(array_filter($later));
 
-        return ['sample' => $loaded['sample'], 'today' => $days[0], 'tomorrow' => $days[1]];
+        return [
+            'sample' => $loaded['sample'],
+            'today' => array_values($days)[0],
+            'tomorrow' => array_values($days)[1],
+            'next' => $nextDay === null ? null : $later[$nextDay][0],
+        ];
     }
 
     public function routes(Router $router): void

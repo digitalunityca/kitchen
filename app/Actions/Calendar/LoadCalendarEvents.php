@@ -7,6 +7,7 @@ namespace App\Actions\Calendar;
 use App\Modules\Calendar\CalendarStore;
 use App\Modules\Calendar\SampleEvents;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Repository as Cache;
 
 /**
  * Events from every connected calendar between two moments, merged and sorted
@@ -19,6 +20,7 @@ class LoadCalendarEvents
         private readonly CalendarStore $store,
         private readonly FetchCalendarFeed $fetchCalendarFeed,
         private readonly ParseIcs $parseIcs,
+        private readonly Cache $cache,
     ) {}
 
     /** @return array{sample: bool, calendars: list<array<string, mixed>>, events: list<array<string, mixed>>} */
@@ -30,6 +32,18 @@ class LoadCalendarEvents
             return ['sample' => true, 'calendars' => SampleEvents::calendars(), 'events' => SampleEvents::between($from, $to)];
         }
 
+        // Expanding a year of recurring events is the slow part, so keep the result 5 minutes.
+        $key = 'calendar.events.'.sha1(json_encode([$calendars, $from->toIso8601String(), $to->toIso8601String()]));
+
+        return $this->cache->remember($key, now()->addMinutes(5), fn (): array => $this->merge($calendars, $from, $to));
+    }
+
+    /**
+     * @param  list<array{id: string, name: string, color: string, url: string, visible: bool}>  $calendars
+     * @return array{sample: bool, calendars: list<array<string, mixed>>, events: list<array<string, mixed>>}
+     */
+    private function merge(array $calendars, CarbonImmutable $from, CarbonImmutable $to): array
+    {
         $events = [];
 
         foreach ($calendars as $calendar) {

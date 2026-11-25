@@ -20,16 +20,21 @@ use Illuminate\Http\Response;
 class CalendarController extends Controller
 {
     /** Days shown in the calendar sheet. */
-    public const SHEET_DAYS = 14;
+    public const SHEET_DAYS = 60;
 
-    /** GET /modules/calendar/sheet: the next 14 days, filterable by calendar, with each event's details. */
+    /**
+     * GET /modules/calendar/sheet: the next 60 days, filterable by calendar, with each event's
+     * details. The card's "Next" event may be further out, so its details come along too.
+     */
     public function sheet(LoadCalendarEvents $loadCalendarEvents): Response
     {
         $from = now(ParseIcs::TIMEZONE)->toImmutable()->startOfDay();
-        $loaded = $loadCalendarEvents->handle($from, $from->addDays(self::SHEET_DAYS), visibleOnly: true);
+        $loaded = $loadCalendarEvents->handle($from, $from->addDays(CalendarModule::NEXT_DAYS), visibleOnly: true);
+        $days = LoadCalendarEvents::byDay($loaded['events'], $from, CalendarModule::NEXT_DAYS);
 
         return response()->view('modules.calendar.sheet', $loaded + [
-            'days' => LoadCalendarEvents::byDay($loaded['events'], $from, self::SHEET_DAYS),
+            'days' => array_slice($days, 0, self::SHEET_DAYS, true),
+            'extra' => array_slice($days, self::SHEET_DAYS, null, true),
             'today' => $from,
         ])->header('Cache-Control', 'no-store');
     }

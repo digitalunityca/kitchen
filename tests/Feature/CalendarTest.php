@@ -125,4 +125,17 @@ class CalendarTest extends TestCase
 
         $this->get('/')->assertOk()->assertSee('Swimming lessons');
     }
+
+    public function test_the_card_shows_the_next_event_after_tomorrow_and_its_details_open(): void
+    {
+        $this->addFamily();
+
+        $this->get('/')->assertOk()->assertSeeInOrder(['Tomorrow', 'Nothing planned', 'Next', 'Pedagogical day', 'Fri Nov 27 · All day'], false);
+
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 12:00', ParseIcs::TIMEZONE));
+        $html = $this->get('/')->assertOk()->assertSee('Tue Dec 15 · 5:00 – 6:00 PM')->getContent();
+        preg_match('/Next<\/p>\s*<button type="button" class="ev" data-event="([a-f0-9]{12})"/', $html, $m);
+
+        $this->get('/modules/calendar/sheet')->assertSee('data-detail="'.$m[1].'"', false);
+    }
 }

@@ -21,6 +21,13 @@
         <p class="cal-none">Nothing planned</p>
       @endforelse
     @endforeach
+    @if ($next)
+      <p class="cal-day">Next</p>
+      <button type="button" class="ev" data-event="{{ $next['id'] }}">
+        <i style="background:{{ $next['color'] }}"></i>
+        <div><b>{{ $next['title'] }}</b><small>{{ $next['start']->format('D M j') }} · @include('modules.calendar.time', ['event' => $next])@if ($next['location']) · {{ \Illuminate\Support\Str::before($next['location'], ',') }}@endif</small></div>
+      </button>
+    @endif
   </div>
 </section>
 
