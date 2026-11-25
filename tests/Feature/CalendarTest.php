@@ -198,4 +198,21 @@ class CalendarTest extends TestCase
             ->assertJsonPath('events.0.title', 'Swimming lessons')
             ->assertJsonPath('next.0.title', 'Pedagogical day');
     }
+
+    public function test_a_calendar_reminder_reaches_its_events_and_an_events_own_alarm_wins(): void
+    {
+        Http::fake(['alarms.example.com/*' => Http::response((string) file_get_contents(base_path('tests/Fixtures/ics/alarms.ics')))]);
+        $this->post('/modules/calendar/calendars', ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => '⚽', 'reminder' => 30, 'speak' => 1, 'url' => 'https://alarms.example.com/feed.ics'])->assertRedirect();
+
+        $this->get('/modules/calendar/settings')->assertSee('reminder 30 minutes before, spoken');
+        $events = collect($this->getJson('/modules/calendar/events')->json('events'))->keyBy('title');
+
+        $this->assertSame([30, true], [$events['Plain']['remind'], $events['Plain']['speak']]);
+        $this->assertSame(45, $events['Soccer game']['remind'], 'the event\'s own alarm takes precedence');
+        $this->assertSame('Coach Martin', $events['Soccer game']['organizer']);
+
+        $id = app(CalendarStore::class)->all()[0]['id'];
+        $this->post("/modules/calendar/calendars/{$id}", ['name' => 'Theo Soccer', 'color' => '#FF9500', 'icon' => '⚽', 'reminder' => ''])->assertRedirect();
+        $this->assertNull(collect($this->getJson('/modules/calendar/events')->json('events'))->firstWhere('title', 'Plain')['remind']);
+    }
 }

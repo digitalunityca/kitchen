@@ -33,10 +33,15 @@ final class SampleEvents
             'location' => $location,
             'description' => $description,
             'attendees' => [],
+            'url' => '',
+            'organizer' => '',
+            'alarm' => null,
             'calendarId' => $calendar === 'School' ? 'sample-school' : 'sample-family',
             'calendar' => $calendar,
             'color' => $calendar === 'School' ? '#34C759' : '#0071E3',
             'icon' => '',
+            'remind' => null,
+            'speak' => false,
         ];
 
         return array_values(array_filter([

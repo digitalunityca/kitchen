@@ -284,6 +284,18 @@ window.ytmRestoreUserAgent = (function () {
     if (ready && !e.detail.system) player.setVolume(e.detail.level);
   });
 
+  // A short sound from another card (a calendar reminder): lower the music, then bring it back.
+  var duckedFrom = null;
+  document.addEventListener('dashboard:duck', function () {
+    if (!ready || duckedFrom !== null) return;
+    duckedFrom = player.getVolume();
+    player.setVolume(Math.round(duckedFrom * 0.25));
+  });
+  document.addEventListener('dashboard:unduck', function () {
+    if (ready && duckedFrom !== null) player.setVolume(duckedFrom);
+    duckedFrom = null;
+  });
+
   // Another card (the voice chat) needs the speaker: pause, then resume afterwards only if music was playing.
   var pausedForOther = false;
   document.addEventListener('dashboard:audio-claim', function () {

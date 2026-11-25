@@ -35,12 +35,13 @@ class CalendarController extends Controller
 
     public function settings(CalendarStore $store): View
     {
-        return view('modules.calendar.settings', ['calendars' => $store->all(), 'colors' => CalendarStore::COLORS, 'icons' => CalendarStore::ICONS]);
+        return view('modules.calendar.settings', ['calendars' => $store->all(), 'colors' => CalendarStore::COLORS, 'icons' => CalendarStore::ICONS, 'reminders' => CalendarStore::REMINDERS]);
     }
 
     public function store(AddCalendarRequest $request, AddCalendar $addCalendar): RedirectResponse
     {
-        $addCalendar->handle($request->validated('name'), $request->validated('color'), $request->validated('url'), $request->validated('icon'));
+        $addCalendar->handle($request->validated('name'), $request->validated('color'), $request->validated('url'), $request->validated('icon'),
+            $request->filled('reminder') ? (int) $request->validated('reminder') : null, $request->boolean('speak'));
 
         return redirect()->route('modules.calendar.settings')->with('status', 'Calendar added.');
     }
@@ -51,6 +52,11 @@ class CalendarController extends Controller
 
         if (array_key_exists('icon', $changes)) {
             $changes['icon'] = trim((string) $changes['icon']);
+        }
+
+        if (array_key_exists('reminder', $changes)) {
+            $changes['reminder'] = $changes['reminder'] === null || $changes['reminder'] === '' ? null : (int) $changes['reminder'];
+            $changes['speak'] = $request->boolean('speak');
         }
 
         if (array_key_exists('visible', $changes)) {

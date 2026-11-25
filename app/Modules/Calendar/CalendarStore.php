@@ -18,6 +18,9 @@ class CalendarStore
     /** Icons offered on the settings page (any emoji can be typed too). */
     public const ICONS = ['⚽', '🏒', '🎵', '🏫', '💼', '🩺', '🎂'];
 
+    /** Reminder choices in minutes before an event (null = none). */
+    public const REMINDERS = [10 => '10 minutes', 15 => '15 minutes', 30 => '30 minutes', 60 => '1 hour', 1440 => '1 day'];
+
     public const COLORS = ['#0071E3', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#5AC8FA', '#FF2D55', '#8E8E93'];
 
     public function __construct(private readonly Filesystem $disk) {}

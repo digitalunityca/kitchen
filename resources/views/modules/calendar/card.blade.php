@@ -20,6 +20,9 @@
   <script type="application/json" id="cal-data">{!! $cardJson !!}</script>
 </section>
 
+{{-- Reminder banner, shown at the top of the screen at an event's reminder time. --}}
+<div class="cal-reminder" id="cal-reminder" hidden role="alert"></div>
+
 <div class="calx-overlay" id="calx-overlay" hidden role="dialog" aria-modal="true" aria-label="Calendar">
   <div class="calx-sheet">
     <header class="calx-head">
@@ -88,6 +91,24 @@
   .cal .ev.past b, .calx-ev.past b { color: var(--sub); font-weight: 400; }
   .cal .ev.past i, .calx-ev.past i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
   .cal-now { font-style: normal; font-size: 11px; font-weight: 700; color: #fff; background: #FF3B30; border-radius: 6px; padding: 2px 6px; margin-left: 8px; vertical-align: 2px; letter-spacing: .03em; text-transform: uppercase; }
+  .cal-reminder {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 55; width: min(640px, calc(100vw - 180px));
+    display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 22px;
+    background: var(--card); box-shadow: 0 16px 50px rgba(0,0,0,.22), 0 0 0 1px var(--line); border-left: 6px solid var(--c, var(--accent));
+    animation: cal-drop .35s ease-out;
+  }
+  .cal-reminder[hidden] { display: none; }
+  body.night .cal-reminder { background: #2C2C2E; }
+  @keyframes cal-drop { from { opacity: 0; transform: translate(-50%, -12px); } }
+  .cal-reminder .ev-lead { width: 40px; }
+  .cal-reminder .ev-icon { font-size: 34px; }
+  .cal-reminder .ev-dot { width: 16px; height: 16px; }
+  .cal-reminder-text { flex: 1; min-width: 0; }
+  .cal-reminder-text small { display: block; font-size: 13px; font-weight: 700; color: var(--c, var(--accent)); text-transform: uppercase; letter-spacing: .04em; }
+  .cal-reminder-text b { display: block; font-size: 20px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-reminder-text span { display: block; font-size: 15px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-reminder button { width: 44px; height: 44px; border-radius: 999px; background: var(--fill); color: var(--text); flex: none; font-size: 18px; }
+  @media (prefers-reduced-motion: reduce) { .cal-reminder { animation: none; } }
   .cal-more { font-size: 14px; color: var(--accent); text-align: left; padding: 4px 0; }
   .cal-day { margin: 6px 0 2px; font-size: 15px; font-weight: 600; }
   .cal-none { margin: 2px 0 6px; color: var(--sub); font-size: 14px; }
@@ -145,6 +166,7 @@
   .calx-detail .calx-meta { margin: 0 0 14px; color: var(--sub); font-size: 15px; }
   .calx-detail dl { margin: 0; display: grid; grid-template-columns: 90px 1fr; gap: 10px 14px; font-size: 16px; }
   .calx-detail dt { color: var(--sub); font-weight: 500; }
+  .calx-url { color: var(--sub); font-size: 14px; }
   .calx-detail dd { margin: 0; overflow-wrap: anywhere; line-height: 1.45; white-space: pre-line; }
   @media (prefers-reduced-motion: reduce) { .calx-overlay, .calx-sheet { animation: none; transition: none; } }
 </style>
@@ -272,9 +294,62 @@
         .then(function (d) { load(d); render(); if (menu.hidden) renderMenu(); })
         .catch(function () {}); // keep what's on screen
     }, 5 * 60 * 1000);
+    // Reminders: at an event's reminder time (its own alarm, or the calendar's setting),
+    // a banner drops in with a soft chime, and is said out loud if the calendar asks for it.
+    // Tap to dismiss; it goes away by itself when the event starts.
+    var banner = document.getElementById('cal-reminder'), showing = null;
+    function done(list) { try { if (list === undefined) return JSON.parse(localStorage.getItem('calendar-reminded') || '{}'); localStorage.setItem('calendar-reminded', JSON.stringify(list)); } catch (e) { return {}; } }
+    function chime() {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)(), t = ctx.currentTime;
+        [[880, 0], [1318.5, .18]].forEach(function (n) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = 'sine'; o.frequency.value = n[0]; o.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0, t + n[1]); g.gain.linearRampToValueAtTime(.25, t + n[1] + .02); g.gain.exponentialRampToValueAtTime(.001, t + n[1] + .9);
+          o.start(t + n[1]); o.stop(t + n[1] + 1);
+        });
+        setTimeout(function () { ctx.close(); }, 1500);
+      } catch (e) {}
+    }
+    function say(text) {
+      if (window.fully && typeof fully.textToSpeech === 'function') { try { fully.textToSpeech(text); return; } catch (e) {} }
+      if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(text); u.lang = 'en-CA'; speechSynthesis.speak(u); }
+    }
+    function remind(ev) {
+      var start = U.parse(ev.start), mins = Math.max(1, Math.round((start - new Date()) / 60000));
+      var when = mins >= 120 ? U.timeLabel(ev) : 'In ' + mins + ' min';
+      showing = ev;
+      banner.style.setProperty('--c', ev.color);
+      banner.innerHTML = U.lead(ev) + '<div class="cal-reminder-text"><small>' + U.esc(when) + '</small><b>' + U.esc(ev.title) + '</b><span>' +
+        U.esc(start.toLocaleDateString('en-CA', { weekday: 'short' }).replace('.', '') + ' ' + U.clock(start) + (ev.location ? ' · ' + ev.location.split(',')[0] : '')) + '</span></div>' +
+        '<button type="button" aria-label="Dismiss">✕</button>';
+      banner.hidden = false;
+      document.dispatchEvent(new CustomEvent('dashboard:duck'));
+      chime();
+      var text = ev.title + ', ' + (mins >= 120 ? 'at ' + U.clock(start) : 'in ' + mins + ' minutes') + (ev.location ? ', at ' + ev.location.split(',')[0] : '');
+      if (ev.speak) setTimeout(function () { say(text); }, 900);
+      setTimeout(function () { document.dispatchEvent(new CustomEvent('dashboard:unduck')); }, ev.speak ? 1500 + text.length * 80 : 1500);
+    }
+    function checkReminders() {
+      var now = new Date(), seen = done(), changed = false;
+      if (showing && (U.parse(showing.start) <= now)) { banner.hidden = true; showing = null; }
+      Object.keys(seen).forEach(function (k) { if (seen[k] < now.getTime() - 86400000) { delete seen[k]; changed = true; } });
+      if (!showing) {
+        data.events.concat(data.next).some(function (ev) {
+          if (!ev.remind || ev.allDay || U.hidden().indexOf(ev.calendarId) >= 0) return false;
+          var start = U.parse(ev.start), key = ev.id;
+          if (seen[key] || start <= now || start - now > ev.remind * 60000) return false;
+          seen[key] = start.getTime(); changed = true; remind(ev); return true;
+        });
+      }
+      if (changed) done(seen);
+    }
+    banner.addEventListener('click', function () { banner.hidden = true; showing = null; });
+    window.CalendarReminders = { check: checkReminders, show: remind };
+
     // Events turn "Now" and then past as time goes by (checked once a minute).
     var lastMinute = -1;
-    document.addEventListener('dashboard:tick', function (e) { var m = e.detail.getMinutes(); if (m !== lastMinute) { lastMinute = m; renderList(); } });
+    document.addEventListener('dashboard:tick', function (e) { var m = e.detail.getMinutes(); if (m !== lastMinute) { lastMinute = m; renderList(); checkReminders(); } });
     // Past midnight the server data is a day old: reload the card's data with the page's next refresh.
   })();
 
@@ -366,11 +441,15 @@
       side.innerHTML = '<div class="calx-detail-head"><button type="button" class="calx-back" id="calx-back" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>' +
         '<article class="calx-detail" style="--c:' + esc(ev.color) + '"><h2>' + esc(window.CalendarUi.title(ev)) + '</h2><p class="calx-meta">' + esc(ev.calendar) + '</p><dl>' +
         '<dt>When</dt><dd>' + esc(when) + '</dd>' +
-        (ev.location ? '<dt>Where</dt><dd>' + esc(ev.location) + '</dd>' : '') +
+        (ev.location ? '<dt>Where</dt><dd>📍 ' + esc(ev.location) + '</dd>' : '') +
         (ev.notes ? '<dt>Notes</dt><dd>' + esc(ev.notes) + '</dd>' : '') +
-        (ev.attendees.length ? '<dt>Guests</dt><dd>' + esc(ev.attendees.join(', ')) + '</dd>' : '') + '</dl></article>';
+        (ev.organizer ? '<dt>Organizer</dt><dd>' + esc(ev.organizer) + '</dd>' : '') +
+        (ev.attendees.length ? '<dt>Guests</dt><dd>' + esc(ev.attendees.join(', ')) + '</dd>' : '') +
+        (ev.url ? '<dt>Link</dt><dd class="calx-url">' + esc(ev.url) + '</dd>' : '') +
+        (ev.remind ? '<dt>Reminder</dt><dd>' + esc(remindLabel(ev.remind)) + ' before' + (ev.speak ? ', spoken' : '') + '</dd>' : '') + '</dl></article>';
       side.scrollTop = 0;
     }
+    function remindLabel(m) { return m >= 1440 ? (m / 1440) + (m === 1440 ? ' day' : ' days') : m >= 60 ? (m / 60) + (m === 60 ? ' hour' : ' hours') : m + ' minutes'; }
     function back() { if (detailFrom === 'search' && q.value.trim()) renderSearch(); else renderDay(); }
     function select(key) {
       selected = key; var d = parse(key);

@@ -17,7 +17,7 @@ class AddCalendar
     ) {}
 
     /** @throws ValidationException when the link doesn't give a calendar */
-    public function handle(string $name, string $color, string $url, ?string $icon = null): void
+    public function handle(string $name, string $color, string $url, ?string $icon = null, ?int $reminder = null, bool $speak = false): void
     {
         $url = FetchCalendarFeed::httpUrl($url);
 
@@ -26,7 +26,7 @@ class AddCalendar
         }
 
         $calendars = $this->store->all();
-        $calendars[] = ['id' => Str::lower(Str::random(8)), 'name' => $name, 'color' => $color, 'icon' => (string) $icon, 'url' => $url, 'visible' => true];
+        $calendars[] = ['id' => Str::lower(Str::random(8)), 'name' => $name, 'color' => $color, 'icon' => (string) $icon, 'reminder' => $reminder, 'speak' => $speak, 'url' => $url, 'visible' => true];
         $this->store->save($calendars);
     }
 }

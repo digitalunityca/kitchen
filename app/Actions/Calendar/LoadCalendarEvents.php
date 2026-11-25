@@ -57,6 +57,9 @@ class LoadCalendarEvents
                     'calendar' => $calendar['name'],
                     'color' => $calendar['color'],
                     'icon' => (string) ($calendar['icon'] ?? ''),
+                    // The event's own alarm wins; otherwise the calendar's reminder setting.
+                    'remind' => $event['alarm'] ?? (isset($calendar['reminder']) ? (int) $calendar['reminder'] : null),
+                    'speak' => (bool) ($calendar['speak'] ?? false),
                 ];
             }
         }

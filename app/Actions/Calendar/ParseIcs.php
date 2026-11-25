@@ -22,7 +22,7 @@ class ParseIcs
 
     /**
      * @return list<array{uid: string, title: string, start: CarbonImmutable, end: CarbonImmutable, allDay: bool,
-     *               location: string, description: string, attendees: list<string>}>|null null when the feed is not valid iCal
+     *               location: string, description: string, attendees: list<string>, url: string, organizer: string, alarm: int|null}>|null null when the feed is not valid iCal
      */
     public function handle(string $ics, CarbonImmutable $from, CarbonImmutable $to): ?array
     {
@@ -61,6 +61,9 @@ class ParseIcs
                 'location' => trim((string) ($event->LOCATION ?? '')),
                 'description' => trim((string) ($event->DESCRIPTION ?? '')),
                 'attendees' => $this->attendees($event),
+                'url' => trim((string) ($event->URL ?? '')),
+                'organizer' => $this->organizer($event),
+                'alarm' => $this->alarmMinutes($event),
             ];
         }
 
@@ -73,6 +76,35 @@ class ParseIcs
         return $allDay
             ? CarbonImmutable::parse($value->format('Y-m-d'), self::TIMEZONE)
             : CarbonImmutable::instance($value)->setTimezone(self::TIMEZONE);
+    }
+
+    private function organizer(mixed $event): string
+    {
+        if (! isset($event->ORGANIZER)) {
+            return '';
+        }
+
+        return isset($event->ORGANIZER['CN']) ? (string) $event->ORGANIZER['CN'] : (string) preg_replace('/^mailto:/i', '', (string) $event->ORGANIZER);
+    }
+
+    /** Minutes before the start of the event's first alarm (VALARM with a relative trigger), if it has one. */
+    private function alarmMinutes(mixed $event): ?int
+    {
+        foreach ($event->select('VALARM') as $alarm) {
+            $trigger = (string) ($alarm->TRIGGER ?? '');
+
+            if (preg_match('/^-?P/i', $trigger)) {
+                try {
+                    $interval = new \DateInterval(ltrim(strtoupper($trigger), '-'));
+
+                    return $interval->d * 1440 + $interval->h * 60 + $interval->i + intdiv($interval->s, 60);
+                } catch (Throwable) {
+                    continue;
+                }
+            }
+        }
+
+        return null;
     }
 
     /** @return list<string> names, or e-mail addresses when there is no name */

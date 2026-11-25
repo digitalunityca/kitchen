@@ -74,4 +74,16 @@ class ParseIcsTest extends TestCase
         $this->assertSame(['Pedagogical day'], array_column($days['2026-11-28'], 'title'));
         $this->assertSame([], $days['2026-11-29']);
     }
+
+    public function test_alarms_links_and_organizers_are_read(): void
+    {
+        $from = CarbonImmutable::parse('2026-11-24 00:00', ParseIcs::TIMEZONE);
+        $events = collect((new ParseIcs)->handle((string) file_get_contents(__DIR__.'/../../../Fixtures/ics/alarms.ics'), $from, $from->addDays(14)))->keyBy('title');
+
+        $this->assertSame(45, $events['Soccer game']['alarm']);
+        $this->assertSame(1440, $events['Trip']['alarm']);
+        $this->assertNull($events['Plain']['alarm']);
+        $this->assertSame('https://example.com/game/42', $events['Soccer game']['url']);
+        $this->assertSame('Coach Martin', $events['Soccer game']['organizer']);
+    }
 }

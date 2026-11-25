@@ -25,6 +25,9 @@
   .swatches input { position: absolute; opacity: 0; }
   .swatches span { display: block; width: 34px; height: 34px; border-radius: 999px; border: 3px solid transparent; box-shadow: 0 0 0 1px var(--line); }
   .swatches input:checked + span { border-color: var(--card); box-shadow: 0 0 0 2px var(--text); }
+  select { width: 100%; font: inherit; font-size: 17px; color: var(--text); background: var(--fill); border: 1px solid transparent; border-radius: 12px; padding: 12px 14px; }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 15px; color: var(--text); font-weight: 500; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); }
   .icons { display: flex; gap: 8px; flex-wrap: wrap; }
   .icons label { margin: 0; }
   .icons input { position: absolute; opacity: 0; }
@@ -81,6 +84,14 @@
       </div>
     </div>
     <div>
+      <label for="reminder">Reminder on the kitchen screen</label>
+      <select id="reminder" name="reminder">
+        <option value="">None</option>
+        @foreach ($reminders as $minutes => $label)<option value="{{ $minutes }}" @selected((string) old('reminder') === (string) $minutes)>{{ $label }} before</option>@endforeach
+      </select>
+      <label class="check"><input type="checkbox" name="speak" value="1" @checked(old('speak'))> Also say it out loud</label>
+    </div>
+    <div>
       <label for="url">iCal link</label>
       <input type="url" id="url" name="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" required autocomplete="off">
       @error('url') <p class="err">{{ $message }}</p> @enderror
@@ -96,7 +107,7 @@
           <li class="{{ $c['visible'] ? '' : 'off' }}">
             <div class="line">
               <span class="dot" style="background:{{ $c['color'] }}"></span>
-              <div class="name">@if (($c['icon'] ?? '') !== ''){{ $c['icon'] }} @endif{{ $c['name'] }}<small>{{ \App\Modules\Calendar\CalendarStore::mask($c['url']) }}</small></div>
+              <div class="name">@if (($c['icon'] ?? '') !== ''){{ $c['icon'] }} @endif{{ $c['name'] }}<small>{{ \App\Modules\Calendar\CalendarStore::mask($c['url']) }}@if (! empty($c['reminder'])) · reminder {{ \App\Modules\Calendar\CalendarStore::REMINDERS[$c['reminder']] ?? '' }} before{{ ($c['speak'] ?? false) ? ', spoken' : '' }}@endif</small></div>
               @if ($i > 0)
                 <form method="post" action="{{ route('modules.calendar.calendars.up', $c['id']) }}">@csrf<button class="ghost" aria-label="Move up">↑</button></form>
               @endif
@@ -104,7 +115,7 @@
               <form method="post" action="{{ route('modules.calendar.calendars.destroy', $c['id']) }}">@csrf<button class="ghost danger">Remove</button></form>
             </div>
             <details>
-              <summary>Rename, icon or colour</summary>
+              <summary>Rename, icon, colour or reminder</summary>
               <form method="post" action="{{ route('modules.calendar.calendars.update', $c['id']) }}">
                 @csrf
                 <input type="text" name="name" value="{{ $c['name'] }}" maxlength="40" required aria-label="Name">
@@ -119,6 +130,11 @@
                     <label><input type="radio" name="color" value="{{ $color }}" @checked($c['color'] === $color)><span style="background:{{ $color }}"></span></label>
                   @endforeach
                 </div>
+                <select name="reminder" aria-label="Reminder">
+                  <option value="">No reminder</option>
+                  @foreach ($reminders as $minutes => $label)<option value="{{ $minutes }}" @selected((string) ($c['reminder'] ?? '') === (string) $minutes)>Remind {{ $label }} before</option>@endforeach
+                </select>
+                <label class="check"><input type="checkbox" name="speak" value="1" @checked($c['speak'] ?? false)> Say reminders out loud</label>
                 <div><button class="btn" type="submit">Save</button></div>
               </form>
             </details>
