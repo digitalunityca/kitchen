@@ -65,6 +65,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // The dashboard's unload reports, kept on the storage/app volume so they survive container rebuilds.
+        'unload' => [
+            'driver' => 'single',
+            'path' => storage_path('app/private/unload.log'),
+            'level' => 'info',
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
