@@ -2,7 +2,7 @@
 @if ($kids !== [])
 @push('menu-items')
   @foreach ($kids as $kid)
-    <button type="button" class="kid-btn" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ $kid['name'] }}’s homework">{{ $kid['badge'] }}</button>
+    <button type="button" class="kid-btn{{ $kid['photo'] ? ' has-photo' : '' }}" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ $kid['name'] }}’s homework">@if ($kid['photo'])<img src="{{ $kid['photo'] }}" alt="" width="56" height="56">@else{{ $kid['badge'] }}@endif</button>
   @endforeach
   <span class="menu-divider" aria-hidden="true"></span>
 @endpush
@@ -27,6 +27,8 @@
     transition: transform .15s ease;
   }
   .kid-btn:active { transform: scale(.94); }
+  .kid-btn.has-photo { padding: 0; overflow: hidden; box-shadow: 0 0 0 3px var(--kid), 0 2px 8px rgba(0,0,0,.12); }
+  .kid-btn img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px; display: block; }
   .kid-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .kid-overlay[hidden], .kid-sheet[hidden] { display: none; }
   .kid-sheet { position: relative; width: min(1180px, 100%); height: 100%; background: var(--bg); border-radius: 28px; padding: 20px 24px; box-shadow: 0 30px 80px rgba(0,0,0,.3); display: flex; flex-direction: column; }

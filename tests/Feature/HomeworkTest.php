@@ -79,6 +79,7 @@ class HomeworkTest extends TestCase
         $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
 
         $this->get(self::SHEET)->assertSee('<img class="kz-avatar big" src="/modules/homework/kids/theo/photo?v=', false);
+        $this->get('/')->assertSee('class="kid-btn has-photo" data-kid="theo"', false)->assertSee('class="kid-btn" data-kid="arthur"', false);
         $this->get('/modules/homework/kids/theo/photo')->assertOk()->assertHeader('Content-Type', 'image/jpeg');
         $this->get('/modules/homework/kids/arthur/photo')->assertNotFound();
     }
