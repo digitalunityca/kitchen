@@ -37,6 +37,15 @@ class YouTubeMusicTest extends TestCase
             ->assertSee('data-tv-ua="'.e($ua).'"', false);
     }
 
+    public function test_the_card_has_a_search_box_that_opens_youtube_tv_results(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('id="ytm-search"', false)
+            ->assertSee('placeholder="Search YouTube"', false)
+            ->assertSee("'#/search?q=' + encodeURIComponent(q)", false)
+            ->assertDontSee('</span>YouTube Music</p>', false);
+    }
+
     public function test_it_rejects_links_without_a_playlist(): void
     {
         $this->from('/modules/youtube-music/settings')

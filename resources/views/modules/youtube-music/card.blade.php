@@ -8,7 +8,11 @@
 
   <div class="ytm-side">
     <div class="row ytm-top">
-      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">Open YouTube Premium ↗</a>
+      <form class="ytm-search" id="ytm-search" role="search" autocomplete="off">
+        <input type="search" name="q" maxlength="100" placeholder="Search YouTube" aria-label="Search YouTube" enterkeyhint="search">
+        <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      </form>
+      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">Full screen ↗</a>
     </div>
 
     @if (count($playlists))
@@ -64,7 +68,13 @@
   .ytm-art-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--sub); pointer-events: none; }
   .ytm.has-video .ytm-art-empty { display: none; }
   .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
-  .ytm-top { justify-content: flex-end; }
+  .ytm-top { gap: 10px; }
+  .ytm-search { flex: 1; min-width: 0; display: flex; align-items: center; height: 36px; border-radius: 999px; background: var(--fill); padding: 0 4px 0 14px; }
+  .ytm-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--text); outline: none; -webkit-appearance: none; appearance: none; }
+  .ytm-search input::placeholder { color: var(--sub); }
+  .ytm-search input::-webkit-search-cancel-button { display: none; }
+  .ytm-search button { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); flex: none; }
+  .ytm-search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
   .ytm-title { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2;
                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ytm-artist { margin: 4px 0 0; font-size: 15px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -103,10 +113,28 @@
 // JavaScript" reports what YouTube TV plays so the card can carry on afterwards.
 window.ytmRestoreUserAgent = (function () {
   var link = document.getElementById('ytm-premium'), tvUa = link.dataset.tvUa;
-  if (!window.fully || !tvUa) return false;
+  if (!window.fully || !tvUa) {
+    // Outside Fully (a computer or phone): regular YouTube search in a new tab.
+    document.getElementById('ytm-search').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var q = this.q.value.trim(); if (q) window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank', 'noopener');
+    });
+    return false;
+  }
 
   var inject = @json($injectScript);
   try { if (fully.getStringSetting('injectJsCode') !== inject) fully.setStringSetting('injectJsCode', inject); } catch (err) {}
+
+  // Search: YouTube TV is hard to type in by touch, so the query is typed here and
+  // YouTube TV opens on its results (#/search?q=...).
+  document.getElementById('ytm-search').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = this.q.value.trim(); if (!q) return;
+    this.q.blur();
+    fully.setStringSetting('customUserAgent', tvUa);
+    fully.setStringSetting('userAgent', 'custom');
+    location.href = link.href.replace(/#.*$/, '') + '?h=' + Date.now() + '#/search?q=' + encodeURIComponent(q);
+  });
 
   link.addEventListener('click', function (e) {
     e.preventDefault();
