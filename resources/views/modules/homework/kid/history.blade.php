@@ -9,11 +9,11 @@
         default => $day->isoFormat('dddd D MMMM'),
     };
 })
-@php($badges = ['check' => 'To check', 'done' => 'Done', 'missed' => 'Not done'])
+@php($badges = ['check' => 'Waiting for a parent', 'done' => 'Approved', 'missed' => 'Not done'])
 <div class="kz kz-history" data-screen="history" data-filter="{{ $filter }}">
   @include('modules.homework.kid._head', ['title' => 'History'])
   <div class="kz-filters" role="group" aria-label="Show">
-    @foreach (['check' => 'To check', 'done' => 'Done', 'missed' => 'Not done', 'all' => 'All'] as $key => $label)
+    @foreach (['check' => 'To check', 'done' => 'Approved', 'missed' => 'Not done', 'all' => 'All'] as $key => $label)
       <button type="button" class="kz-chip" data-filter-chip="{{ $key }}" aria-pressed="{{ $filter === $key ? 'true' : 'false' }}">{{ $label }} <span>{{ $counts[$key] }}</span></button>
     @endforeach
     <p class="kz-quiet kz-week">This week: <b>{{ $stats['weekTasks'] }}</b> {{ $stats['weekTasks'] === 1 ? 'sheet' : 'sheets' }}, <b>+{{ $stats['weekPoints'] }}</b> points</p>
@@ -35,7 +35,13 @@
                   <b>@if ($row['number'])<span class="kz-no">{{ $row['number'] }}</span>@endif{{ $row['name'] }}</b>
                   <small>{{ $row['printed'] ? 'Printed '.\Carbon\CarbonImmutable::parse($row['printed'])->setTimezone(\App\Modules\Homework\HomeworkModule::TIMEZONE)->format('g:i A').' · ' : '' }}+{{ $row['points'] }} points</small>
                 </span>
-                <span class="kz-badge is-{{ $row['status'] }}">{{ $badges[$row['status']] }}</span>
+                @if ($row['status'] === 'done')
+                  <span class="kz-approved">@include('modules.homework.kid._icon', ['name' => 'ok', 'size' => 22])Approved · +{{ $row['points'] }}</span>
+                @elseif ($row['status'] === 'missed')
+                  <span class="kz-badge is-missed">Not done · no points</span>
+                @else
+                  <span class="kz-badge is-check">{{ $badges['check'] }}</span>
+                @endif
                 <span class="kz-row-actions">
                   @if ($row['preview'])
                     <button type="button" class="kz-btn ghost" data-preview="{{ route('modules.homework.preview', [$kid['id'], $day['date'], $row['id']]) }}" data-preview-title="{{ $row['number'] }} {{ $row['name'] }}">Preview</button>

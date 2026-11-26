@@ -209,7 +209,7 @@ class HomeworkTest extends TestCase
         $this->assertSame(0, app(HomeworkStore::class)->balance('arthur'));
 
         $this->post($check, ['pin' => '4821', 'decision' => 'approve'])->assertOk()
-            ->assertSee('Done <span>1</span>', false)
+            ->assertSee('Approved <span>1</span>', false)->assertSee('Approved · +10')
             ->assertSee('+10 points</b>', false);
         $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
 
@@ -251,7 +251,7 @@ class HomeworkTest extends TestCase
         $this->assertSame(3, $store->tasks('theo', '2026-11-25')[0]['number']);
 
         $this->get(self::SHEET.'?screen=history')
-            ->assertSeeInOrder(['Today', '#0003', 'Division', 'To check', 'Yesterday', '#0001', 'Addition', 'Done'])
+            ->assertSeeInOrder(['Today', '#0003', 'Division', 'Waiting for a parent', 'Yesterday', '#0001', 'Addition', 'Approved · +10'])
             ->assertSee('/modules/homework/kids/theo/preview/2026-11-25/t1', false);
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
@@ -345,7 +345,7 @@ class HomeworkTest extends TestCase
         $this->post('/modules/homework/kids/theo/rewards/weekend-treat', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Weekend prizes are for Saturday and Sunday.']);
 
         $this->get(self::SHEET.'?screen=history')->assertSee('This week: <b>1</b> sheet, <b>+10</b> points', false)
-            ->assertSeeInOrder(['Today', '+170 points', 'Movie in the evening', '−40'])->assertSeeInOrder(['Addition', 'Done']);
+            ->assertSeeInOrder(['Today', '+170 points', 'Movie in the evening', '−40'])->assertSeeInOrder(['Addition', 'Approved · +10']);
 
         // Saturday: the weekend treat (150) can be bought, the outing (300) not yet.
         $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));

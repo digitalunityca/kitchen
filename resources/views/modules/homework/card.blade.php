@@ -190,6 +190,10 @@
   .kz-badge.is-done { background: rgba(52,199,89,.16); color: #1E7A34; }
   body.night .kz-badge.is-check { color: #FFB340; }
   body.night .kz-badge.is-done { color: #4CD964; }
+  .kz-approved { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px; border-radius: 14px; background: rgba(52,199,89,.14); color: #1E7A34; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  body.night .kz-approved { color: #4CD964; }
+  .kz-row.is-done .kz-row-icon { background: #34C759; color: #fff; }
+  .kz-row.is-check .kz-row-icon { background: rgba(255,149,0,.18); color: #A65A00; }
   .kz-row.is-missed .kz-row-text b { color: var(--sub); text-decoration: line-through; text-decoration-thickness: 1.5px; }
   .kz-row-actions { display: flex; gap: 8px; flex: none; }
   .kz-row-actions .kz-btn { min-height: 48px; padding: 0 16px; font-size: 16px; }
