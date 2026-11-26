@@ -288,7 +288,11 @@
       var value = digits(p);
       if (k === 'del') { setPin(p, value.slice(0, -1)); return; }
       if (k === 'ok') { submit(p); return; }
-      if (value.length < 8) { setPin(p, value + k); p.querySelector('[data-error]').hidden = true; }
+      var max = +(p.dataset.max || 8);
+      if (value.length >= max) { return; }
+      setPin(p, value + k); p.querySelector('[data-error]').hidden = true;
+      // A kid's PIN is exactly 4 digits: check it as soon as the 4th is typed.
+      if (p.dataset.screen === 'pin' && max === 4 && value.length + 1 === 4) { submit(p); }
     }
     function submit(p) {
       if (digits(p).length < 4 || p.dataset.busy) { return; }

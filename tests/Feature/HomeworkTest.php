@@ -51,7 +51,7 @@ class HomeworkTest extends TestCase
     {
         app(KidPinStore::class)->put('theo', '1234');
 
-        $this->get(self::SHEET)->assertOk()->assertSee('data-screen="pin"', false)->assertSee('Type your PIN')->assertDontSee('data-go="homework"', false);
+        $this->get(self::SHEET)->assertOk()->assertSee('data-screen="pin"', false)->assertSee('data-max="4"', false)->assertSee('Type your PIN')->assertDontSee('data-go="homework"', false);
         $this->get(self::SHEET.'?screen=rewards')->assertSee('data-screen="pin"', false)->assertDontSee('Choose dessert');
 
         $this->post('/modules/homework/kids/theo/unlock', ['pin' => '9999'])->assertForbidden()->assertJson(['error' => 'That’s not the right PIN.']);
@@ -86,7 +86,7 @@ class HomeworkTest extends TestCase
 
     public function test_the_parent_pin_opens_any_kid_and_a_kid_without_a_pin_is_told_to_ask(): void
     {
-        $this->get(self::SHEET)->assertSee('Ask a parent to set your PIN in Settings.');
+        $this->get(self::SHEET)->assertSee('Ask a parent to set your PIN in Settings.')->assertSee('data-max="8"', false);
         $this->post('/modules/homework/kids/theo/unlock', ['pin' => '4821'])->assertOk()->assertSee('data-screen="home"', false);
 
         app(KidPinStore::class)->put('arthur', '5555');

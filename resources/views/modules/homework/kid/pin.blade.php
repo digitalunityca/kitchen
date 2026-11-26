@@ -1,5 +1,5 @@
 {{-- The kid's sign-in: their own 4-digit PIN, or a parent's PIN. --}}
-<div class="kz kz-pin" data-screen="pin" data-pad data-submit="{{ route('modules.homework.unlock', $kid['id']) }}">
+<div class="kz kz-pin" data-screen="pin" data-pad data-max="{{ $hasPin ? 4 : 8 }}" data-submit="{{ route('modules.homework.unlock', $kid['id']) }}">
   <div class="kz-pin-who">
     @include('modules.homework.kid._avatar', ['big' => true])
     <h2>Hi {{ $kid['name'] }}!</h2>
