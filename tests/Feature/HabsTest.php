@@ -23,49 +23,70 @@ class HabsTest extends TestCase
         $this->travelTo(CarbonImmutable::parse($local, FetchHabsSchedule::TIMEZONE));
     }
 
-    public function test_the_day_after_a_game_the_strip_shows_the_final_and_the_next_game(): void
+    public function test_the_day_after_a_game_there_is_no_game_card_and_no_strip(): void
     {
         $this->at('2026-11-24 15:00');
 
         $this->get('/')->assertOk()
-            ->assertSee('id="habs-strip"', false)
-            ->assertSee('1 – 2')
-            ->assertSee('Final')
-            ->assertSee('Canadiens vs Kings')
-            ->assertSee('Canadiens at Avalanche')
-            ->assertSee('Tomorrow 9:30 PM')
-            ->assertSee('TV TSN2, RDS')
-            ->assertSee('https://assets.nhle.com/logos/nhl/svg/LAK_light.svg', false)
-            ->assertSee('https://assets.nhle.com/logos/nhl/svg/COL_dark.svg', false);
+            ->assertDontSee('habs-strip', false)
+            ->assertDontSee('class="habs-face', false)
+            ->assertSee('id="habs-open"', false);
+        $this->getJson('/modules/habs/ticker')->assertOk()->assertJsonPath('face', '');
     }
 
-    public function test_on_game_day_the_action_bar_gets_a_note(): void
+    public function test_on_game_day_the_weather_card_gets_a_game_side_and_the_action_bar_a_note(): void
     {
         $this->at('2026-11-25 12:00');
 
-        $this->get('/')->assertOk()->assertSee('Tonight 9:30 PM')->assertSee('data-title="🏒 Habs 9:30 PM"', false);
+        $this->get('/')->assertOk()
+            ->assertSee('class="habs-face habs-face-upcoming"', false)
+            ->assertSee('Canadiens at Avalanche')
+            ->assertSee('Tonight 9:30 PM')
+            ->assertSee('TSN2, RDS')
+            ->assertSee('data-habs-turn', false)
+            ->assertSee('https://assets.nhle.com/logos/nhl/svg/COL_dark.svg', false)
+            ->assertSee('data-title="🏒 Habs 9:30 PM"', false);
+        $this->getJson('/modules/habs/ticker')->assertOk()->assertJsonPath('title', '🏒 Habs 9:30 PM');
+        $this->assertStringContainsString('Canadiens at Avalanche', $this->getJson('/modules/habs/ticker')->json('face'));
     }
 
-    public function test_no_game_in_range_means_no_strip_but_the_stats_button_stays(): void
+    public function test_no_game_today_keeps_the_stats_button(): void
     {
         $this->at('2026-12-03 19:00');
 
-        $this->get('/')->assertOk()->assertDontSee('id="habs-strip"', false)->assertSee('id="habs-open"', false);
+        $this->get('/')->assertOk()->assertDontSee('class="habs-face', false)->assertSee('id="habs-open"', false);
     }
 
-    public function test_when_the_nhl_api_fails_the_strip_is_hidden_and_the_page_still_works(): void
+    public function test_when_the_nhl_api_fails_there_is_no_game_card_and_the_page_still_works(): void
     {
         $this->nhl['club-schedule-season/MTL/now'] = 500;
 
-        $this->get('/')->assertOk()->assertDontSee('id="habs-strip"', false);
-        $this->getJson('/modules/habs/ticker')->assertOk()->assertJsonPath('html', '')->assertJsonPath('title', null);
+        $this->get('/')->assertOk()->assertDontSee('class="habs-face', false);
+        $this->getJson('/modules/habs/ticker')->assertOk()->assertJsonPath('face', '')->assertJsonPath('title', null);
     }
 
     public function test_demo_states_preview_live_and_final(): void
     {
-        $this->get('/?habs=live')->assertOk()->assertSee('habs-strip habs-state-live', false)->assertSee('2 – 1')->assertSee('2nd · 12:34');
-        $this->get('/?habs=final')->assertOk()->assertSee('3 – 2')->assertSee('Final/OT')->assertSee('habs-result habs-w', false);
+        $this->get('/?habs=live')->assertOk()->assertSee('habs-face habs-face-live', false)->assertSee('2<span>–</span>1', false)->assertSee('2nd · 12:34');
+        $this->get('/?habs=final')->assertOk()->assertSee('3<span>–</span>2', false)->assertSee('Final/OT')->assertSee('habs-result habs-w', false);
         $this->getJson('/modules/habs/ticker?habs=upcoming')->assertOk()->assertJsonPath('title', '🏒 Habs 7 PM');
+    }
+
+    public function test_the_preview_command_shows_a_sample_game_until_midnight_or_off(): void
+    {
+        $this->at('2026-12-03 15:00');
+
+        $this->artisan('habs:preview', ['state' => 'live'])->assertSuccessful();
+        $this->get('/')->assertSee('habs-face habs-face-live', false);
+
+        $this->artisan('habs:preview', ['state' => 'off'])->assertSuccessful();
+        $this->get('/')->assertDontSee('class="habs-face', false);
+
+        $this->artisan('habs:preview', ['state' => 'upcoming'])->assertSuccessful();
+        $this->at('2026-12-04 00:01');
+        $this->get('/')->assertDontSee('class="habs-face', false);
+
+        $this->artisan('habs:preview', ['state' => 'nope'])->assertFailed();
     }
 
     private function withGameAndStandings(): void

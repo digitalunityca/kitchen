@@ -20,14 +20,23 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AccessSettings::class, fn (): AccessSettings => AccessSettings::fromConfig());
     }
 
+    /** Requests a minute from the home's own address (all the family's devices together). */
+    public const HOME_PER_MINUTE = 1000;
+
     /**
      * Bootstrap any application services.
      */
     public function boot(): void
     {
-        // Every request, per visitor IP. The dashboard polls rarely, so this only
-        // bites scripts hammering the public hostname.
-        RateLimiter::for('global', fn (Request $request) => Limit::perMinute(120)->by(AccessGate::clientIp($request)));
+        // Every request, per visitor IP: 120 a minute, enough for one visitor and low
+        // enough to stop scripts hammering the public hostname. The home's own address
+        // (HOME_HUB_ALLOWED_IPS) is shared by the tablet, phones and computers, so it
+        // gets a much higher ceiling. PIN attempts keep their own strict limits.
+        RateLimiter::for('global', function (Request $request) {
+            $ip = AccessGate::clientIp($request);
+
+            return Limit::perMinute($this->app->make(AccessSettings::class)->isHomeIp($ip) ? self::HOME_PER_MINUTE : 120)->by($ip);
+        });
 
         // PIN attempts on POST /unlock. Repeated failures also trigger a longer
         // lockout in UnlockController.

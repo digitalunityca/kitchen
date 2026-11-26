@@ -7,7 +7,7 @@ namespace App\Actions\Habs;
 use App\Modules\Habs\DemoGames;
 use Carbon\CarbonImmutable;
 
-/** The ticker strip's items (with the live clock when a game is on) and the action bar note. */
+/** The game highlights (with the live clock when a game is on), today's game for the weather card, and the action bar note. */
 class BuildHabsTicker
 {
     public function __construct(
@@ -16,14 +16,14 @@ class BuildHabsTicker
         private readonly FetchGameDetails $fetchGameDetails,
     ) {}
 
-    /** @return array{items: list<array<string, mixed>>, title: string|null} */
+    /** @return array{items: list<array<string, mixed>>, today: array<string, mixed>|null, title: string|null} */
     public function handle(CarbonImmutable $now, ?string $demo = null): array
     {
         $isDemo = in_array($demo, DemoGames::STATES, true);
         $games = $isDemo ? DemoGames::make($demo, $now) : $this->fetchHabsSchedule->handle();
 
         if ($games === null) {
-            return ['items' => [], 'title' => null];
+            return ['items' => [], 'today' => null, 'title' => null];
         }
 
         $items = array_map(function (array $item) use ($isDemo): array {
@@ -38,7 +38,7 @@ class BuildHabsTicker
             return $item;
         }, $this->findHabsHighlights->handle($games, $now));
 
-        return ['items' => $items, 'title' => FindHabsHighlights::titleNote($items, $now)];
+        return ['items' => $items, 'today' => FindHabsHighlights::today($items, $now), 'title' => FindHabsHighlights::titleNote($items, $now)];
     }
 
     /** "2nd · 12:34", "2nd intermission", or "2nd" without a clock. */

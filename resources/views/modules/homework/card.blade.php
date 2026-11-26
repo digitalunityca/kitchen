@@ -110,7 +110,7 @@
 
   /* Homework */
   .kz-pick { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
-  .kz-choices { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); grid-auto-rows: minmax(250px, auto); gap: 14px; align-content: start; padding: 2px; }
+  .kz-choices { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); grid-auto-rows: minmax(230px, auto); gap: 14px; align-content: start; padding: 2px; }
   .kz-choice { position: relative; background: var(--card); box-shadow: var(--shadow); border-radius: 24px; padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; color: var(--text); border: 3px solid transparent; }
   .kz-choice-icon { width: 68px; height: 68px; border-radius: 20px; background: var(--fill); color: var(--text); display: flex; align-items: center; justify-content: center; margin-bottom: auto; transition: background-color .2s ease, color .2s ease; }
   .kz-choice b { font-size: 24px; font-weight: 600; margin-top: 14px; }
@@ -120,6 +120,11 @@
   body.night .kz-choice[aria-pressed="true"] { border-color: var(--kid); }
   .kz-choice[aria-pressed="true"] .kz-choice-icon { background: var(--kid-ink); color: #fff; }
   .kz-choice:disabled { opacity: .45; box-shadow: none; }
+  .kz-choice-wrap { position: relative; display: flex; }
+  .kz-choice-wrap .kz-choice { flex: 1; }
+  .kz-minus { position: absolute; right: 14px; bottom: 14px; width: 52px; height: 52px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 30px; font-weight: 500; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .kz-minus[hidden] { display: none; }
+  .kz-minus:active { transform: scale(.94); }
   .kz-choice-count { position: absolute; top: 16px; right: 16px; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 999px; background: var(--kid-ink); color: #fff; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
   .kz-printbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--card); box-shadow: var(--shadow); border-radius: 24px; padding: 14px 14px 14px 24px; }
   .kz-printsum { margin: 0; font-size: 19px; color: var(--sub); }
@@ -338,16 +343,18 @@
         sheets += n; points += n * +c.dataset.points;
         c.setAttribute('aria-pressed', n > 0 ? 'true' : 'false');
         badge.hidden = n === 0; badge.textContent = '×' + n;
+        var minus = c.parentNode.querySelector('[data-minus]'); if (minus) { minus.hidden = n === 0; }
       });
       var sum = screen.querySelector('[data-summary]'), btn = screen.querySelector('[data-print-all]');
       if (!sum) { return; }
       sum.innerHTML = sheets === 0 ? 'Pick at least one sheet' : '<b>' + sheets + ' ' + (sheets === 1 ? 'sheet' : 'sheets') + '</b> · +' + points + ' points once checked';
       btn.disabled = sheets === 0 || !!screen.dataset.busy;
     }
-    function pick(c) {
+    function total(screen) { var t = 0; screen.querySelectorAll('[data-choice]').forEach(function (c) { t += +(c.dataset.count || 0); }); return t; }
+    function pick(c, step) {
       var screen = c.closest('[data-screen]'); if (screen.dataset.busy) { return; }
-      var n = +(c.dataset.count || 0) + 1;
-      c.dataset.count = n > +c.dataset.left ? 0 : n; tally(screen);
+      if (step > 0 && total(screen) >= +screen.dataset.max) { return; }
+      c.dataset.count = Math.max(0, +(c.dataset.count || 0) + step); tally(screen);
     }
     function printAll(screen) {
       var btn = screen.querySelector('[data-print-all]'), label = btn.querySelector('[data-print-label]'), err = screen.querySelector('[data-error]'), data = {};
@@ -393,7 +400,8 @@
       var t;
       if ((t = e.target.closest('[data-key]'))) { key(pad(t), t.dataset.key); return; }
       if ((t = e.target.closest('[data-go]'))) { go(t.dataset.go); return; }
-      if ((t = e.target.closest('[data-choice]'))) { pick(t); return; }
+      if ((t = e.target.closest('[data-minus]'))) { pick(t.parentNode.querySelector('[data-choice]'), -1); return; }
+      if ((t = e.target.closest('[data-choice]'))) { pick(t, 1); return; }
       if ((t = e.target.closest('[data-print-all]'))) { printAll(t.closest('[data-screen]')); return; }
       if ((t = e.target.closest('[data-parent-open]'))) { openParent(t); return; }
       if ((t = e.target.closest('[data-filter-chip]'))) { filter(t.closest('[data-screen]'), t.dataset.filterChip); return; }

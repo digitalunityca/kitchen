@@ -27,17 +27,17 @@ class HomeworkModule extends Module
 
     /**
      * Each kind of task the kids can pick: its name on the tablet and on the sheet,
-     * its points, whether it has a printable worksheet, how many a kid may pick per
-     * day, and which grades get it (writing is for the younger kids).
+     * its points, whether it has a printable worksheet, and which grades get it
+     * (writing is for the younger kids). No daily limit: a kid prints as many as they like.
      *
-     * @var array<string, array{name: string, sheet: string, emoji: string, points: int, printable: bool, max: int, grades: array{int, int}}>
+     * @var array<string, array{name: string, sheet: string, emoji: string, points: int, printable: bool, grades: array{int, int}}>
      */
     public const TEMPLATES = [
-        'addition' => ['name' => 'Addition', 'sheet' => 'Additions', 'emoji' => '➕', 'points' => 10, 'printable' => true, 'max' => 2, 'grades' => [1, 6]],
-        'multiplication' => ['name' => 'Multiplication', 'sheet' => 'Multiplications', 'emoji' => '✖️', 'points' => 15, 'printable' => true, 'max' => 2, 'grades' => [1, 6]],
-        'division' => ['name' => 'Division', 'sheet' => 'Divisions', 'emoji' => '➗', 'points' => 15, 'printable' => true, 'max' => 2, 'grades' => [1, 6]],
-        'writing' => ['name' => 'Writing', 'sheet' => 'Écriture', 'emoji' => '✏️', 'points' => 10, 'printable' => true, 'max' => 1, 'grades' => [1, 3]],
-        'reading' => ['name' => 'Reading', 'sheet' => 'Lecture', 'emoji' => '📖', 'points' => 10, 'printable' => false, 'max' => 1, 'grades' => [1, 6]],
+        'addition' => ['name' => 'Addition', 'sheet' => 'Additions', 'emoji' => '➕', 'points' => 10, 'printable' => true, 'grades' => [1, 6]],
+        'multiplication' => ['name' => 'Multiplication', 'sheet' => 'Multiplications', 'emoji' => '✖️', 'points' => 15, 'printable' => true, 'grades' => [1, 6]],
+        'division' => ['name' => 'Division', 'sheet' => 'Divisions', 'emoji' => '➗', 'points' => 15, 'printable' => true, 'grades' => [1, 6]],
+        'writing' => ['name' => 'Writing', 'sheet' => 'Écriture', 'emoji' => '✏️', 'points' => 10, 'printable' => true, 'grades' => [1, 3]],
+        'reading' => ['name' => 'Reading', 'sheet' => 'Lecture', 'emoji' => '📖', 'points' => 10, 'printable' => false, 'grades' => [1, 6]],
     ];
 
     /**
@@ -123,7 +123,7 @@ class HomeworkModule extends Module
     /**
      * The templates this kid can pick (by grade).
      *
-     * @return array<string, array{name: string, sheet: string, emoji: string, points: int, printable: bool, max: int, grades: array{int, int}}>
+     * @return array<string, array{name: string, sheet: string, emoji: string, points: int, printable: bool, grades: array{int, int}}>
      */
     public static function templatesFor(int $grade): array
     {

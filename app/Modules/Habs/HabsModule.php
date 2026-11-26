@@ -5,12 +5,16 @@ namespace App\Modules\Habs;
 use App\Actions\Habs\BuildHabsTicker;
 use App\Dashboard\Module;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Cache;
 
 /**
- * Montreal Canadiens: a slim scrolling strip under the header on game days
- * (upcoming today or tomorrow, live score, or yesterday's final until 6 PM),
- * a hockey button in the header that opens a stats sheet any day, and a short
- * note in Fully's action bar on game days. Data from the NHL's public API.
+ * Montreal Canadiens: on game days the weather card turns into a game card (logos,
+ * time or live score, venue, final), with a Turn button to flip back to the weather;
+ * a Habs button in the side menu opens a stats sheet any day; and a short note goes
+ * in Fully's action bar. Data from the NHL's public API.
+ *
+ * Preview without a game: /?habs=upcoming|live|final, or `php artisan habs:preview live`
+ * (on the tablet too, until midnight; `habs:preview off` ends it).
  */
 class HabsModule extends Module
 {
@@ -24,19 +28,28 @@ class HabsModule extends Module
         return 'Canadiens';
     }
 
-    /** Rendered as a strip between the header and the grid. */
+    public const PREVIEW_KEY = 'habs:preview';
+
+    /** No card of its own: it takes over the weather card on game days, from the side menu. */
     public function placement(): string
     {
-        return 'ticker';
+        return 'overlay';
     }
 
-    /** @return array{items: list<array<string, mixed>>, title: string|null, demo: string|null} */
+    /** @return array{items: list<array<string, mixed>>, today: array<string, mixed>|null, title: string|null, demo: string|null} */
     public function data(): array
     {
-        $demo = request()->query('habs');
-        $demo = is_string($demo) && in_array($demo, DemoGames::STATES, true) ? $demo : null;
+        $demo = self::demo(request()->query('habs'));
 
         return app(BuildHabsTicker::class)->handle(now()->toImmutable(), $demo) + ['demo' => $demo];
+    }
+
+    /** A sample game state: from ?habs=…, else the preview turned on with `habs:preview` (until midnight). */
+    public static function demo(mixed $query): ?string
+    {
+        $demo = is_string($query) ? $query : Cache::get(self::PREVIEW_KEY);
+
+        return is_string($demo) && in_array($demo, DemoGames::STATES, true) ? $demo : null;
     }
 
     public function routes(Router $router): void

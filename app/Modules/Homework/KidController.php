@@ -251,7 +251,6 @@ class KidController extends Controller
             'choices' => array_values(array_map(fn (array $t, string $key): array => $t + [
                 'key' => $key,
                 'already' => $picked[$key] ?? 0,
-                'left' => max(0, $t['max'] - ($picked[$key] ?? 0)),
             ], $templates, array_keys($templates))),
         ];
     }

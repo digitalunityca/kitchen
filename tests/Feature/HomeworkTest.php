@@ -131,8 +131,8 @@ class HomeworkTest extends TestCase
         $this->get(self::SHEET.'?screen=homework')
             ->assertSee('data-choice="division"', false)
             ->assertDontSee('data-choice="writing"', false)
-            ->assertSee('data-choice="reading" data-points="10" data-left="0" aria-pressed="false" disabled', false)
-            ->assertSee('Done for today');
+            ->assertSee('data-choice="reading" data-points="10" aria-pressed="false">', false)
+            ->assertSee('1 printed today');
     }
 
     public function test_weekends_have_no_homework(): void
@@ -148,7 +148,9 @@ class HomeworkTest extends TestCase
     {
         config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
         Http::preventStrayRequests();
-        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->packet(['Multiplications', 'Lecture']))]);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::sequence()
+            ->push($this->packet(['Multiplications', 'Lecture']))
+            ->push($this->packet(['Multiplications', 'Lecture']))]);
 
         $this->signIn('theo');
         $this->get(self::SHEET.'?screen=homework')->assertOk();
@@ -164,8 +166,10 @@ class HomeworkTest extends TestCase
         $this->assertCount(1, glob($this->spool().'/*.pdf'));
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
 
-        // The daily limit still holds.
-        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['reading' => 1]])->assertStatus(422)->assertJson(['error' => 'Only 1 Reading per day.']);
+        // No daily limit: another reading and multiplication print fine; only a runaway pick is refused.
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['multiplication' => 1, 'reading' => 1]])->assertOk();
+        $this->assertCount(4, app(HomeworkStore::class)->tasks('theo', '2026-11-25'));
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 13]])->assertStatus(422)->assertJson(['error' => 'That’s a lot! Print up to 12 sheets at a time.']);
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => []])->assertStatus(422)->assertJson(['error' => 'Pick some homework first.']);
     }
 
@@ -219,12 +223,11 @@ class HomeworkTest extends TestCase
         $this->post($check, ['pin' => '4821'])->assertOk();
         $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
 
-        // "Not done": no points, stays in the list, frees the day's slot.
+        // "Not done": no points, stays in the list.
         $this->post('/modules/homework/kids/arthur/check/2026-11-25/t2', ['pin' => '4821', 'decision' => 'missed'])->assertOk()
             ->assertSee('Not done <span>1</span>', false)
             ->assertSee('<li class="kz-row is-missed" data-status="missed">', false);
         $this->assertSame('missed', app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[1]['status']);
-        $this->get('/modules/homework/kids/arthur/sheet?screen=homework')->assertSee('data-choice="writing" data-points="10" data-left="1"', false);
 
         $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
 

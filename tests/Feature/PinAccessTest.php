@@ -143,7 +143,14 @@ class PinAccessTest extends TestCase
             $this->get('/up')->assertOk();
         }
 
-        $this->get('/up')->assertStatus(429);
+        $this->get('/up')->assertStatus(429)->assertSee('http-equiv="refresh" content="30"', false);
         $this->away(self::HOME)->get('/up')->assertOk();
+    }
+
+    public function test_the_home_address_shares_a_much_higher_limit(): void
+    {
+        for ($i = 0; $i < 200; $i++) {
+            $this->away(self::HOME)->get('/up')->assertOk();
+        }
     }
 }

@@ -51,6 +51,29 @@ class FindHabsHighlights
         return array_slice($items, 0, 2);
     }
 
+    /**
+     * Today's game for the weather card's game side: a live game first, else today's
+     * game still to come, else today's final. Null on days without a game.
+     *
+     * @param  list<array{kind: string, game: array<string, mixed>, when: string|null}>  $items
+     * @return array{kind: string, game: array<string, mixed>, when: string|null}|null
+     */
+    public static function today(array $items, CarbonImmutable $now): ?array
+    {
+        $today = $now->setTimezone(FetchHabsSchedule::TIMEZONE)->toDateString();
+        $todays = array_values(array_filter($items, fn (array $item): bool => $item['kind'] === 'live' || $item['game']['date'] === $today));
+
+        foreach (['live', 'upcoming', 'final'] as $kind) {
+            foreach ($todays as $item) {
+                if ($item['kind'] === $kind) {
+                    return $item;
+                }
+            }
+        }
+
+        return null;
+    }
+
     /** "Tonight 7:00 PM", "Today 1:00 PM", "Tomorrow 7:30 PM". */
     public static function when(CarbonImmutable $start, CarbonImmutable $now): string
     {

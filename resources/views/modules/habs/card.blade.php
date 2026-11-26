@@ -1,6 +1,6 @@
-{{-- Canadiens: the ticker strip (refreshed every 2 minutes), a header button and the stats sheet. --}}
-<div class="habs" id="habs" data-ticker="{{ route('modules.habs.ticker') }}" data-sheet="{{ route('modules.habs.sheet') }}" @if ($demo) data-demo="{{ $demo }}" @endif data-title="{{ $title }}">
-  <div id="habs-ticker">@include('modules.habs.ticker', ['items' => $items])</div>
+{{-- Canadiens: on game days the game side of the weather card (refreshed every 2 minutes), a side-menu button and the stats sheet. --}}
+<div class="habs" id="habs" hidden data-ticker="{{ route('modules.habs.ticker') }}" data-sheet="{{ route('modules.habs.sheet') }}" @if ($demo) data-demo="{{ $demo }}" @endif data-title="{{ $title }}">
+  <template id="habs-face-html">@if ($today)@include('modules.habs.face', ['item' => $today])@endif</template>
 </div>
 
 <div class="habs-overlay" id="habs-overlay" hidden role="dialog" aria-modal="true" aria-label="Canadiens scores and stats">
@@ -28,28 +28,32 @@
 
 @push('styles')
 <style>
-  /* The strip must never be wider than the page: its scrolling track is wider than the screen. */
-  .habs, #habs-ticker { flex: 1; min-width: 0; width: 100%; display: flex; }
   .habs-logo { display: inline-flex; width: 30px; height: 30px; flex: none; }
   .habs-logo img { width: 100%; height: 100%; object-fit: contain; }
   .habs-logo.big { width: 72px; height: 72px; }
   .habs-logo-dark, body.night .habs-logo-light { display: none; }
   body.night .habs-logo-dark { display: block; }
 
-  /* The strip: slim, white, scrolls slowly; static when reduced motion is on. */
-  .habs-strip {
-    width: 100%; max-width: 100%; min-width: 0; height: 48px; display: flex; contain: paint; align-items: center; overflow: hidden; border-radius: 14px;
-    background: var(--card); box-shadow: var(--shadow); color: var(--text); font-size: 17px; text-align: left;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-            mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-  }
-  .habs-track { display: flex; width: max-content; animation: habs-scroll 32s linear infinite; }
-  .habs-run { display: flex; flex: none; }
-  .habs-item { display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; padding-left: 24px; }
-  .habs-item b { font-weight: 600; }
-  .habs-score { font-variant-numeric: tabular-nums; font-size: 19px; }
+  /* Game days: the weather card flips between the game (front) and the weather (back). */
+  .habs-flip { flex: 1; width: 100%; min-width: 0; height: 100%; align-self: stretch; perspective: 1600px; }
+  .habs-flip-inner { position: relative; height: 100%; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.3,.9,.3,1); }
+  .habs-flip.turned .habs-flip-inner { transform: rotateY(180deg); }
+  .habs-flip-front, .habs-flip-back { position: absolute; inset: 0; display: flex; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+  .habs-flip-back { transform: rotateY(180deg); }
+  .habs-flip-front > *, .habs-flip-back > * { flex: 1; min-width: 0; }
+  .habs-face { cursor: pointer; }
+  .habs-turn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 12px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 15px; font-weight: 600; flex: none; }
+  .habs-turn:active { transform: scale(.95); }
+  .habs-face-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+  .habs-logo.face { width: 88px; height: 88px; justify-self: center; }
+  .habs-face-mid { text-align: center; }
+  .habs-face-score { font-size: 64px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .habs-face-score span { color: var(--sub); margin: 0 .12em; font-weight: 400; }
+  .habs-face-time { font-size: 56px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .habs-face-time small { font-size: 22px; font-weight: 600; margin-left: 4px; color: var(--sub); }
+  .habs-face-teams { margin: 0; text-align: center; font-size: 19px; font-weight: 600; }
+  .habs-face-foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 16px; color: var(--sub); }
   .habs-sep { color: var(--sub); }
-  .habs-gap { width: 64px; }
   .habs-live { display: inline-flex; align-items: center; gap: 6px; color: #FF3B30; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
   .habs-live i { width: 8px; height: 8px; border-radius: 999px; background: #FF3B30; animation: habs-blink 1.4s ease-in-out infinite; }
   .habs-result { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: #fff; }
@@ -137,8 +141,7 @@
   .habs-row-main small { display: block; color: var(--sub); font-weight: 400; font-size: 13px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .habs-track { animation: none; }
-    .habs-run[aria-hidden] { display: none; }
+    .habs-flip-inner { transition: none; }
     .habs-live i { animation: none; }
     .habs-overlay { animation: none; }
     .habs-loading span { animation-duration: 2s; }
@@ -157,10 +160,40 @@
   function setNote(text) { if (window.Dashboard && Dashboard.setTitlePart) Dashboard.setTitlePart('habs', text || ''); }
   setNote(root.dataset.title);
 
+  // Game days: wrap the weather card in a flip card with the game in front. "Turn" flips
+  // it; it turns back to the game after 2 minutes, and on non-game days it's just the weather.
+  var slot = document.querySelector('.slot[data-module="weather"]'), flip = null, turnBack = 0;
+  var turnSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
+  function setFace(html) {
+    if (!slot) return;
+    if (!html) {
+      if (flip) { var weather = flip.querySelector('.habs-flip-back > *'); var btn = weather.querySelector('[data-habs-turn]'); if (btn) btn.remove(); slot.replaceChildren(weather); flip = null; }
+      return;
+    }
+    if (!flip) {
+      var card = slot.firstElementChild;
+      flip = document.createElement('div'); flip.className = 'habs-flip';
+      flip.innerHTML = '<div class="habs-flip-inner"><div class="habs-flip-front"></div><div class="habs-flip-back"></div></div>';
+      flip.querySelector('.habs-flip-back').appendChild(card);
+      var back = document.createElement('button'); back.type = 'button'; back.className = 'habs-turn'; back.setAttribute('data-habs-turn', ''); back.setAttribute('aria-label', 'Show the Canadiens game'); back.innerHTML = turnSvg + 'Turn';
+      var row = card.querySelector('.row'); (row || card).appendChild(back);
+      slot.replaceChildren(flip);
+    }
+    var front = flip.querySelector('.habs-flip-front');
+    front.innerHTML = '<section class="card">' + html + '</section>';
+  }
+  function turn() {
+    if (!flip) return;
+    var turned = flip.classList.toggle('turned');
+    clearTimeout(turnBack);
+    if (turned) turnBack = setTimeout(function () { flip && flip.classList.remove('turned'); }, IDLE_MS);
+  }
+  setFace(document.getElementById('habs-face-html').innerHTML.trim());
+
   function refresh() {
     fetch(root.dataset.ticker + demo, { cache: 'no-store', headers: { Accept: 'application/json' } })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (t) { document.getElementById('habs-ticker').innerHTML = t.html; setNote(t.title); })
+      .then(function (t) { setFace(t.face); setNote(t.title); })
       .catch(function () {});
   }
   setInterval(refresh, 2 * 60 * 1000);
@@ -206,7 +239,8 @@
   });
 
   document.addEventListener('click', function (e) {
-    if (e.target.closest('#habs-strip') || e.target.closest('#habs-open')) open();
+    if (e.target.closest('[data-habs-turn]')) { turn(); return; }
+    if (e.target.closest('.habs-face') || e.target.closest('#habs-open')) open();
   });
   document.getElementById('habs-close').addEventListener('click', close);
   document.addEventListener('dashboard:home', close);

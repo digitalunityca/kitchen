@@ -12,13 +12,13 @@ use Illuminate\Http\Response;
 
 class HabsController
 {
-    /** GET /modules/habs/ticker: the strip's HTML and the action bar note, for refreshing without a reload. */
+    /** GET /modules/habs/ticker: the game side of the weather card (empty without a game today) and the action bar note. */
     public function ticker(Request $request, BuildHabsTicker $buildHabsTicker): JsonResponse
     {
-        $ticker = $buildHabsTicker->handle(now()->toImmutable(), $request->query('habs'));
+        $ticker = $buildHabsTicker->handle(now()->toImmutable(), HabsModule::demo($request->query('habs')));
 
         return response()->json([
-            'html' => view('modules.habs.ticker', ['items' => $ticker['items']])->render(),
+            'face' => $ticker['today'] ? view('modules.habs.face', ['item' => $ticker['today']])->render() : '',
             'title' => $ticker['title'],
         ])->header('Cache-Control', 'no-store');
     }
