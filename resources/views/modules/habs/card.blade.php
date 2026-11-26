@@ -44,12 +44,12 @@
   .habs-face { cursor: pointer; }
   .habs-turn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 12px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 15px; font-weight: 600; flex: none; }
   .habs-turn:active { transform: scale(.95); }
-  .habs-face-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
-  .habs-logo.face { width: 88px; height: 88px; justify-self: center; }
+  .habs-face-main { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; }
+  .habs-logo.face { width: 80px; height: 80px; justify-self: center; }
   .habs-face-mid { text-align: center; }
-  .habs-face-score { font-size: 64px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .habs-face-score { white-space: nowrap; font-size: 60px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
   .habs-face-score span { color: var(--sub); margin: 0 .12em; font-weight: 400; }
-  .habs-face-time { font-size: 56px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .habs-face-time { white-space: nowrap; font-size: 52px; font-weight: 600; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
   .habs-face-time small { font-size: 22px; font-weight: 600; margin-left: 4px; color: var(--sub); }
   .habs-face-teams { margin: 0; text-align: center; font-size: 19px; font-weight: 600; }
   .habs-face-foot { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 16px; color: var(--sub); }
