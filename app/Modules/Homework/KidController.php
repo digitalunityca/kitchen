@@ -132,7 +132,7 @@ class KidController extends Controller
             return response()->json(['error' => collect($e->errors())->flatten()->first()], 422);
         }
 
-        return $this->render('rewards', $profile, $this->screenData('rewards', $profile) + ['bought' => $reward]);
+        return $this->render('rewards', $profile, $this->screenData('rewards', $profile) + ['bought' => collect(HomeworkModule::REWARDS)->firstWhere('id', $reward)['name'] ?? '']);
     }
 
     /**
@@ -191,8 +191,7 @@ class KidController extends Controller
                 'toCheck' => count($this->toCheck($kid['id'])),
             ],
             'homework' => $this->homeworkData($kid, $today, $tasks),
-            'rewards' => [
-                'rewards' => $this->rewards($kid['id'], $tasks, $today, $data['balance']),
+            'rewards' => $this->rewardsData($kid['id'], $tasks, $today, $data['balance']) + [
                 'homeworkFirst' => ! $today->isWeekend() && ($tasks === [] || collect($tasks)->contains(fn (array $t): bool => $t['status'] !== 'approved')),
                 'waiting' => (int) collect($this->toCheck($kid['id']))->sum('points'),
             ],
@@ -263,6 +262,25 @@ class KidController extends Controller
     }
 
     /**
+     * Only the rewards the kid can afford now and use today (weekend prizes on weekends,
+     * daily limits not reached). Affordable evening rewards still waiting for today's
+     * homework check stay, marked so. With none, the cheapest reward usable today to save for.
+     *
+     * @param  list<array<string, mixed>>  $tasks
+     * @return array{rewards: list<array<string, mixed>>, next: array<string, mixed>|null}
+     */
+    private function rewardsData(string $kid, array $tasks, CarbonImmutable $today, int $balance): array
+    {
+        $all = collect($this->rewards($kid, $tasks, $today, $balance));
+        $usableToday = $all->reject(fn (array $r): bool => in_array($r['blocker'], ['weekend', 'limit', 'after'], true));
+
+        return [
+            'rewards' => $usableToday->filter(fn (array $r): bool => $balance >= $r['need'])->values()->all(),
+            'next' => $usableToday->filter(fn (array $r): bool => $balance < $r['need'])->sortBy('need')->first(),
+        ];
+    }
+
+    /**
      * The store with each reward's state: "ready" (a parent can confirm it now),
      * "reach" (enough once the waiting homework is checked), or "locked" with why.
      *
@@ -294,6 +312,7 @@ class KidController extends Controller
                     default => 'Once today’s homework is checked',
                 },
                 'progress' => min(100, (int) round($balance * 100 / max(1, $need))),
+                'blocker' => $state,
             ];
         }, HomeworkModule::REWARDS);
     }

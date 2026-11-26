@@ -207,25 +207,50 @@ class HomeworkTest extends TestCase
         $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
     }
 
-    public function test_rewards_unlock_once_every_task_is_checked(): void
+    public function test_rewards_show_only_what_the_points_can_buy_today(): void
     {
-        $this->pick('theo', ['multiplication' => 2, 'division' => 1]);
         $this->signIn('theo');
 
-        // 45 points waiting: the movie (40) is within reach, the PS5 (60) not.
-        $this->get(self::SHEET.'?screen=rewards')->assertSee('+45 points are waiting for a parent check.')
-            ->assertSeeInOrder(['Movie in the evening', 'Yours once your homework is checked'])
-            ->assertSeeInOrder(['30 min PS5', '60 more points'])->assertSee('Tonight’s rewards open once today’s homework is checked.');
+        // No points: a friendly nudge toward the cheapest reward.
+        $this->get(self::SHEET.'?screen=rewards')->assertSee('Keep going!')->assertSee('25 more points to get “Choose dessert”.', false);
 
-        foreach (['t1', 't2', 't3'] as $task) {
+        $this->pick('theo', ['multiplication' => 2, 'division' => 1]);
+        foreach (['t1', 't2'] as $task) {
             $this->post("/modules/homework/kids/theo/check/2026-11-25/{$task}", ['pin' => '4821']);
         }
 
+        // 30 points, one sheet still to check: affordable evening rewards wait for the check.
         $this->get(self::SHEET.'?screen=rewards')
-            ->assertSee('<li class="kz-reward is-ready" data-state="ready">', false)
-            ->assertSeeInOrder(['30 min PS5', '15 more points'])->assertDontSee('Tonight’s rewards open')
-            // The Habs 3rd period needs the 2 periods first: 50 + 30.
-            ->assertSeeInOrder(['Habs game: 3rd period', 'Take the first 2 periods first.', '80']);
+            ->assertSee('Tonight’s rewards open once today’s homework is checked.')
+            ->assertSeeInOrder(['Choose dessert', 'Yours once your homework is checked'])
+            ->assertSee('Board game with a parent')
+            ->assertDontSee('<b>Movie in the evening</b>', false)
+            ->assertDontSee('Weekend treat')
+            ->assertSee('Next: Movie in the evening · 10 more points');
+
+        $this->post('/modules/homework/kids/theo/check/2026-11-25/t3', ['pin' => '4821']);
+
+        // 45 points, all checked: the movie (40) is ready, the PS5 (60) and the Habs (50) hidden.
+        $this->get(self::SHEET.'?screen=rewards')
+            ->assertSeeInOrder(['Movie in the evening', 'You can get it now'])
+            ->assertDontSee('Tonight’s rewards open')
+            ->assertDontSee('30 min PS5')
+            ->assertDontSee('Habs game: 3rd period')
+            ->assertSee('Next: Habs game: 2 periods · 5 more points');
+
+        // Once taken today, a 1-per-evening reward disappears.
+        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertOk()->assertSee('Enjoy! Movie in the evening is yours.')->assertDontSee('<b>Movie in the evening</b>', false);
+    }
+
+    public function test_weekend_prizes_show_only_on_weekends(): void
+    {
+        app(HomeworkStore::class)->addPoints('theo', 160, 'Saved');
+        $this->signIn('theo');
+        $this->get(self::SHEET.'?screen=rewards')->assertDontSee('Weekend treat');
+
+        $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));
+        $this->signIn('theo');
+        $this->get(self::SHEET.'?screen=rewards')->assertSee('Weekend treat')->assertDontSee('<b>Weekend outing', false)->assertSee('30 min PS5');
     }
 
     public function test_kids_buy_rewards_with_the_parent_pin_and_save_up_for_weekend_prizes(): void
