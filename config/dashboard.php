@@ -70,6 +70,11 @@ return [
             // only serves TV browsers. In Fully Kiosk the button switches Fully's user
             // agent to this one for the trip; the dashboard switches it back on return.
             'tv_url' => 'https://www.youtube.com/tv',
+            // The YouTube Music app link through MacroDroid (MusicAppController): the
+            // token MacroDroid sends with "now playing", and MacroDroid's webhook URL
+            // the hub calls for play/pause/next/previous. Both secret, in .env only.
+            'app_token' => (string) env('YTM_APP_TOKEN', ''),
+            'app_webhook' => (string) env('YTM_APP_WEBHOOK', ''),
             'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
                 'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
         ],

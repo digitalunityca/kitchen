@@ -37,7 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Posted by the script Fully injects into youtube.com, which has no CSRF token.
         // The unload report is a sendBeacon, which cannot send a CSRF token either.
-        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff', 'diagnostics/unload']);
+        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff', 'modules/youtube-music/app/now-playing', 'diagnostics/unload']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

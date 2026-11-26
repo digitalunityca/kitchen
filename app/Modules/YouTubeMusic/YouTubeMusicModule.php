@@ -64,6 +64,11 @@ class YouTubeMusicModule extends Module
                 ->whereNumber('index')->name('playlists.up');
         });
 
+        // The YouTube Music app on the tablet, through MacroDroid (see MusicAppController).
+        $router->post('app/now-playing', [MusicAppController::class, 'store'])->middleware('throttle:60,1')->name('app.store');
+        $router->get('app/now', [MusicAppController::class, 'show'])->middleware('throttle:60,1')->name('app.now');
+        $router->post('app/control', [MusicAppController::class, 'control'])->middleware('throttle:30,1')->name('app.control');
+
         // Song handoff from YouTube Premium (see HandoffController).
         $router->post('handoff', [HandoffController::class, 'store'])
             ->middleware('throttle:30,1')->name('handoff.store');

@@ -16,6 +16,16 @@
       <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">TV ↗</a>
     </div>
 
+    {{-- What the YouTube Music app is playing (reported by MacroDroid), with its buttons. --}}
+    <div class="ytm-appnow" id="ytm-appnow" hidden data-now="{{ route('modules.youtube-music.app.now') }}" data-control="{{ route('modules.youtube-music.app.control') }}">
+      <span class="ytm-appnow-text"><small>In YouTube Music</small><b id="ytm-appnow-title"></b><span id="ytm-appnow-artist"></span></span>
+      <span class="ytm-appnow-buttons" id="ytm-appnow-buttons" hidden>
+        <button type="button" data-app-action="previous" aria-label="Previous in YouTube Music"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+        <button type="button" data-app-action="play-pause" class="main" aria-label="Play or pause YouTube Music"><svg class="i-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+        <button type="button" data-app-action="next" aria-label="Next in YouTube Music"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      </span>
+    </div>
+
     @if (count($playlists))
       <div class="ytm-meta">
         <p class="ytm-title" id="ytm-title">Ready to play</p>
@@ -70,6 +80,20 @@
   .ytm.has-video .ytm-art-empty { display: none; }
   .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
   .ytm-top { gap: 8px; }
+  .ytm-appnow { display: flex; align-items: center; gap: 10px; background: var(--fill); border-radius: 14px; padding: 8px 8px 8px 12px; }
+  .ytm-appnow[hidden], .ytm-appnow-buttons[hidden] { display: none; }
+  .ytm-appnow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  .ytm-appnow-text small { font-size: 11px; font-weight: 600; color: #FF0033; text-transform: uppercase; letter-spacing: .04em; }
+  .ytm-appnow-text b, .ytm-appnow-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ytm-appnow-text b { font-size: 15px; font-weight: 600; }
+  .ytm-appnow-text span { font-size: 13px; color: var(--sub); }
+  .ytm-appnow-buttons { display: flex; gap: 4px; flex: none; }
+  .ytm-appnow-buttons button { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .ytm-appnow-buttons button.main { background: #FF0033; color: #fff; }
+  .ytm-appnow-buttons button:active { transform: scale(.94); }
+  .ytm-appnow .i-pause, .ytm-appnow.playing .i-play { display: none; }
+  .ytm-appnow.playing .i-pause { display: block; }
+  .ytm.app-mode .ytm-meta { display: none; }
   .ytm-app { background: #FF0033; color: #fff; border-color: #FF0033; font-weight: 600; cursor: pointer; }
   .ytm-search { flex: 1; min-width: 0; display: flex; align-items: center; height: 36px; border-radius: 999px; background: var(--fill); padding: 0 4px 0 14px; }
   .ytm-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--text); outline: none; -webkit-appearance: none; appearance: none; }
@@ -127,6 +151,35 @@
     var note = document.getElementById('ytm-artist');
     if (note) note.textContent = 'Open YouTube Music from the tablet’s home screen.';
   });
+})();
+
+// Now playing in the YouTube Music app (MacroDroid tells the hub), with ⏮ ⏯ ⏭ that the
+// hub passes back to MacroDroid. Checked every 5 s while the dashboard is visible.
+(function () {
+  var box = document.getElementById('ytm-appnow'); if (!box) return;
+  var card = box.closest('.ytm'), csrf = card.dataset.csrf;
+  function render(d) {
+    box.hidden = !d.active; card.classList.toggle('app-mode', !!d.active);
+    if (!d.active) return;
+    document.getElementById('ytm-appnow-title').textContent = d.title;
+    document.getElementById('ytm-appnow-artist').textContent = d.artist || '';
+    document.getElementById('ytm-appnow-buttons').hidden = !d.controls;
+    box.classList.toggle('playing', !!d.playing);
+  }
+  function poll() {
+    if (document.hidden) return;
+    fetch(box.dataset.now, { cache: 'no-store', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d) render(d); }).catch(function () {});
+  }
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-app-action]'); if (!b) return;
+    var form = new FormData(); form.append('action', b.dataset.appAction);
+    if (b.dataset.appAction === 'play-pause') box.classList.toggle('playing');
+    fetch(box.dataset.control, { method: 'POST', body: form, headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } })
+      .then(function () { setTimeout(poll, 1500); }).catch(function () {});
+  });
+  setInterval(poll, 5000); poll();
+  document.addEventListener('visibilitychange', poll);
 })();
 
 window.ytmRestoreUserAgent = (function () {
