@@ -82,6 +82,9 @@ class YouTubeHandoffTest extends TestCase
             ->assertSee('injectJsCode', false)
             ->assertSee('www.youtube.com', false)
             ->assertSee(str_replace('/', '\\/', route('modules.youtube-music.handoff.store')), false)
-            ->assertDontSee('__HANDOFF_URL__');
+            ->assertDontSee('__HANDOFF_URL__')
+            // Swipes become arrow keys, plus a small on-screen remote, on YouTube TV only.
+            ->assertSee('hh-remote', false)
+            ->assertSee('ArrowDown', false);
     }
 }
