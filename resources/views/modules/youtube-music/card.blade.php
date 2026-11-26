@@ -7,8 +7,7 @@
   </div>
 
   <div class="ytm-side">
-    <div class="row">
-      <p class="label"><span class="ytm-dot"></span>YouTube Music</p>
+    <div class="row ytm-top">
       <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">Open YouTube Premium ↗</a>
     </div>
 
@@ -65,7 +64,7 @@
   .ytm-art-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--sub); pointer-events: none; }
   .ytm.has-video .ytm-art-empty { display: none; }
   .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
-  .ytm-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FF0033; margin-right: 8px; vertical-align: 1px; }
+  .ytm-top { justify-content: flex-end; }
   .ytm-title { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2;
                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ytm-artist { margin: 4px 0 0; font-size: 15px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
