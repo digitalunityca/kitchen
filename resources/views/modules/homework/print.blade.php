@@ -8,8 +8,8 @@
     article + article { page-break-before: always; }
     table.head { width: 100%; border-collapse: collapse; }
     table.head td { vertical-align: top; padding: 0; }
-    .title { margin: 0 0 4pt; font-size: 18pt; font-weight: bold; }
-    .inst { margin: 0; font-size: 12pt; }
+    .title { margin: 0 0 3pt; font-size: 15pt; font-weight: bold; }
+    .inst { margin: 0; font-size: 11pt; }
     .meta { text-align: right; width: 210pt; }
     .meta-line { font-size: 12pt; margin: 0 0 6pt; }
     .meta-small { font-size: 9pt; color: #333; margin: 0; }
@@ -29,14 +29,15 @@
 <body>
   @foreach ($tasks as $task)
     @php($isSums = $task['template'] === 'addition' && isset($task['worksheet'][0]['top']))
-    @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : null)
+    @php($isGrid = $task['template'] === 'multiplication' && isset($task['worksheet'][0]['top']))
+    @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : ($isGrid ? \App\Actions\Homework\BuildMultiplicationSheet::layout($task['worksheet']) : null))
     @php($qr = \App\Modules\Homework\WorksheetQrCode::make($kid['id'], $date, $task))
     <article>
       <table class="head" role="presentation">
         <tr>
           <td>
-            <p class="title">{{ $isSums ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</p>
-            <p class="inst">{{ $isSums ? 'Calcule chaque somme.' : 'Réponds à chaque question.' }}</p>
+            <p class="title">{{ $layout ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</p>
+            <p class="inst">{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : 'Réponds à chaque question.') }}</p>
           </td>
           <td class="meta">
             <table role="presentation" style="width: 100%; border-collapse: collapse">
@@ -66,6 +67,16 @@
                     <div class="line">&nbsp;</div>
                   </div>
                 </td>
+              @endforeach
+            </tr>
+          @endforeach
+        </table>
+      @elseif ($isGrid)
+        <table class="sums" role="presentation">
+          @foreach (array_chunk($task['worksheet'], \App\Actions\Homework\BuildMultiplicationSheet::ACROSS) as $row)
+            <tr>
+              @foreach ($row as $p)
+                <td style="padding-bottom: 26pt">@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => false, 'cell' => 17])</td>
               @endforeach
             </tr>
           @endforeach

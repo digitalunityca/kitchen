@@ -61,7 +61,7 @@ class BuildAdditionSheet
 
         return [
             'chars' => $chars,
-            'font' => $chars <= 5 ? 26 : 22,
+            'font' => $chars <= 5 ? 22 : 19,
             'rows' => (int) ceil(count($problems) / self::COLUMNS),
             'digits' => $digits,
             'title' => match (true) {

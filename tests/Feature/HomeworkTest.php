@@ -158,7 +158,7 @@ class HomeworkTest extends TestCase
 
         // 4-digit + 3-digit numbers: the column fits a 5-digit sum, and the title names the digits.
         $layout = BuildAdditionSheet::layout([['top' => 9876, 'bottom' => 543], ['top' => 1200, 'bottom' => 999]]);
-        $this->assertSame(['chars' => 6, 'font' => 22, 'rows' => 1, 'digits' => 4, 'title' => 'Additions : 3 et 4 chiffres'], $layout);
+        $this->assertSame(['chars' => 6, 'font' => 19, 'rows' => 1, 'digits' => 4, 'title' => 'Additions : 3 et 4 chiffres'], $layout);
         $this->assertSame(5, BuildAdditionSheet::layout([['top' => 99, 'bottom' => 99]])['chars'] + 1);
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
@@ -173,8 +173,8 @@ class HomeworkTest extends TestCase
         config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
         Http::preventStrayRequests();
         Http::fake(['https://api.openai.com/v1/responses' => Http::sequence()
-            ->push($this->packet(['Multiplications', 'Lecture']))
-            ->push($this->packet(['Multiplications', 'Lecture']))]);
+            ->push($this->packet(['Lecture']))
+            ->push($this->packet(['Lecture']))]);
 
         $this->signIn('theo');
         $this->get(self::SHEET.'?screen=homework')->assertOk();
@@ -182,11 +182,13 @@ class HomeworkTest extends TestCase
 
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['multiplication' => 1, 'reading' => 1]])->assertOk()->assertJson(['ok' => true, 'sheets' => 2]);
         Http::assertSentCount(1);
-        Http::assertSent(fn (Request $request): bool => json_decode($request['input'], true)['topics'] === ['Multiplications', 'Lecture']);
+        Http::assertSent(fn (Request $request): bool => json_decode($request['input'], true)['topics'] === ['Lecture']);
 
         $tasks = app(HomeworkStore::class)->tasks('theo', '2026-11-25');
         $this->assertSame(['done', 'done'], array_column($tasks, 'status'));
         $this->assertArrayHasKey('worksheet', $tasks[0]);
+        $this->assertCount(9, $tasks[0]['worksheet']); // multiplications are made on the hub, in grids
+        $this->assertSame((string) ($tasks[0]['worksheet'][0]['top'] * $tasks[0]['worksheet'][0]['bottom']), $tasks[0]['worksheet'][0]['answer']);
         $this->assertCount(1, glob($this->spool().'/*.pdf'));
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
 

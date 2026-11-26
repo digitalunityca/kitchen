@@ -20,6 +20,7 @@ class GenerateWorksheetPacket
         private readonly Http $http,
         private readonly LoggerInterface $log,
         private readonly BuildAdditionSheet $buildAdditionSheet,
+        private readonly BuildMultiplicationSheet $buildMultiplicationSheet,
     ) {}
 
     /**
@@ -41,14 +42,16 @@ class GenerateWorksheetPacket
                 return true;
             }
 
-            // Additions are made on the hub (column layout); the rest by the AI in one call.
+            // Additions and multiplications are made on the hub (column and grid layouts); the rest by the AI in one call.
             $worksheets = [];
-            $others = array_values(array_filter($pending, fn (array $t): bool => $t['template'] !== 'addition'));
+            $others = array_values(array_filter($pending, fn (array $t): bool => ! in_array($t['template'], ['addition', 'multiplication'], true)));
             $written = $others === [] ? [] : $this->generate($others, $kid['grade'], $this->store->words($kid['id']));
             foreach ($pending as $i => $task) {
-                $worksheets[$i] = $task['template'] === 'addition'
-                    ? $this->buildAdditionSheet->handle($kid['grade'], (int) $task['seed'])
-                    : array_shift($written);
+                $worksheets[$i] = match ($task['template']) {
+                    'addition' => $this->buildAdditionSheet->handle($kid['grade'], (int) $task['seed']),
+                    'multiplication' => $this->buildMultiplicationSheet->handle($kid['grade'], (int) $task['seed']),
+                    default => array_shift($written),
+                };
             }
 
             $this->store->update(function (array &$data) use ($kid, $date, $pending, $worksheets): void {

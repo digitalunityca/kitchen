@@ -25,6 +25,7 @@
     .sums { display: grid; grid-template-columns: repeat(5, 1fr); row-gap: 2.2em; justify-items: center; font-family: ui-monospace, Menlo, monospace; }
     .sum { width: calc(var(--chars) * .62em); text-align: right; line-height: 1.15; }
     .sum span { float: left; }
+    .grids { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 1.6rem; }
     .sum-line { border-top: 2px solid #000; margin-top: .1em; font-weight: 700; }
     body.preview .paper { margin-top: 1rem; }
     .exercise { margin-bottom: 1.15rem; overflow-wrap: anywhere; }
@@ -73,12 +74,13 @@
   @unless ($needsGeneration ?? false)
     @foreach ($tasks as $task)
       @php($isSums = $task['template'] === 'addition' && isset($task['worksheet'][0]['top']))
-      @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : null)
+      @php($isGrid = $task['template'] === 'multiplication' && isset($task['worksheet'][0]['top']))
+      @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : ($isGrid ? \App\Actions\Homework\BuildMultiplicationSheet::layout($task['worksheet']) : null))
       <article class="paper" lang="fr-CA">
         <header class="sheet-head">
           <div class="sheet-title">
-            <h2>{{ $isSums ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
-            <p>{{ $isSums ? 'Calcule chaque somme.' : 'Réponds à chaque question.' }}</p>
+            <h2>{{ $layout ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
+            <p>{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : 'Réponds à chaque question.') }}</p>
           </div>
           <div class="sheet-meta">
             <p>{{ $kid['name'] }}</p>
@@ -91,6 +93,12 @@
           <div class="sums" style="--chars: {{ $layout['chars'] }}; font-size: {{ $layout['font'] * 1.25 }}px">
             @foreach ($task['worksheet'] as $p)
               <div class="sum"><div>{{ $p['top'] }}</div><div><span>+</span>{{ $p['bottom'] }}</div><div class="sum-line">{{ $answers ? $p['answer'] : "\u{00A0}" }}</div></div>
+            @endforeach
+          </div>
+        @elseif ($isGrid)
+          <div class="grids">
+            @foreach ($task['worksheet'] as $p)
+              <div>@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers, 'cell' => 17])</div>
             @endforeach
           </div>
         @else
