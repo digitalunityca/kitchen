@@ -70,6 +70,19 @@ class HomeworkTest extends TestCase
         $this->get(self::SHEET)->assertSee('data-screen="pin"', false);
     }
 
+    public function test_a_kid_photo_shows_on_the_pin_screen_when_a_parent_added_one(): void
+    {
+        $this->get(self::SHEET)->assertSee('<span class="kz-avatar big" aria-hidden="true">T</span>', false);
+        $this->get('/modules/homework/kids/theo/photo')->assertNotFound();
+
+        Storage::disk('local')->put('kid-photos/theo.jpg', 'jpeg bytes');
+        $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
+
+        $this->get(self::SHEET)->assertSee('<img class="kz-avatar big" src="/modules/homework/kids/theo/photo?v=', false);
+        $this->get('/modules/homework/kids/theo/photo')->assertOk()->assertHeader('Content-Type', 'image/jpeg');
+        $this->get('/modules/homework/kids/arthur/photo')->assertNotFound();
+    }
+
     public function test_the_parent_pin_opens_any_kid_and_a_kid_without_a_pin_is_told_to_ask(): void
     {
         $this->get(self::SHEET)->assertSee('Ask a parent to set your PIN in Settings.');

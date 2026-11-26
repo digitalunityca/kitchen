@@ -42,7 +42,9 @@
   .kz-head { display: flex; align-items: center; gap: 14px; min-height: 56px; padding-right: 72px; }
   .kz-head h2 { flex: 1; margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
   .kz-avatar { width: 52px; height: 52px; border-radius: 999px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--kid); color: #fff; font-size: 26px; font-weight: 600; }
-  .kz-avatar.big { width: 96px; height: 96px; font-size: 46px; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .kz-avatar.big { width: 160px; height: 160px; font-size: 64px; box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+  img.kz-avatar { object-fit: cover; background: var(--fill); border: 3px solid var(--kid); }
+  img.kz-avatar.big { border-width: 5px; }
   .kz-back { width: 52px; height: 52px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--text); display: flex; align-items: center; justify-content: center; flex: none; }
   .kz-points { display: inline-flex; align-items: center; gap: 6px; background: var(--card); box-shadow: var(--shadow); border-radius: 999px; padding: 10px 16px 10px 12px; color: var(--kid-ink); }
   body.night .kz-points { color: var(--kid); }

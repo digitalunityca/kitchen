@@ -88,13 +88,13 @@ class HomeworkModule extends Module
         $app->bind(KidPinStore::class, fn (): KidPinStore => new KidPinStore(Storage::disk('local')));
     }
 
-    /** @return array{kids: list<array{id: string, name: string, badge: string, color: string, grade: int}>} */
+    /** @return array{kids: list<array{id: string, name: string, badge: string, color: string, grade: int, photo: string|null}>} */
     public function data(): array
     {
         return ['kids' => $this->kids()];
     }
 
-    /** @return list<array{id: string, name: string, badge: string, color: string, grade: int}> */
+    /** @return list<array{id: string, name: string, badge: string, color: string, grade: int, photo: string|null}> */
     public function kids(): array
     {
         return array_values(array_map(fn (array $kid): array => [
@@ -103,7 +103,21 @@ class HomeworkModule extends Module
             'badge' => (string) ($kid['badge'] ?? mb_substr((string) $kid['name'], 0, 1)),
             'color' => (string) ($kid['color'] ?? '#5AC8FA'),
             'grade' => (int) ($kid['grade'] ?? 2),
+            'photo' => self::photoPath(Str::slug($kid['name'])) !== null
+                ? route('modules.homework.photo', ['kid' => Str::slug($kid['name']), 'v' => Storage::disk('local')->lastModified(self::photoPath(Str::slug($kid['name'])))], absolute: false)
+                : null,
         ], (array) $this->config('kids', [])));
+    }
+
+    /**
+     * The kid's face for the avatars, if a parent added one: storage/app/private/kid-photos/<id>.jpg
+     * (on the data volume, never in git). Null when there is none.
+     */
+    public static function photoPath(string $kid): ?string
+    {
+        $path = 'kid-photos/'.$kid.'.jpg';
+
+        return Storage::disk('local')->exists($path) ? $path : null;
     }
 
     /**
@@ -157,6 +171,7 @@ class HomeworkModule extends Module
         $router->post('kids/{kid}/print', [KidController::class, 'print'])->where('kid', $kid)->middleware('throttle:6,1,homework-print-all:')->name('print');
         $router->post('kids/{kid}/check/{date}/{task}', [KidController::class, 'check'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:30,1')->name('check');
+        $router->get('kids/{kid}/photo', [KidController::class, 'photo'])->where('kid', $kid)->middleware('throttle:120,1')->name('photo');
         $router->get('kids/{kid}/preview/{date}/{task}', [KidController::class, 'preview'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:60,1')->name('preview');
         $router->post('kids/{kid}/rewards/{reward}', [KidController::class, 'redeem'])->where(['kid' => $kid, 'reward' => '[a-z0-9-]+'])->middleware('throttle:30,1')->name('redeem');

@@ -19,7 +19,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * The kid's own homework area, inside the overlay: a PIN screen, then the kid's
@@ -117,6 +119,19 @@ class KidController extends Controller
         }
 
         return $this->render('history', $profile, $this->screenData('history', $profile));
+    }
+
+    /** GET …/kids/{kid}/photo: the kid's face for the PIN screen and avatars. */
+    public function photo(string $kid): BinaryFileResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        $path = HomeworkModule::photoPath($profile['id']);
+        abort_if($path === null, 404);
+
+        return response()->file(Storage::disk('local')->path($path), [
+            'Content-Type' => 'image/jpeg',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     /** GET …/kids/{kid}/preview/{date}/{task}: the printed worksheet, for the signed-in kid or an unlocked parent. */

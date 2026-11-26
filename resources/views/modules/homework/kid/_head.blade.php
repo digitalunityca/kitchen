@@ -1,7 +1,7 @@
 {{-- Top of every screen after the PIN: back to the kid's home, the screen's title, and the points. --}}
 <header class="kz-head">
   @if ($screen === 'home')
-    <span class="kz-avatar">{{ $kid['badge'] }}</span>
+    @include('modules.homework.kid._avatar')
     <h2>Hi {{ $kid['name'] }}!</h2>
   @else
     <button type="button" class="kz-back" data-go="home" aria-label="Back to {{ $kid['name'] }}’s home">@include('modules.homework.kid._icon', ['name' => 'back', 'size' => 26])</button>
