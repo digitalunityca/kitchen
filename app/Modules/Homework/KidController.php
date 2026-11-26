@@ -6,6 +6,7 @@ namespace App\Modules\Homework;
 
 use App\Actions\Access\AttemptSettingsUnlock;
 use App\Actions\Homework\AttemptKidUnlock;
+use App\Actions\Homework\LoadHomeworkEvents;
 use App\Actions\Homework\MarkTaskMissed;
 use App\Actions\Homework\PrintHomework;
 use App\Actions\Homework\RedeemReward;
@@ -72,8 +73,20 @@ class KidController extends Controller
         }
 
         $this->session->start($request, $profile['id']);
+        $this->store->markSeen($profile['id']);
 
         return $this->render('home', $profile, $this->screenData('home', $profile));
+    }
+
+    /** GET …/events?after=N: approvals and rewards since ledger position N, and each kid's "+points" badge. */
+    public function events(Request $request, LoadHomeworkEvents $loadHomeworkEvents): JsonResponse
+    {
+        $module = $this->modules->get('homework');
+        $kids = $module instanceof HomeworkModule ? array_column($module->kids(), 'id') : [];
+        $after = $request->query('after');
+
+        return response()->json($loadHomeworkEvents->handle(is_numeric($after) ? (int) $after : null, $kids))
+            ->header('Cache-Control', 'no-store');
     }
 
     /** POST …/kids/{kid}/lock: ✕, Home or 5 minutes idle sign the kid out. */

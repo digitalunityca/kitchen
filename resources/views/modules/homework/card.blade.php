@@ -2,10 +2,26 @@
 @if ($kids !== [])
 @push('menu-items')
   @foreach ($kids as $kid)
-    <button type="button" class="kid-btn{{ $kid['photo'] ? ' has-photo' : '' }}" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ $kid['name'] }}’s homework">@if ($kid['photo'])<img src="{{ $kid['photo'] }}" alt="" width="56" height="56">@else{{ $kid['badge'] }}@endif</button>
+    <span class="kid-btn-wrap">
+      <button type="button" class="kid-btn{{ $kid['photo'] ? ' has-photo' : '' }}" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ $kid['name'] }}’s homework">@if ($kid['photo'])<img src="{{ $kid['photo'] }}" alt="" width="56" height="56">@else{{ $kid['badge'] }}@endif</button>
+      <span class="kid-badge" data-kid-badge="{{ $kid['id'] }}" @if (! $kid['unseen']) hidden @endif>+{{ $kid['unseen'] }}</span>
+    </span>
   @endforeach
   <span class="menu-divider" aria-hidden="true"></span>
 @endpush
+
+{{-- The celebration when a parent approves sheets or a reward is bought (from the tablet or a phone). --}}
+<div class="hw-cheer" id="hw-cheer" hidden role="status" aria-live="polite" data-events="{{ route('modules.homework.events') }}" data-cursor="{{ $cursor }}" data-voice="{{ $voice ? '1' : '0' }}">
+  <canvas class="hw-cheer-confetti" aria-hidden="true"></canvas>
+  <div class="hw-cheer-card">
+    <span class="hw-cheer-face" data-cheer-face></span>
+    <p class="hw-cheer-title" data-cheer-title></p>
+    <p class="hw-cheer-points"><b data-cheer-points>0</b> points</p>
+    <p class="hw-cheer-note" data-cheer-note></p>
+  </div>
+</div>
+@php($cheerKids = collect($kids)->keyBy('id')->map(fn ($k) => \Illuminate\Support\Arr::only($k, ['name', 'badge', 'color', 'photo'])))
+<script type="application/json" id="hw-kids">{!! json_encode($cheerKids, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) !!}</script>
 
 <div class="kid-overlay" id="kid-overlay" hidden role="dialog" aria-modal="true" data-csrf="{{ csrf_token() }}">
   @foreach ($kids as $kid)
@@ -27,6 +43,23 @@
     transition: transform .15s ease;
   }
   .kid-btn:active { transform: scale(.94); }
+  .kid-btn-wrap { position: relative; display: flex; }
+  .kid-badge { position: absolute; top: -6px; right: -8px; min-width: 30px; height: 26px; padding: 0 7px; border-radius: 999px; background: #34C759; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--card); font-variant-numeric: tabular-nums; animation: kz-pop .4s cubic-bezier(.2,1.6,.4,1); }
+  .kid-badge[hidden] { display: none; }
+  @keyframes kz-pop { from { transform: scale(.3); opacity: 0; } }
+  .hw-cheer { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.42); animation: kz-fade .25s ease; }
+  .hw-cheer[hidden] { display: none; }
+  .hw-cheer-confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .hw-cheer-card { position: relative; background: var(--bg); border-radius: 32px; padding: 34px 56px 30px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 30px 80px rgba(0,0,0,.35); text-align: center; animation: hw-cheer-in .55s cubic-bezier(.2,1.4,.4,1); min-width: 420px; }
+  body.night .hw-cheer-card { background: #1C1C1E; }
+  @keyframes hw-cheer-in { from { transform: scale(.6) translateY(30px); opacity: 0; } }
+  .hw-cheer-face { width: 132px; height: 132px; border-radius: 999px; border: 5px solid var(--kid, #34C759); overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--kid, #34C759); color: #fff; font-size: 60px; font-weight: 600; margin-bottom: 6px; }
+  .hw-cheer-face img { width: 100%; height: 100%; object-fit: cover; }
+  .hw-cheer-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -.02em; }
+  .hw-cheer-points { margin: 0; font-size: 22px; color: var(--sub); }
+  .hw-cheer-points b { font-size: 48px; color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 4px; }
+  .hw-cheer-note { margin: 0; font-size: 18px; color: var(--sub); }
+  @media (prefers-reduced-motion: reduce) { .hw-cheer-card, .kid-badge { animation: none; } }
   .kid-btn.has-photo { padding: 0; overflow: hidden; box-shadow: 0 0 0 3px var(--kid), 0 2px 8px rgba(0,0,0,.12); }
   .kid-btn img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px; display: block; }
   .kid-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -418,6 +451,91 @@
       if (/^[0-9]$/.test(e.key)) { key(p, e.key); } else if (e.key === 'Backspace') { key(p, 'del'); } else if (e.key === 'Enter') { key(p, 'ok'); }
     });
     document.addEventListener('dashboard:home', close);
+
+    /* Celebrations: approvals and rewards from anywhere (this tablet or a parent's phone). */
+    var cheer = document.getElementById('hw-cheer'), kids = JSON.parse(document.getElementById('hw-kids').textContent);
+    var queue = [], showing = false, cheerTimer = 0, KEY = 'hw.cursor';
+    var cursor = +cheer.dataset.cursor;
+    // Back from YouTube full screen: catch up on what happened meanwhile (the server skips old ones).
+    try { var saved = parseInt(localStorage.getItem(KEY), 10); if (saved >= 0 && saved < cursor) { cursor = saved; } } catch (e) {}
+    function saveCursor() { try { localStorage.setItem(KEY, String(cursor)); } catch (e) {} }
+    function badges(map) {
+      Object.keys(map || {}).forEach(function (id) {
+        var b = document.querySelector('[data-kid-badge="' + id + '"]'); if (!b) { return; }
+        var hide = !map[id]; if (!hide && b.textContent !== '+' + map[id]) { b.hidden = true; void b.offsetWidth; }
+        b.textContent = '+' + map[id]; b.hidden = hide;
+      });
+    }
+    function say(text) {
+      if (cheer.dataset.voice !== '1' || !window.fully || typeof fully.textToSpeech !== 'function') { return; }
+      if (document.querySelector('.ytm.playing')) { return; } // never talk over the music
+      try { fully.textToSpeech(text); } catch (e) {}
+    }
+    function confetti() {
+      var c = cheer.querySelector('canvas'), ctx = c.getContext && c.getContext('2d'); if (!ctx) { return; }
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+      var w = c.width = innerWidth, h = c.height = innerHeight, colors = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#0A84FF', '#AF52DE'], bits = [];
+      for (var i = 0; i < 140; i++) { bits.push({ x: Math.random() * w, y: -20 - Math.random() * h * .5, s: 6 + Math.random() * 8, v: 2 + Math.random() * 4, a: Math.random() * 6, r: (Math.random() - .5) * .2, c: colors[i % colors.length] }); }
+      var t0 = performance.now();
+      (function frame(t) {
+        if (cheer.hidden || t - t0 > 4500) { ctx.clearRect(0, 0, w, h); return; }
+        ctx.clearRect(0, 0, w, h);
+        bits.forEach(function (b) { b.y += b.v; b.x += Math.sin(b.a += .05) * 1.2; ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a); ctx.fillStyle = b.c; ctx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); ctx.restore(); });
+        requestAnimationFrame(frame);
+      })(t0);
+    }
+    function countUp(el, from, to) {
+      var t0 = performance.now();
+      (function step(t) { var p = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1) { requestAnimationFrame(step); } })(t0);
+    }
+    function closeCheer() { clearTimeout(cheerTimer); cheer.hidden = true; showing = false; setTimeout(next, 400); }
+    function next() {
+      if (showing || !queue.length || document.hidden) { return; }
+      var e = queue.shift(), kid = kids[e.kid]; if (!kid) { return next(); }
+      showing = true;
+      cheer.style.setProperty('--kid', kid.color);
+      cheer.querySelector('[data-cheer-face]').innerHTML = kid.photo ? '<img src="' + kid.photo + '" alt="">' : kid.badge;
+      var title, note, spoken;
+      if (e.kind === 'approved') {
+        title = 'Bravo ' + kid.name + '! +' + e.points + ' ⭐';
+        note = e.sheets === 1 ? 'A parent approved your sheet.' : 'A parent approved ' + e.sheets + ' sheets.';
+        spoken = 'Bravo ' + kid.name + '! ' + e.points + ' points!';
+        countUp(cheer.querySelector('[data-cheer-points]'), e.balance - e.points, e.balance);
+        confetti();
+      } else {
+        title = 'Enjoy, ' + kid.name + '! 🎉';
+        note = e.name;
+        spoken = 'Enjoy, ' + kid.name + '! ' + e.name + '.';
+        cheer.querySelector('[data-cheer-points]').textContent = e.balance;
+      }
+      cheer.querySelector('[data-cheer-title]').textContent = title;
+      cheer.querySelector('[data-cheer-note]').textContent = note;
+      cheer.hidden = false;
+      say(spoken);
+      cheerTimer = setTimeout(closeCheer, 5500);
+      // The kid's own area, if open, shows the new points straight away.
+      var s = sheet();
+      if (!overlay.hidden && s && s.dataset.kidSheet === e.kid) {
+        var screen = s.querySelector('[data-screen]');
+        if (screen && ['home', 'history', 'rewards'].indexOf(screen.dataset.screen) !== -1 && !screen.querySelector('.kz-parent:not([hidden])')) { go(screen.dataset.screen); }
+      }
+    }
+    cheer.addEventListener('click', closeCheer);
+    function poll() {
+      if (document.hidden) { return; }
+      fetch(cheer.dataset.events + '?after=' + cursor, { cache: 'no-store', headers: { Accept: 'application/json' } })
+        .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+        .then(function (d) {
+          cursor = d.next; saveCursor(); badges(d.badges);
+          if (d.events.length) { queue = queue.concat(d.events); next(); }
+        })
+        .catch(function () {});
+    }
+    setInterval(poll, 5000);
+    poll();
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { poll(); next(); } });
+    // Opening the kid's area clears their badge (the server marks it seen on sign-in).
+    document.addEventListener('click', function (e) { var b = e.target.closest('[data-kid]'); if (b) { setTimeout(poll, 2500); } });
   })();
 </script>
 @endpush

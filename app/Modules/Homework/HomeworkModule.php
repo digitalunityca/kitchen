@@ -88,10 +88,16 @@ class HomeworkModule extends Module
         $app->bind(KidPinStore::class, fn (): KidPinStore => new KidPinStore(Storage::disk('local')));
     }
 
-    /** @return array{kids: list<array{id: string, name: string, badge: string, color: string, grade: int, photo: string|null}>} */
+    /** @return array{kids: list<array<string, mixed>>, cursor: int, voice: bool} */
     public function data(): array
     {
-        return ['kids' => $this->kids()];
+        $store = app(HomeworkStore::class);
+
+        return [
+            'kids' => array_map(fn (array $kid): array => $kid + ['unseen' => $store->unseenPoints($kid['id'])], $this->kids()),
+            'cursor' => count($store->load()['ledger']),
+            'voice' => (bool) $this->config('celebrate_voice', true),
+        ];
     }
 
     /** @return list<array{id: string, name: string, badge: string, color: string, grade: int, photo: string|null}> */
@@ -165,6 +171,7 @@ class HomeworkModule extends Module
         $kid = '[a-z0-9-]+';
         $task = 't[0-9]+';
 
+        $router->get('events', [KidController::class, 'events'])->middleware('throttle:60,1')->name('events');
         $router->get('kids/{kid}/sheet', [KidController::class, 'screen'])->where('kid', $kid)->middleware('throttle:120,1')->name('sheet');
         $router->post('kids/{kid}/unlock', [KidController::class, 'unlock'])->where('kid', $kid)->middleware('throttle:30,1')->name('unlock');
         $router->post('kids/{kid}/lock', [KidController::class, 'lock'])->where('kid', $kid)->middleware('throttle:60,1')->name('lock');

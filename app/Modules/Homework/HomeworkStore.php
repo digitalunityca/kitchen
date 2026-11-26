@@ -25,7 +25,7 @@ class HomeworkStore
 
     public function __construct(private readonly Filesystem $disk) {}
 
-    /** @return array{days: array<string, array<string, list<array<string, mixed>>>>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets: int} */
+    /** @return array{days: array<string, array<string, list<array<string, mixed>>>>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets: int, seen: array<string, int>} */
     public function load(): array
     {
         $data = $this->disk->exists(self::FILE) ? json_decode((string) $this->disk->get(self::FILE), true) : null;
@@ -36,10 +36,11 @@ class HomeworkStore
             'ledger' => array_values((array) ($data['ledger'] ?? [])),
             'words' => (array) ($data['words'] ?? []),
             'sheets' => (int) ($data['sheets'] ?? 0),
+            'seen' => (array) ($data['seen'] ?? []),
         ];
     }
 
-    /** @param  array{days: array<string, mixed>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets?: int}  $data */
+    /** @param  array{days: array<string, mixed>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets?: int, seen?: array<string, int>}  $data */
     public function save(array $data): void
     {
         $cutoff = now(HomeworkModule::TIMEZONE)->subDays(self::KEEP_DAYS)->toDateString();
@@ -147,6 +148,29 @@ class HomeworkStore
                 }
             }
         });
+    }
+
+    /** The kid opened their area: approvals up to now no longer show as a badge on their button. */
+    public function markSeen(string $kid): void
+    {
+        $this->update(function (array &$data) use ($kid): void {
+            $data['seen'][$kid] = count($data['ledger']);
+        });
+    }
+
+    /** Points from sheets approved since the kid last opened their area (the "+15" on their button). */
+    public function unseenPoints(string $kid): int
+    {
+        $data = $this->load();
+        if (! isset($data['seen'][$kid])) {
+            $this->markSeen($kid); // first look: start counting from now
+
+            return 0;
+        }
+
+        return (int) collect(array_slice($data['ledger'], (int) $data['seen'][$kid]))
+            ->filter(fn (array $e): bool => $e['kid'] === $kid && ! empty($e['taskId']))
+            ->sum('points');
     }
 
     /** "#0042" */

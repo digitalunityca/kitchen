@@ -235,6 +235,40 @@ class HomeworkTest extends TestCase
         $this->get('/modules/homework/kids/arthur/sheet?screen=history')->assertSee('data-filter="all"', false)->assertDontSee('>Approve</button>', false);
     }
 
+    public function test_the_tablet_hears_about_approvals_and_rewards_and_badges_clear_on_sign_in(): void
+    {
+        $this->pick('theo', ['addition' => 1, 'division' => 1]);
+        $page = $this->get('/')->assertOk()->assertSee('id="hw-cheer"', false)->assertSee('data-cursor="0"', false);
+        $page->assertSee('<span class="kid-badge" data-kid-badge="theo"  hidden >', false);
+
+        $this->getJson('/modules/homework/events?after=0')->assertOk()->assertExactJson(['next' => 0, 'events' => [], 'badges' => ['theo' => 0, 'arthur' => 0]]);
+
+        // Two sheets approved (here from the tablet; the QR link on paper does the same): one combined celebration.
+        $this->signIn('theo');
+        foreach (['t1', 't2'] as $task) {
+            $this->post("/modules/homework/kids/theo/check/2026-11-25/{$task}", ['pin' => '4821']);
+        }
+        $this->getJson('/modules/homework/events?after=0')->assertOk()
+            ->assertJsonPath('next', 2)
+            ->assertJsonPath('events', [['kind' => 'approved', 'kid' => 'theo', 'points' => 25, 'sheets' => 2, 'balance' => 25]])
+            ->assertJsonPath('badges.theo', 25);
+        $this->getJson('/modules/homework/events?after=2')->assertJsonPath('events', []);
+        $this->get('/')->assertSee('data-kid-badge="theo" >+25</span>', false);
+
+        // A reward bought: a lighter celebration.
+        $this->post('/modules/homework/kids/theo/rewards/dessert', ['pin' => '4821'])->assertOk();
+        $this->getJson('/modules/homework/events?after=2')->assertJsonPath('events', [['kind' => 'reward', 'kid' => 'theo', 'points' => -25, 'name' => 'Choose dessert', 'balance' => 0]]);
+
+        // Theo opens his area: his badge clears.
+        $this->post('/modules/homework/kids/theo/lock');
+        $this->signIn('theo');
+        $this->getJson('/modules/homework/events')->assertJsonPath('badges.theo', 0)->assertJsonPath('events', []);
+
+        // Old news isn't celebrated when the tablet comes back hours later.
+        $this->travel(3)->hours();
+        $this->getJson('/modules/homework/events?after=0')->assertJsonPath('events', []);
+    }
+
     public function test_printed_sheets_get_a_number_shown_in_history_and_on_the_paper(): void
     {
         $store = app(HomeworkStore::class);
