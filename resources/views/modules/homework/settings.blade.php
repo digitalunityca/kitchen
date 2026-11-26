@@ -54,7 +54,7 @@
           @foreach ($kid['tasks'] as $task)
             <li>
               <span>{{ $templates[$task['template']]['emoji'] }}</span>
-              <span class="grow">{{ $templates[$task['template']]['name'] }} <small>· {{ $task['points'] }} pts · {{ ['todo' => 'to do', 'done' => 'waiting for a check', 'approved' => 'approved'][$task['status']] ?? $task['status'] }}</small></span>
+              <span class="grow">{{ $templates[$task['template']]['name'] }} <small>· {{ $task['points'] }} pts · {{ ['todo' => 'to do', 'done' => 'waiting for a check', 'approved' => 'approved', 'missed' => 'not done'][$task['status']] ?? $task['status'] }}</small></span>
               @if (isset($task['worksheet']) || $templates[$task['template']]['printable'])
                 <span class="links">
                   @if (isset($task['worksheet']) || $task['status'] === 'approved')

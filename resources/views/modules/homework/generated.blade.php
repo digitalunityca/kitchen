@@ -16,6 +16,9 @@
     .paper { background: white; color: black; box-sizing: border-box; margin: 0 auto 1rem; max-width: 8.5in; padding: clamp(1rem, 4vw, .55in); }
     .paper h2 { font-size: 1.55rem; margin: 0; }
     .paper header p { margin: .15rem 0 0; }
+    .sheet-head { position: relative; }
+    .sheet-no { position: absolute; top: 0; right: 0; font-size: 1.6rem; font-weight: 700; border: 2px solid #000; border-radius: .4rem; padding: .1rem .5rem; font-variant-numeric: tabular-nums; }
+    body.preview .paper { margin-top: 1rem; }
     .exercise { margin-bottom: 1.15rem; overflow-wrap: anywhere; }
     .question { white-space: pre-line; }
     .line { height: .3in; border-bottom: 1px solid #777; }
@@ -32,7 +35,8 @@
     }
   </style>
 </head>
-<body>
+<body @class(['preview' => $preview ?? false])>
+  @unless ($preview ?? false)
   <header class="toolbar">
     <div>
       <a href="{{ route('dashboard', absolute: false) }}">← Dashboard</a>
@@ -60,11 +64,13 @@
       @endif
     @endif
   </header>
+  @endunless
 
   @unless ($needsGeneration ?? false)
     @foreach ($tasks as $task)
       <article class="paper" lang="fr-CA">
-        <header>
+        <header class="sheet-head">
+          @isset($task['number'])<span class="sheet-no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</span>@endisset
           <h2>{{ \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
           <p>{{ $kid['name'] }} · {{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
         </header>

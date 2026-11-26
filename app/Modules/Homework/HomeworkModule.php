@@ -157,6 +157,8 @@ class HomeworkModule extends Module
         $router->post('kids/{kid}/print', [KidController::class, 'print'])->where('kid', $kid)->middleware('throttle:6,1,homework-print-all:')->name('print');
         $router->post('kids/{kid}/check/{date}/{task}', [KidController::class, 'check'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:30,1')->name('check');
+        $router->get('kids/{kid}/preview/{date}/{task}', [KidController::class, 'preview'])
+            ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:60,1')->name('preview');
         $router->post('kids/{kid}/rewards/{reward}', [KidController::class, 'redeem'])->where(['kid' => $kid, 'reward' => '[a-z0-9-]+'])->middleware('throttle:30,1')->name('redeem');
         $router->get('kids/{kid}/{date}/{task}/worksheet', [HomeworkController::class, 'worksheet'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:30,1')->name('worksheet');

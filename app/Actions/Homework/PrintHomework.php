@@ -52,6 +52,7 @@ class PrintHomework
                 throw ValidationException::withMessages(['print' => 'Your sheets are already being made. Try again in a minute.']);
             }
 
+            $this->store->numberSheets();
             $tasks = array_values(array_filter($this->store->tasks($kid['id'], $date) ?? [], fn (array $t): bool => in_array($t['id'], $picked, true)));
             $this->queueWorksheetPrint->handle((string) Str::uuid(), $kid, $date, $tasks);
         } catch (\Throwable $e) {

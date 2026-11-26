@@ -6,14 +6,15 @@ namespace App\Modules\Homework;
 
 use App\Actions\Access\AttemptSettingsUnlock;
 use App\Actions\Homework\AttemptKidUnlock;
+use App\Actions\Homework\MarkTaskMissed;
 use App\Actions\Homework\PrintHomework;
 use App\Actions\Homework\RedeemReward;
-use App\Actions\Homework\RemoveTask;
 use App\Actions\Homework\ReviewTask;
 use App\Dashboard\ModuleRegistry;
 use App\Http\Access\AccessGate;
 use App\Http\Access\AccessSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RequireSettingsPin;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -101,21 +102,40 @@ class KidController extends Controller
         return response()->json(['ok' => true, 'sheets' => $sheets]);
     }
 
-    /** POST …/kids/{kid}/check/{date}/{task} (decision=approve|remove, pin): a parent checks a printed task. */
-    public function check(Request $request, string $kid, string $date, string $task, ReviewTask $reviewTask, RemoveTask $removeTask): Response|JsonResponse
+    /** POST …/kids/{kid}/check/{date}/{task} (decision=approve|missed, pin): a parent checks a printed sheet. */
+    public function check(Request $request, string $kid, string $date, string $task, ReviewTask $reviewTask, MarkTaskMissed $markTaskMissed): Response|JsonResponse
     {
         $profile = $this->kidOrFail($kid);
         if ($denied = $this->guard($request, $profile['id'])) {
             return $denied;
         }
 
-        if ($request->input('decision') === 'remove') {
-            $this->store->synchronized(fn () => $removeTask->handle($profile['id'], $date, $task));
+        if ($request->input('decision') === 'missed') {
+            $markTaskMissed->handle($profile['id'], $date, $task);
         } else {
             $reviewTask->handle($profile['id'], $date, $task, approve: true);
         }
 
         return $this->render('history', $profile, $this->screenData('history', $profile));
+    }
+
+    /** GET …/kids/{kid}/preview/{date}/{task}: the printed worksheet, for the signed-in kid or an unlocked parent. */
+    public function preview(Request $request, string $kid, string $date, string $task): Response
+    {
+        $profile = $this->kidOrFail($kid);
+        $parent = (int) $request->session()->get(RequireSettingsPin::SESSION_KEY, 0) >= now()->timestamp;
+        abort_unless($parent || $this->session->active($request, $profile['id']), 403);
+
+        $found = collect($this->store->tasks($profile['id'], $date) ?? [])->firstWhere('id', $task);
+        abort_unless(isset($found['worksheet']), 404);
+
+        return response()->view('modules.homework.generated', [
+            'kid' => $profile,
+            'date' => $date,
+            'tasks' => [$found],
+            'answers' => false,
+            'preview' => true,
+        ])->header('Cache-Control', 'no-store');
     }
 
     /** POST …/kids/{kid}/rewards/{reward} (pin): a parent confirms buying a reward. */
@@ -186,20 +206,16 @@ class KidController extends Controller
         return $data + match ($screen) {
             'home' => [
                 'schoolDay' => ! $today->isWeekend(),
-                'todayTotal' => count($tasks),
+                'todayTotal' => collect($tasks)->where('status', '!=', 'missed')->count(),
                 'todayChecked' => collect($tasks)->where('status', 'approved')->count(),
                 'toCheck' => count($this->toCheck($kid['id'])),
             ],
             'homework' => $this->homeworkData($kid, $today, $tasks),
             'rewards' => $this->rewardsData($kid['id'], $tasks, $today, $data['balance']) + [
-                'homeworkFirst' => ! $today->isWeekend() && ($tasks === [] || collect($tasks)->contains(fn (array $t): bool => $t['status'] !== 'approved')),
+                'homeworkFirst' => ! $today->isWeekend() && RedeemReward::homeworkOpen($tasks),
                 'waiting' => (int) collect($this->toCheck($kid['id']))->sum('points'),
             ],
-            'history' => [
-                'toCheck' => $this->toCheck($kid['id']),
-                'days' => $this->ledgerByDay($kid['id']),
-                'stats' => $this->store->stats($kid['id']),
-            ],
+            'history' => $this->historyData($kid) + ['stats' => $this->store->stats($kid['id'])],
             default => [],
         };
     }
@@ -211,7 +227,7 @@ class KidController extends Controller
      */
     private function homeworkData(array $kid, CarbonImmutable $today, array $tasks): array
     {
-        $picked = collect($tasks)->countBy('template')->all();
+        $picked = collect($tasks)->where('status', '!=', 'missed')->countBy('template')->all();
         $templates = HomeworkModule::templatesFor($kid['grade']);
 
         return [
@@ -252,13 +268,71 @@ class KidController extends Controller
         return $list;
     }
 
-    /** @return array<string, list<array<string, mixed>>> date => that day's ledger lines, newest first */
-    private function ledgerByDay(string $kid): array
+    /**
+     * History as one list, newest day first: each day's sheets (to check, done, not done)
+     * and the rewards bought that day, with the day's points total.
+     *
+     * @param  array{id: string}  $kid
+     * @return array{days: list<array{date: string, points: int, rows: list<array<string, mixed>>}>, counts: array<string, int>, filter: string}
+     */
+    private function historyData(array $kid): array
     {
-        return collect($this->store->history($kid, 60))
-            ->groupBy(fn (array $entry): string => substr((string) $entry['at'], 0, 10))
-            ->map(fn ($entries) => $entries->values()->all())
-            ->all();
+        $this->store->numberSheets();
+        $data = $this->store->load();
+        $cutoff = $this->today()->subDays(self::HISTORY_DAYS)->toDateString();
+        $days = [];
+
+        foreach ($data['days'] as $date => $kids) {
+            if ($date < $cutoff) {
+                continue;
+            }
+            foreach ($kids[$kid['id']] ?? [] as $task) {
+                $status = match ($task['status']) {
+                    'approved' => 'done',
+                    'missed' => 'missed',
+                    default => 'check',
+                };
+                $days[$date][] = [
+                    'kind' => 'sheet',
+                    'id' => $task['id'],
+                    'template' => $task['template'],
+                    'name' => HomeworkModule::TEMPLATES[$task['template']]['name'] ?? $task['template'],
+                    'points' => (int) $task['points'],
+                    'status' => $status,
+                    'number' => isset($task['number']) ? HomeworkStore::sheetLabel((int) $task['number']) : null,
+                    'printed' => $task['printedAt'] ?? null,
+                    'time' => $task['approvedAt'] ?? $task['checkedAt'] ?? $task['printedAt'] ?? $task['doneAt'] ?? null,
+                    'preview' => isset($task['worksheet']),
+                ];
+            }
+        }
+
+        $totals = [];
+        foreach ($data['ledger'] as $entry) {
+            $date = substr((string) $entry['at'], 0, 10);
+            if ($entry['kid'] !== $kid['id'] || $date < $cutoff) {
+                continue;
+            }
+            $totals[$date] = ($totals[$date] ?? 0) + (int) $entry['points'];
+            if (! empty($entry['rewardId'])) {
+                $days[$date][] = ['kind' => 'reward', 'name' => $entry['reason'], 'points' => (int) $entry['points'], 'status' => 'reward', 'time' => $entry['at']];
+            }
+        }
+
+        krsort($days);
+        $list = [];
+        foreach ($days as $date => $rows) {
+            usort($rows, fn (array $a, array $b): int => strcmp((string) ($b['time'] ?? ''), (string) ($a['time'] ?? '')) ?: strnatcmp((string) ($b['id'] ?? ''), (string) ($a['id'] ?? '')));
+            $list[] = ['date' => (string) $date, 'points' => $totals[$date] ?? 0, 'rows' => $rows];
+        }
+
+        $counts = collect($list)->flatMap(fn (array $day): array => $day['rows'])->countBy('status')->all();
+
+        return [
+            'days' => $list,
+            'counts' => ['all' => array_sum($counts), 'check' => $counts['check'] ?? 0, 'done' => $counts['done'] ?? 0, 'missed' => $counts['missed'] ?? 0],
+            'filter' => ($counts['check'] ?? 0) > 0 ? 'check' : 'all',
+        ];
     }
 
     /**

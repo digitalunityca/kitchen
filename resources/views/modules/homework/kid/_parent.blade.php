@@ -8,7 +8,6 @@
     @include('modules.homework.kid._keypad', ['okLabel' => 'Confirm'])
     <div class="kz-parent-actions">
       <button type="button" class="kz-btn ghost" data-decision="cancel">Cancel</button>
-      <button type="button" class="kz-btn ghost" data-decision="remove" hidden>Not done</button>
     </div>
   </div>
 </div>

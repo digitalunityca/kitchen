@@ -184,7 +184,10 @@ class HomeworkTest extends TestCase
         $this->signIn('arthur', '1111');
 
         $this->get('/modules/homework/kids/arthur/sheet?screen=history')->assertOk()
-            ->assertSeeInOrder(['To check', 'Addition', 'Writing', 'Reading', 'Points']);
+            ->assertSee('data-filter="check"', false)
+            ->assertSee('To check <span>3</span>', false)
+            ->assertSeeInOrder(['Reading', 'Writing', 'Addition'])
+            ->assertSee('>Approve</button>', false);
 
         $check = '/modules/homework/kids/arthur/check/2026-11-25/t1';
         $this->post($check)->assertForbidden()->assertJson(['pin' => true]);
@@ -192,7 +195,9 @@ class HomeworkTest extends TestCase
         $this->post($check, ['pin' => '1111'])->assertForbidden()->assertJson(['error' => 'Wrong parent PIN.']);
         $this->assertSame(0, app(HomeworkStore::class)->balance('arthur'));
 
-        $this->post($check, ['pin' => '4821', 'decision' => 'approve'])->assertOk()->assertSee('Addition · 2026-11-25')->assertSee('+10');
+        $this->post($check, ['pin' => '4821', 'decision' => 'approve'])->assertOk()
+            ->assertSee('Done <span>1</span>', false)
+            ->assertSee('+10 points</b>', false);
         $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
 
         // Each check needs the PIN again, and approving twice doesn't pay twice.
@@ -200,11 +205,66 @@ class HomeworkTest extends TestCase
         $this->post($check, ['pin' => '4821'])->assertOk();
         $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
 
-        // "Not done" takes the task off with no points.
-        $this->post('/modules/homework/kids/arthur/check/2026-11-25/t2', ['pin' => '4821', 'decision' => 'remove'])->assertOk();
-        $this->assertSame(['t1', 't3'], array_column(app(HomeworkStore::class)->tasks('arthur', '2026-11-25'), 'id'));
+        // "Not done": no points, stays in the list, frees the day's slot.
+        $this->post('/modules/homework/kids/arthur/check/2026-11-25/t2', ['pin' => '4821', 'decision' => 'missed'])->assertOk()
+            ->assertSee('Not done <span>1</span>', false)
+            ->assertSee('<li class="kz-row is-missed" data-status="missed">', false);
+        $this->assertSame('missed', app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[1]['status']);
+        $this->get('/modules/homework/kids/arthur/sheet?screen=homework')->assertSee('data-choice="writing" data-points="10" data-left="1"', false);
 
         $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
+
+        $this->post('/modules/homework/kids/arthur/check/2026-11-25/t3', ['pin' => '4821']);
+        $this->get('/modules/homework/kids/arthur/sheet?screen=history')->assertSee('data-filter="all"', false)->assertDontSee('>Approve</button>', false);
+    }
+
+    public function test_printed_sheets_get_a_number_shown_in_history_and_on_the_paper(): void
+    {
+        $store = app(HomeworkStore::class);
+        // Two sheets printed before numbering existed, on different days.
+        $store->update(function (array &$data): void {
+            $sheet = [['question' => 'Combien font 2 + 2?', 'answer' => '4']];
+            $data['days']['2026-11-24']['theo'] = [['id' => 't1', 'template' => 'addition', 'points' => 10, 'status' => 'approved', 'seed' => 1, 'worksheet' => $sheet]];
+            $data['days']['2026-11-25']['arthur'] = [['id' => 't1', 'template' => 'addition', 'points' => 10, 'status' => 'done', 'seed' => 2, 'worksheet' => $sheet]];
+        });
+
+        config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->packet(['Divisions']))]);
+        $this->signIn('theo');
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 1]])->assertOk();
+
+        $this->assertSame(1, $store->tasks('theo', '2026-11-24')[0]['number']);
+        $this->assertSame(2, $store->tasks('arthur', '2026-11-25')[0]['number']);
+        $this->assertSame(3, $store->tasks('theo', '2026-11-25')[0]['number']);
+
+        $this->get(self::SHEET.'?screen=history')
+            ->assertSeeInOrder(['Today', '#0003', 'Division', 'To check', 'Yesterday', '#0001', 'Addition', 'Done'])
+            ->assertSee('/modules/homework/kids/theo/preview/2026-11-25/t1', false);
+
+        $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
+            ->assertSee('<span class="sheet-no">#0003</span>', false)
+            ->assertSee('Combien font 6 × 7?')
+            ->assertDontSee('class="toolbar"', false);
+    }
+
+    public function test_a_preview_is_only_for_the_signed_in_kid_or_a_parent(): void
+    {
+        app(HomeworkStore::class)->update(function (array &$data): void {
+            $data['days']['2026-11-25']['theo'] = [['id' => 't1', 'template' => 'addition', 'points' => 10, 'status' => 'done', 'seed' => 1, 'worksheet' => [['question' => 'Q?', 'answer' => 'A']]]];
+        });
+        $preview = '/modules/homework/kids/theo/preview/2026-11-25/t1';
+
+        $this->get($preview)->assertForbidden();
+        $this->signIn('arthur');
+        $this->get($preview)->assertForbidden();
+        $this->signIn('theo');
+        $this->get($preview)->assertOk();
+        $this->get('/modules/homework/kids/theo/preview/2026-11-25/t9')->assertNotFound();
+
+        $this->post('/modules/homework/kids/theo/lock');
+        $this->get($preview)->assertForbidden();
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->get($preview)->assertOk();
     }
 
     public function test_rewards_show_what_the_kid_can_get_first_and_the_rest_disabled(): void
@@ -271,7 +331,8 @@ class HomeworkTest extends TestCase
         $this->post('/modules/homework/kids/theo/rewards/habs-3rd', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Take the first 2 periods first.']);
         $this->post('/modules/homework/kids/theo/rewards/weekend-treat', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Weekend prizes are for Saturday and Sunday.']);
 
-        $this->get(self::SHEET.'?screen=history')->assertSee('This week: <b>1</b> sheet, <b>+10</b> points', false)->assertSee('−40');
+        $this->get(self::SHEET.'?screen=history')->assertSee('This week: <b>1</b> sheet, <b>+10</b> points', false)
+            ->assertSeeInOrder(['Today', '+170 points', 'Movie in the evening', '−40'])->assertSeeInOrder(['Addition', 'Done']);
 
         // Saturday: the weekend treat (150) can be bought, the outing (300) not yet.
         $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));

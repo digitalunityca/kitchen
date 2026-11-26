@@ -7,6 +7,7 @@
     body { font: 11pt/1.3 DejaVu Sans, sans-serif; color: black; }
     article + article { page-break-before: always; }
     h1 { margin: 0 0 3pt; font-size: 19pt; }
+    .no { float: right; font-size: 20pt; font-weight: bold; border: 1.5pt solid #000; padding: 2pt 8pt; }
     p { margin: 0 0 4pt; }
     ol { padding-left: 25pt; }
     li { margin-bottom: 12pt; page-break-inside: avoid; overflow-wrap: break-word; }
@@ -19,6 +20,7 @@
 <body>
   @foreach ($tasks as $task)
     <article>
+      @isset($task['number'])<div class="no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</div>@endisset
       <h1>{{ \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</h1>
       <p>{{ $kid['name'] }} · {{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
       <ol>

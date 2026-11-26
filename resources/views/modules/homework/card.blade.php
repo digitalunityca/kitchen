@@ -168,6 +168,33 @@
   .kz-line .plus { color: #1E7A34; }
   body.night .kz-line .plus { color: #4CD964; }
   .kz-news-list:empty { display: none; }
+  .kz-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .kz-chip { min-height: 48px; padding: 0 18px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--text); font-size: 17px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .kz-chip span { min-width: 26px; height: 26px; padding: 0 7px; border-radius: 999px; background: var(--fill); font-size: 14px; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+  .kz-chip[aria-pressed="true"] { background: var(--kid-ink); color: #fff; }
+  .kz-chip[aria-pressed="true"] span { background: rgba(255,255,255,.25); }
+  .kz-week { margin-left: auto; }
+  .kz-history-list { background: var(--card); box-shadow: var(--shadow); border-radius: 24px; padding: 6px 22px 16px; }
+  .kz-history .kz-day { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 2px; font-size: 16px; }
+  .kz-day b { font-variant-numeric: tabular-nums; }
+  .kz-day .plus, .kz-row-points.plus { color: #1E7A34; }
+  .kz-day .minus, .kz-row-points.minus { color: var(--sub); }
+  .kz-day-group[hidden], .kz-row[hidden], .kz-viewer[hidden], .kz-filter-empty[hidden] { display: none; }
+  .kz-row { min-height: 72px; }
+  .kz-row-points { font-size: 18px; font-variant-numeric: tabular-nums; padding-right: 4px; }
+  .kz-no { display: inline-block; margin-right: 10px; padding: 1px 8px; border: 2px solid var(--text); border-radius: 8px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: 2px; }
+  .kz-badge { flex: none; border-radius: 999px; padding: 6px 12px; font-size: 14px; font-weight: 600; background: var(--fill); color: var(--sub); }
+  .kz-badge.is-check { background: rgba(255,149,0,.16); color: #A65A00; }
+  .kz-badge.is-done { background: rgba(52,199,89,.16); color: #1E7A34; }
+  body.night .kz-badge.is-check { color: #FFB340; }
+  body.night .kz-badge.is-done { color: #4CD964; }
+  .kz-row.is-missed .kz-row-text b { color: var(--sub); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .kz-row-actions { display: flex; gap: 8px; flex: none; }
+  .kz-row-actions .kz-btn { min-height: 48px; padding: 0 16px; font-size: 16px; }
+  .kz-viewer { position: absolute; inset: -20px -24px; z-index: 5; border-radius: 28px; overflow: hidden; background: var(--bg); display: flex; flex-direction: column; animation: kz-fade .2s ease; }
+  .kz-viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px 10px 26px; }
+  .kz-viewer-bar b { font-size: 22px; font-weight: 600; }
+  .kz-viewer iframe { flex: 1; border: 0; width: 100%; background: #f2f2f7; }
 
   /* Parent check */
   .kz-parent { position: absolute; inset: -20px -24px; border-radius: 28px; background: rgba(0,0,0,.32); display: flex; align-items: center; justify-content: center; z-index: 4; animation: kz-fade .2s ease; }
@@ -201,6 +228,7 @@
       el.innerHTML = html;
       var screen = el.querySelector('[data-screen]');
       if (screen && screen.dataset.screen === 'homework') { tally(screen); }
+      if (screen && screen.dataset.screen === 'history') { filter(screen, screen.dataset.filter); }
     }
     function go(screen) {
       var el = body(); if (!el) { return; }
@@ -256,7 +284,7 @@
     }
     function submit(p) {
       if (digits(p).length < 4 || p.dataset.busy) { return; }
-      if (p.dataset.screen === 'pin') { unlock(p); } else { decide(p, 'approve'); }
+      if (p.dataset.screen === 'pin') { unlock(p); } else { decide(p, p.dataset.decision || 'approve'); }
     }
     function unlock(p) {
       p.dataset.busy = '1';
@@ -272,7 +300,7 @@
       var screen = btn.closest('[data-screen]'), p = screen.querySelector('[data-parent]');
       p.dataset.url = btn.dataset.parentOpen;
       p.querySelector('[data-parent-title]').textContent = btn.dataset.parentTitle || 'Parent check';
-      p.querySelector('[data-decision="remove"]').hidden = !btn.dataset.parentRemove;
+      p.dataset.decision = btn.dataset.parentDecision || 'approve';
       p.querySelector('[data-error]').hidden = true;
       setPin(p, ''); p.hidden = false;
     }
@@ -328,6 +356,24 @@
       });
     }
 
+    /* History: status filter and the worksheet preview */
+    function filter(screen, key) {
+      screen.dataset.filter = key;
+      screen.querySelectorAll('[data-filter-chip]').forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.filterChip === key ? 'true' : 'false'); });
+      var any = false;
+      screen.querySelectorAll('[data-day]').forEach(function (day) {
+        var shown = 0;
+        day.querySelectorAll('[data-status]').forEach(function (row) { row.hidden = key !== 'all' && row.dataset.status !== key; if (!row.hidden) { shown++; } });
+        day.hidden = shown === 0; any = any || shown > 0;
+      });
+      var empty = screen.querySelector('[data-filter-empty]'); if (empty) { empty.hidden = any || !screen.querySelector('[data-day]'); }
+    }
+    function preview(btn) {
+      var v = btn.closest('[data-screen]').querySelector('[data-viewer]');
+      v.querySelector('[data-viewer-title]').textContent = btn.dataset.previewTitle;
+      v.querySelector('[data-viewer-frame]').src = btn.dataset.preview; v.hidden = false;
+    }
+
     document.addEventListener('click', function (e) { var b = e.target.closest('[data-kid]'); if (b) { open(b.dataset.kid); } });
     overlay.addEventListener('click', function (e) {
       poke();
@@ -338,6 +384,9 @@
       if ((t = e.target.closest('[data-choice]'))) { pick(t); return; }
       if ((t = e.target.closest('[data-print-all]'))) { printAll(t.closest('[data-screen]')); return; }
       if ((t = e.target.closest('[data-parent-open]'))) { openParent(t); return; }
+      if ((t = e.target.closest('[data-filter-chip]'))) { filter(t.closest('[data-screen]'), t.dataset.filterChip); return; }
+      if ((t = e.target.closest('[data-preview]'))) { preview(t); return; }
+      if ((t = e.target.closest('[data-viewer-close]'))) { var v = t.closest('[data-viewer]'); v.hidden = true; v.querySelector('iframe').removeAttribute('src'); return; }
       if ((t = e.target.closest('[data-decision]'))) { decide(pad(t), t.dataset.decision); }
     });
     document.addEventListener('keydown', function (e) {

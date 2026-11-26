@@ -55,12 +55,25 @@ class RedeemReward
     {
         return match (true) {
             $reward['when'] === 'weekend' && ! $today->isWeekend() => 'weekend',
-            $reward['when'] === 'evening' && ! $today->isWeekend() && ($tasks === [] || collect($tasks)->contains(fn (array $t): bool => $t['status'] !== 'approved')) => 'homework',
+            $reward['when'] === 'evening' && ! $today->isWeekend() && self::homeworkOpen($tasks) => 'homework',
             isset($reward['limit']) && ($bought[$reward['id']] ?? 0) >= $reward['limit'] => 'limit',
             isset($reward['after']) && ($bought[$reward['after']] ?? 0) === 0 => 'after',
             $balance < $reward['cost'] => 'points',
             default => 'ready',
         };
+    }
+
+    /**
+     * True while today's homework isn't all checked: nothing picked yet, or a sheet
+     * still waiting (sheets a parent marked "Not done" don't count).
+     *
+     * @param  list<array<string, mixed>>  $tasks
+     */
+    public static function homeworkOpen(array $tasks): bool
+    {
+        $counted = array_filter($tasks, fn (array $t): bool => $t['status'] !== 'missed');
+
+        return $counted === [] || collect($counted)->contains(fn (array $t): bool => $t['status'] !== 'approved');
     }
 
     /** @return array<string, int> reward id => times bought today */

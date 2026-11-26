@@ -25,7 +25,7 @@ class HomeworkStore
 
     public function __construct(private readonly Filesystem $disk) {}
 
-    /** @return array{days: array<string, array<string, list<array<string, mixed>>>>, ledger: list<array<string, mixed>>, words: array<string, list<string>>} */
+    /** @return array{days: array<string, array<string, list<array<string, mixed>>>>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets: int} */
     public function load(): array
     {
         $data = $this->disk->exists(self::FILE) ? json_decode((string) $this->disk->get(self::FILE), true) : null;
@@ -35,10 +35,11 @@ class HomeworkStore
             'days' => (array) ($data['days'] ?? []),
             'ledger' => array_values((array) ($data['ledger'] ?? [])),
             'words' => (array) ($data['words'] ?? []),
+            'sheets' => (int) ($data['sheets'] ?? 0),
         ];
     }
 
-    /** @param  array{days: array<string, mixed>, ledger: list<array<string, mixed>>, words: array<string, list<string>>}  $data */
+    /** @param  array{days: array<string, mixed>, ledger: list<array<string, mixed>>, words: array<string, list<string>>, sheets?: int}  $data */
     public function save(array $data): void
     {
         $cutoff = now(HomeworkModule::TIMEZONE)->subDays(self::KEEP_DAYS)->toDateString();
@@ -125,6 +126,33 @@ class HomeworkStore
             'earned' => (int) $entries->where('points', '>', 0)->sum('points'),
             'spent' => (int) -$entries->where('points', '<', 0)->sum('points'),
         ];
+    }
+
+    /**
+     * Give every printed worksheet (a task with a generated sheet) that has no number
+     * yet the next household-wide sheet number, oldest day first. The number is printed
+     * on the paper and shown in History, so a parent can match the two.
+     */
+    public function numberSheets(): void
+    {
+        $this->update(function (array &$data): void {
+            ksort($data['days']);
+            foreach ($data['days'] as $date => $kids) {
+                foreach ($kids as $kid => $tasks) {
+                    foreach ($tasks as $i => $task) {
+                        if (isset($task['worksheet']) && ! isset($task['number'])) {
+                            $data['days'][$date][$kid][$i]['number'] = ++$data['sheets'];
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /** "#0042" */
+    public static function sheetLabel(int $number): string
+    {
+        return '#'.str_pad((string) $number, 4, '0', STR_PAD_LEFT);
     }
 
     /** @return list<string> */

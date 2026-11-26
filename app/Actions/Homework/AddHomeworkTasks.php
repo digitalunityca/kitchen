@@ -46,7 +46,7 @@ class AddHomeworkTasks
                 throw ValidationException::withMessages(['counts' => 'That homework isn’t available.']);
             }
 
-            $already = collect($tasks)->where('template', $template)->count();
+            $already = collect($tasks)->where('template', $template)->where('status', '!=', 'missed')->count();
             if ($already + $count > $templates[$template]['max']) {
                 throw ValidationException::withMessages(['counts' => "Only {$templates[$template]['max']} {$templates[$template]['name']} per day."]);
             }
