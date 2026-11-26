@@ -207,12 +207,15 @@ class HomeworkTest extends TestCase
         $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
     }
 
-    public function test_rewards_show_only_what_the_points_can_buy_today(): void
+    public function test_rewards_show_what_the_kid_can_get_first_and_the_rest_disabled(): void
     {
         $this->signIn('theo');
 
-        // No points: a friendly nudge toward the cheapest reward.
-        $this->get(self::SHEET.'?screen=rewards')->assertSee('Keep going!')->assertSee('25 more points to get “Choose dessert”.', false);
+        // No points: everything is disabled, the cheapest first.
+        $this->get(self::SHEET.'?screen=rewards')
+            ->assertDontSee('data-state="ready"', false)
+            ->assertSeeInOrder(['Choose dessert', '25 more points', 'Stay up 15 min later', '30 more points'])
+            ->assertSeeInOrder(['Weekend treat', 'Weekends only']);
 
         $this->pick('theo', ['multiplication' => 2, 'division' => 1]);
         foreach (['t1', 't2'] as $task) {
@@ -222,35 +225,33 @@ class HomeworkTest extends TestCase
         // 30 points, one sheet still to check: affordable evening rewards wait for the check.
         $this->get(self::SHEET.'?screen=rewards')
             ->assertSee('Tonight’s rewards open once today’s homework is checked.')
-            ->assertSeeInOrder(['Choose dessert', 'Yours once your homework is checked'])
-            ->assertSee('Board game with a parent')
-            ->assertDontSee('<b>Movie in the evening</b>', false)
-            ->assertDontSee('Weekend treat')
-            ->assertSee('Next: Movie in the evening · 10 more points');
+            ->assertSeeInOrder(['Choose dessert', 'Yours once your homework is checked', 'Movie in the evening', '10 more points']);
 
         $this->post('/modules/homework/kids/theo/check/2026-11-25/t3', ['pin' => '4821']);
 
-        // 45 points, all checked: the movie (40) is ready, the PS5 (60) and the Habs (50) hidden.
+        // 45 points, all checked: what he can get comes first, then the rest by points missing.
         $this->get(self::SHEET.'?screen=rewards')
+            ->assertSeeInOrder(['Choose dessert', 'Stay up 15 min later', 'Board game with a parent', 'Movie in the evening', 'Habs game: 2 periods', '5 more points', '30 min PS5', '15 more points', 'Habs game: 3rd period', 'After the first 2 periods'])
             ->assertSeeInOrder(['Movie in the evening', 'You can get it now'])
-            ->assertDontSee('Tonight’s rewards open')
-            ->assertDontSee('30 min PS5')
-            ->assertDontSee('Habs game: 3rd period')
-            ->assertSee('Next: Habs game: 2 periods · 5 more points');
+            ->assertSee('<li class="kz-reward is-locked" data-state="locked"  aria-disabled="true" >', false);
 
-        // Once taken today, a 1-per-evening reward disappears.
-        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertOk()->assertSee('Enjoy! Movie in the evening is yours.')->assertDontSee('<b>Movie in the evening</b>', false);
+        // Once taken tonight, a 1-per-evening reward is disabled, not gone.
+        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertOk()
+            ->assertSee('Enjoy! Movie in the evening is yours.')
+            ->assertSeeInOrder(['Movie in the evening', 'Already taken tonight']);
     }
 
-    public function test_weekend_prizes_show_only_on_weekends(): void
+    public function test_weekend_prizes_are_enabled_only_on_weekends(): void
     {
         app(HomeworkStore::class)->addPoints('theo', 160, 'Saved');
         $this->signIn('theo');
-        $this->get(self::SHEET.'?screen=rewards')->assertDontSee('Weekend treat');
+        $this->get(self::SHEET.'?screen=rewards')->assertSeeInOrder(['Weekend treat', 'Weekends only']);
 
         $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));
         $this->signIn('theo');
-        $this->get(self::SHEET.'?screen=rewards')->assertSee('Weekend treat')->assertDontSee('<b>Weekend outing', false)->assertSee('30 min PS5');
+        $this->get(self::SHEET.'?screen=rewards')
+            ->assertSeeInOrder(['Weekend treat', 'You can get it now'])
+            ->assertSeeInOrder(['Weekend outing', '140 more points']);
     }
 
     public function test_kids_buy_rewards_with_the_parent_pin_and_save_up_for_weekend_prizes(): void

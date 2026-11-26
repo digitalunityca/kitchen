@@ -262,27 +262,24 @@ class KidController extends Controller
     }
 
     /**
-     * Only the rewards the kid can afford now and use today (weekend prizes on weekends,
-     * daily limits not reached). Affordable evening rewards still waiting for today's
-     * homework check stay, marked so. With none, the cheapest reward usable today to save for.
+     * Every reward: the ones the kid can get now first (enabled), then the rest
+     * (disabled, with why), fewest points missing first.
      *
      * @param  list<array<string, mixed>>  $tasks
-     * @return array{rewards: list<array<string, mixed>>, next: array<string, mixed>|null}
+     * @return array{rewards: list<array<string, mixed>>}
      */
     private function rewardsData(string $kid, array $tasks, CarbonImmutable $today, int $balance): array
     {
-        $all = collect($this->rewards($kid, $tasks, $today, $balance));
-        $usableToday = $all->reject(fn (array $r): bool => in_array($r['blocker'], ['weekend', 'limit', 'after'], true));
+        $rewards = collect($this->rewards($kid, $tasks, $today, $balance))
+            ->sortBy(fn (array $r): array => [$r['state'] === 'ready' ? 0 : 1, max(0, $r['need'] - $balance), $r['need']])
+            ->values();
 
-        return [
-            'rewards' => $usableToday->filter(fn (array $r): bool => $balance >= $r['need'])->values()->all(),
-            'next' => $usableToday->filter(fn (array $r): bool => $balance < $r['need'])->sortBy('need')->first(),
-        ];
+        return ['rewards' => $rewards->all()];
     }
 
     /**
      * The store with each reward's state: "ready" (a parent can confirm it now),
-     * "reach" (enough once the waiting homework is checked), or "locked" with why.
+     * "reach" (affordable, waiting for today's homework check), or "locked" with why.
      *
      * @param  list<array<string, mixed>>  $tasks
      * @return list<array<string, mixed>>
@@ -291,14 +288,14 @@ class KidController extends Controller
     {
         $bought = app(RedeemReward::class)->boughtToday($kid, $today);
         $costs = array_column(HomeworkModule::REWARDS, 'cost', 'id');
-        $waiting = (int) collect($this->toCheck($kid))->sum('points');
 
-        return array_map(function (array $r) use ($balance, $tasks, $bought, $today, $costs, $waiting): array {
+        return array_map(function (array $r) use ($balance, $tasks, $bought, $today, $costs): array {
             $need = $r['cost'] + (isset($r['after']) && ($bought[$r['after']] ?? 0) === 0 ? $costs[$r['after']] : 0);
             $state = RedeemReward::state($r, $balance, $tasks, $bought, $today);
 
             $short = max(0, $need - $balance);
-            $reach = $state !== 'ready' && in_array($state, ['homework', 'points'], true) && $balance + $waiting >= $need;
+            // Affordable now, only waiting for today's homework check.
+            $reach = $state === 'homework' && $balance >= $need;
 
             return $r + [
                 'need' => $need,
@@ -306,9 +303,10 @@ class KidController extends Controller
                 // One short line a kid can act on: how many points are missing, or the rule that blocks it.
                 'why' => match (true) {
                     $state === 'ready', $reach => '',
-                    in_array($state, ['limit', 'after'], true) => RedeemReward::REASONS[$state],
+                    $state === 'limit' => 'Already taken tonight',
+                    $state === 'after' => 'After the first 2 periods',
+                    $state === 'weekend' => 'Weekends only',
                     $short > 0 => $short.' more points',
-                    $state === 'weekend' => 'Saturday or Sunday',
                     default => 'Once today’s homework is checked',
                 },
                 'progress' => min(100, (int) round($balance * 100 / max(1, $need))),

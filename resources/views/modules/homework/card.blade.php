@@ -143,9 +143,8 @@
   .kz-reward.is-ready { border-color: #34C759; }
   .kz-reward.is-ready small { color: #1E7A34; font-weight: 500; }
   body.night .kz-reward.is-ready small { color: #4CD964; }
-  .kz-reward.is-locked .kz-reward-text b, .kz-reward.is-locked .kz-cost { color: var(--sub); }
-  .kz-empty-bar { width: 280px; height: 10px; }
-  .kz-next { margin: 4px 0 8px; }
+  .kz-reward.is-locked, .kz-reward.is-reach { opacity: .5; box-shadow: none; background: var(--fill); }
+  .kz-hint b { color: var(--text); font-weight: 600; }
   .kz-cost { flex: none; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; padding-right: 6px; }
   .kz-bar { display: block; height: 8px; border-radius: 99px; background: var(--fill); margin-top: 6px; overflow: hidden; }
   .kz-bar i { display: block; height: 100%; background: var(--kid); border-radius: 99px; }
