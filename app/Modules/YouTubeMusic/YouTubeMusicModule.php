@@ -37,6 +37,7 @@ class YouTubeMusicModule extends Module
             'playlists' => app(PlaylistStore::class)->all(),
             'volume' => (int) $this->config('volume', 60),
             'tvUrl' => (string) $this->config('tv_url', 'https://www.youtube.com/tv'),
+            'appPackage' => (string) $this->config('app_package', 'com.google.android.apps.youtube.music'),
             'tvUserAgent' => (string) $this->config('tv_user_agent', ''),
             'injectScript' => $this->injectScript(),
         ];

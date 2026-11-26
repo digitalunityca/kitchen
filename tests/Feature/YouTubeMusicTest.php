@@ -37,11 +37,19 @@ class YouTubeMusicTest extends TestCase
             ->assertSee('data-tv-ua="'.e($ua).'"', false);
     }
 
+    public function test_the_card_opens_the_youtube_music_app_through_fully(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('id="ytm-app" data-package="com.google.android.apps.youtube.music"', false)
+            ->assertSee('fully.startApplication(btn.dataset.package)', false)
+            ->assertSee('id="ytm-premium"', false); // YouTube TV stays for now
+    }
+
     public function test_the_card_has_a_search_box_that_opens_youtube_tv_results(): void
     {
         $this->get('/')->assertOk()
             ->assertSee('id="ytm-search"', false)
-            ->assertSee('placeholder="Search YouTube"', false)
+            ->assertSee('placeholder="Search"', false)
             ->assertSee("'#/search?q=' + encodeURIComponent(q)", false)
             ->assertDontSee('</span>YouTube Music</p>', false);
     }

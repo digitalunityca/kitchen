@@ -9,10 +9,11 @@
   <div class="ytm-side">
     <div class="row ytm-top">
       <form class="ytm-search" id="ytm-search" role="search" autocomplete="off">
-        <input type="search" name="q" maxlength="100" placeholder="Search YouTube" aria-label="Search YouTube" enterkeyhint="search">
+        <input type="search" name="q" maxlength="100" placeholder="Search" aria-label="Search YouTube" enterkeyhint="search">
         <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
       </form>
-      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">Full screen ↗</a>
+      <button type="button" class="pill ytm-app" id="ytm-app" data-package="{{ $appPackage }}" aria-label="Open the YouTube Music app">Music app ↗</button>
+      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">TV ↗</a>
     </div>
 
     @if (count($playlists))
@@ -68,7 +69,8 @@
   .ytm-art-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--sub); pointer-events: none; }
   .ytm.has-video .ytm-art-empty { display: none; }
   .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
-  .ytm-top { gap: 10px; }
+  .ytm-top { gap: 8px; }
+  .ytm-app { background: #FF0033; color: #fff; border-color: #FF0033; font-weight: 600; cursor: pointer; }
   .ytm-search { flex: 1; min-width: 0; display: flex; align-items: center; height: 36px; border-radius: 999px; background: var(--fill); padding: 0 4px 0 14px; }
   .ytm-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--text); outline: none; -webkit-appearance: none; appearance: none; }
   .ytm-search input::placeholder { color: var(--sub); }
@@ -111,6 +113,22 @@
 // Song handoff: the button opens YouTube TV at the card's song and position
 // (window.ytmNowPlaying), and the script installed below as Fully's "Inject
 // JavaScript" reports what YouTube TV plays so the card can carry on afterwards.
+// "Music app": opens the YouTube Music app (installed with Google Play) through Fully,
+// after pausing this card so two players never play at once. Back: the tablet's Home
+// button, then the Fully Kiosk icon.
+(function () {
+  var btn = document.getElementById('ytm-app');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    document.dispatchEvent(new CustomEvent('dashboard:audio-claim', { detail: { by: 'music-app' } }));
+    try {
+      if (window.fully && typeof fully.startApplication === 'function') { fully.startApplication(btn.dataset.package); return; }
+    } catch (err) {}
+    var note = document.getElementById('ytm-artist');
+    if (note) note.textContent = 'Open YouTube Music from the tablet’s home screen.';
+  });
+})();
+
 window.ytmRestoreUserAgent = (function () {
   var link = document.getElementById('ytm-premium'), tvUa = link.dataset.tvUa;
   if (!window.fully || !tvUa) {
