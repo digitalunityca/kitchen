@@ -109,6 +109,18 @@ class HomeworkTest extends TestCase
         $this->post('/modules/homework/kids/theo/unlock', ['pin' => '1234'])->assertOk();
     }
 
+    public function test_background_polling_never_uses_up_the_pin_screens_allowance(): void
+    {
+        app(KidPinStore::class)->put('theo', '1234');
+
+        // The dashboard polls several endpoints all the time (homework events, now playing...).
+        for ($i = 0; $i < 40; $i++) {
+            $this->getJson('/modules/homework/events')->assertOk();
+        }
+
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '1234'])->assertOk()->assertSee('data-screen="home"', false);
+    }
+
     public function test_the_kid_is_signed_out_after_five_idle_minutes(): void
     {
         $this->signIn('theo');

@@ -177,6 +177,8 @@
   /* Rewards */
   .kz-toast { margin: 0; align-self: flex-start; background: rgba(52,199,89,.14); color: #1E7A34; border-radius: 14px; padding: 10px 16px; font-size: 18px; font-weight: 600; animation: kz-in .35s cubic-bezier(.2,.8,.2,1); }
   body.night .kz-toast { color: #4CD964; }
+  .kz-toast-error { background: rgba(255,59,48,.12); color: #C4001A; }
+  body.night .kz-toast-error { color: #FF6961; }
   .kz-rewards-list { list-style: none; margin: 10px 0 18px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
   .kz-reward { background: var(--card); box-shadow: var(--shadow); border-radius: 20px; padding: 16px 16px 16px 20px; display: flex; align-items: center; gap: 14px; min-height: 84px; border: 2px solid transparent; }
   .kz-reward-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -340,7 +342,11 @@
       p.dataset.busy = '1';
       post(p.dataset.submit, { pin: digits(p) }).then(function (r) {
         if (r.ok) { return r.text().then(show); }
-        return r.json().then(function (j) { wrong(p, j.error || 'That’s not the right PIN.', j.wait); });
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          // A 429 without our own message comes from the route throttle, not a wrong PIN.
+          if (r.status === 429 && !j.error) { return wrong(p, 'Too many tries. Wait a minute.', +(r.headers.get('Retry-After') || 60)); }
+          wrong(p, j.error || 'That’s not the right PIN.', j.wait);
+        });
       }).catch(function () { wrong(p, 'Couldn’t check. Try again.'); })
         .finally(function () { delete p.dataset.busy; });
     }
@@ -354,14 +360,23 @@
       p.querySelector('[data-error]').hidden = true;
       setPin(p, ''); p.hidden = false;
     }
+    /** The PIN was right but the action can't happen (e.g. "Already taken today"): say so plainly, no shake. */
+    function showError(p, message) {
+      var screen = p.closest('[data-screen]'), old = screen.querySelector('.kz-toast-error');
+      if (old) { old.remove(); }
+      var note = document.createElement('p'); note.className = 'kz-toast kz-toast-error'; note.setAttribute('role', 'alert'); note.textContent = message;
+      screen.querySelector('.kz-head').insertAdjacentElement('afterend', note);
+    }
     function decide(p, decision) {
       if (decision === 'cancel') { p.hidden = true; setPin(p, ''); return; }
       if (digits(p).length < 4) { wrong(p, 'Type the parent PIN first.'); return; }
       p.dataset.busy = '1';
       post(p.dataset.url, { pin: digits(p), decision: decision }).then(function (r) {
         if (r.ok) { return r.text().then(show); }
-        return r.json().then(function (j) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401) { return go(); }
+          if (r.status === 429 && !j.error) { return wrong(p, 'Too many tries. Wait a minute.'); }
+          if (r.status === 422 && j.error) { p.hidden = true; setPin(p, ''); return showError(p, j.error); }
           wrong(p, j.error || 'Wrong parent PIN.');
         });
       }).catch(function () { wrong(p, 'Something went wrong. Try again.'); })

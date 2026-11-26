@@ -3,6 +3,7 @@
 use App\Http\Access\AccessGate;
 use App\Http\Middleware\AllowHealthCheckCors;
 use App\Http\Middleware\RestrictTunnelVisitors;
+use App\Http\Middleware\ThrottlePerRoute;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // cloudflared container; trust its X-Forwarded-* headers so generated
         // URLs use the public https hostname.
         $middleware->trustProxies(at: '*');
+
+        // Route throttles count per route and visitor (App\Http\Middleware\ThrottlePerRoute).
+        $middleware->alias(['throttle' => ThrottlePerRoute::class]);
 
         // Through the tunnel, addresses in HOME_HUB_ALLOWED_IPS get in; everyone
         // else needs the PIN from /unlock. Every request counts towards the
