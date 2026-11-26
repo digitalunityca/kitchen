@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\Homework\AddHomeworkTasks;
+use App\Actions\Homework\BuildAdditionSheet;
 use App\Dashboard\ModuleRegistry;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
@@ -144,6 +145,29 @@ class HomeworkTest extends TestCase
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertStatus(422);
     }
 
+    public function test_addition_sheets_are_made_on_the_hub_in_columns_sized_to_the_biggest_number(): void
+    {
+        config(['dashboard.homework_print_spool' => $this->spool()]);
+        Http::preventStrayRequests(); // no AI call for additions
+
+        $this->signIn('theo');
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertOk();
+        $sheet = app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]['worksheet'];
+        $this->assertCount(20, $sheet);
+        $this->assertSame((string) ($sheet[0]['top'] + $sheet[0]['bottom']), $sheet[0]['answer']);
+
+        // 4-digit + 3-digit numbers: the column fits a 5-digit sum, and the title names the digits.
+        $layout = BuildAdditionSheet::layout([['top' => 9876, 'bottom' => 543], ['top' => 1200, 'bottom' => 999]]);
+        $this->assertSame(['chars' => 6, 'font' => 22, 'rows' => 1, 'digits' => 4, 'title' => 'Additions : 3 et 4 chiffres'], $layout);
+        $this->assertSame(5, BuildAdditionSheet::layout([['top' => 99, 'bottom' => 99]])['chars'] + 1);
+
+        $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
+            ->assertSee('Calcule chaque somme.')
+            ->assertSee('<p class="sheet-no">#0001</p>', false)
+            ->assertSee('aria-label="Code QR de confirmation"', false)
+            ->assertDontSee('Scannez le code QR');
+    }
+
     public function test_worksheets_are_generated_only_when_print_all_is_tapped(): void
     {
         config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
@@ -179,7 +203,7 @@ class HomeworkTest extends TestCase
         Http::fake(['https://api.openai.com/v1/responses' => Http::response('down', 503)]);
         $this->signIn('theo');
 
-        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
         $this->assertSame([], app(HomeworkStore::class)->tasks('theo', '2026-11-25'));
 
         config(['dashboard.homework_print_spool' => null]);
@@ -293,7 +317,7 @@ class HomeworkTest extends TestCase
             ->assertSee('/modules/homework/kids/theo/preview/2026-11-25/t1', false);
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
-            ->assertSee('<span class="sheet-no">#0003</span>', false)
+            ->assertSee('<p class="sheet-no">#0003</p>', false)
             ->assertSee('Combien font 6 × 7?')
             ->assertDontSee('class="toolbar"', false);
     }
@@ -444,7 +468,7 @@ class HomeworkTest extends TestCase
         $url = 'https://api.openai.com/v1/responses';
         $exercise = ['question' => 'Combine 12 et 15.', 'answer' => '27'];
         $worksheets = [
-            ['topic' => 'Additions', 'exercises' => array_fill(0, 4, $exercise)],
+            ['topic' => 'Divisions', 'exercises' => array_fill(0, 4, $exercise)],
             ['topic' => 'Lecture', 'exercises' => array_fill(0, 4, ['question' => 'Que lit le personnage?', 'answer' => 'Un livre.'])],
         ];
         Http::preventStrayRequests();
@@ -455,7 +479,7 @@ class HomeworkTest extends TestCase
             ]])]);
 
         $packet = '/modules/homework/kids/theo/2026-11-25/packet';
-        $this->pick('theo', ['addition' => 1, 'reading' => 1]);
+        $this->pick('theo', ['division' => 1, 'reading' => 1]);
         $this->get($packet)->assertOk()->assertSee('Generating 2 worksheets');
         $this->postJson($packet)->assertUnprocessable();
         $this->assertArrayNotHasKey('worksheet', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]);
@@ -465,7 +489,7 @@ class HomeworkTest extends TestCase
         Http::assertSentCount(2);
         Http::assertSent(fn (Request $request): bool => $request->url() === $url
             && ! $request['store']
-            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Additions', 'Lecture'], 'copy_words' => []]);
+            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'copy_words' => []]);
 
         $html = $this->get($packet)->assertOk()
             ->assertSee('Print all worksheets')->assertSee('Combine 12 et 15.')->assertSee('Que lit le personnage?')
@@ -495,8 +519,8 @@ class HomeworkTest extends TestCase
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
 
         $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('Homework confirmed');
-        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('10 points awarded.');
-        $this->assertSame(10, app(HomeworkStore::class)->balance('theo'));
+        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('15 points awarded.');
+        $this->assertSame(15, app(HomeworkStore::class)->balance('theo'));
         $this->assertSame('todo', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[1]['status']);
 
         $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertRedirect();

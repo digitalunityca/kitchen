@@ -19,6 +19,7 @@ class GenerateWorksheetPacket
         private readonly HomeworkStore $store,
         private readonly Http $http,
         private readonly LoggerInterface $log,
+        private readonly BuildAdditionSheet $buildAdditionSheet,
     ) {}
 
     /**
@@ -40,7 +41,15 @@ class GenerateWorksheetPacket
                 return true;
             }
 
-            $worksheets = $this->generate($pending, $kid['grade'], $this->store->words($kid['id']));
+            // Additions are made on the hub (column layout); the rest by the AI in one call.
+            $worksheets = [];
+            $others = array_values(array_filter($pending, fn (array $t): bool => $t['template'] !== 'addition'));
+            $written = $others === [] ? [] : $this->generate($others, $kid['grade'], $this->store->words($kid['id']));
+            foreach ($pending as $i => $task) {
+                $worksheets[$i] = $task['template'] === 'addition'
+                    ? $this->buildAdditionSheet->handle($kid['grade'], (int) $task['seed'])
+                    : array_shift($written);
+            }
 
             $this->store->update(function (array &$data) use ($kid, $date, $pending, $worksheets): void {
                 foreach ($data['days'][$date][$kid['id']] ?? [] as $index => $task) {

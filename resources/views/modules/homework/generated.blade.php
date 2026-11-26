@@ -16,22 +16,26 @@
     .paper { background: white; color: black; box-sizing: border-box; margin: 0 auto 1rem; max-width: 8.5in; padding: clamp(1rem, 4vw, .55in); }
     .paper h2 { font-size: 1.55rem; margin: 0; }
     .paper header p { margin: .15rem 0 0; }
-    .sheet-head { position: relative; }
-    .sheet-no { position: absolute; top: 0; right: 0; font-size: 1.6rem; font-weight: 700; border: 2px solid #000; border-radius: .4rem; padding: .1rem .5rem; font-variant-numeric: tabular-nums; }
+    .sheet-head { display: flex; align-items: flex-start; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: .6rem; margin-bottom: 1.4rem; }
+    .sheet-title { flex: 1; }
+    .sheet-meta { text-align: right; font-size: .85rem; }
+    .sheet-meta p { margin: 0; }
+    .sheet-no { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .sheet-qr img { width: .9in; height: .9in; display: block; }
+    .sums { display: grid; grid-template-columns: repeat(5, 1fr); row-gap: 2.2em; justify-items: center; font-family: ui-monospace, Menlo, monospace; }
+    .sum { width: calc(var(--chars) * .62em); text-align: right; line-height: 1.15; }
+    .sum span { float: left; }
+    .sum-line { border-top: 2px solid #000; margin-top: .1em; font-weight: 700; }
     body.preview .paper { margin-top: 1rem; }
     .exercise { margin-bottom: 1.15rem; overflow-wrap: anywhere; }
     .question { white-space: pre-line; }
     .line { height: .3in; border-bottom: 1px solid #777; }
-    .approval { display: flex; align-items: center; gap: 1rem; border-top: 1px solid #999; padding-top: .2in; }
-    .approval img { flex: none; width: 1.15in; height: 1.15in; }
-    .approval p { margin: .15rem 0; }
     @page { size: letter; margin: .55in; }
     @media print {
       :root { font-size: 11pt; line-height: 1.3; background: white; }
       .toolbar { display: none; }
       .paper { margin: 0; padding: 0; max-width: none; }
       .paper + .paper { break-before: page; }
-      .exercise, .approval { break-inside: avoid; }
     }
   </style>
 </head>
@@ -68,34 +72,42 @@
 
   @unless ($needsGeneration ?? false)
     @foreach ($tasks as $task)
+      @php($isSums = $task['template'] === 'addition' && isset($task['worksheet'][0]['top']))
+      @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : null)
       <article class="paper" lang="fr-CA">
         <header class="sheet-head">
-          @isset($task['number'])<span class="sheet-no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</span>@endisset
-          <h2>{{ \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
-          <p>{{ $kid['name'] }} · {{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
+          <div class="sheet-title">
+            <h2>{{ $isSums ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
+            <p>{{ $isSums ? 'Calcule chaque somme.' : 'Réponds à chaque question.' }}</p>
+          </div>
+          <div class="sheet-meta">
+            <p>{{ $kid['name'] }}</p>
+            @isset($task['number'])<p class="sheet-no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</p>@endisset
+            <p class="sheet-date">{{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
+          </div>
+          @unless ($answers)<div class="sheet-qr">@include('modules.homework.qr', ['task' => $task])</div>@endunless
         </header>
-        <ol>
-          @foreach ($task['worksheet'] as $exercise)
-            <li class="exercise">
-              <div class="question">{{ $exercise['question'] }}</div>
-              @if ($answers)
-                <p><strong>{{ $exercise['answer'] }}</strong></p>
-              @else
-                <div class="line"></div>
-                <div class="line"></div>
-              @endif
-            </li>
-          @endforeach
-        </ol>
-        @unless ($answers)
-          <footer class="approval">
-            @include('modules.homework.qr', ['task' => $task])
-            <div>
-              <strong>Vérification par un parent</strong>
-              <p>Scannez le code QR et entrez votre NIP pour confirmer ce devoir.</p>
-            </div>
-          </footer>
-        @endunless
+        @if ($isSums)
+          <div class="sums" style="--chars: {{ $layout['chars'] }}; font-size: {{ $layout['font'] * 1.25 }}px">
+            @foreach ($task['worksheet'] as $p)
+              <div class="sum"><div>{{ $p['top'] }}</div><div><span>+</span>{{ $p['bottom'] }}</div><div class="sum-line">{{ $answers ? $p['answer'] : "\u{00A0}" }}</div></div>
+            @endforeach
+          </div>
+        @else
+          <ol>
+            @foreach ($task['worksheet'] as $exercise)
+              <li class="exercise">
+                <div class="question">{{ $exercise['question'] }}</div>
+                @if ($answers)
+                  <p><strong>{{ $exercise['answer'] }}</strong></p>
+                @else
+                  <div class="line"></div>
+                  <div class="line"></div>
+                @endif
+              </li>
+            @endforeach
+          </ol>
+        @endif
       </article>
     @endforeach
   @endunless

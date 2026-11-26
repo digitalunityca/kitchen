@@ -3,42 +3,84 @@
 <head>
   <meta charset="utf-8">
   <style>
-    @page { margin: 40pt; }
+    @page { margin: 38pt 40pt; }
     body { font: 11pt/1.3 DejaVu Sans, sans-serif; color: black; }
     article + article { page-break-before: always; }
-    h1 { margin: 0 0 3pt; font-size: 19pt; }
-    .no { float: right; font-size: 20pt; font-weight: bold; border: 1.5pt solid #000; padding: 2pt 8pt; }
-    p { margin: 0 0 4pt; }
-    ol { padding-left: 25pt; }
+    table.head { width: 100%; border-collapse: collapse; }
+    table.head td { vertical-align: top; padding: 0; }
+    .title { margin: 0 0 4pt; font-size: 18pt; font-weight: bold; }
+    .inst { margin: 0; font-size: 12pt; }
+    .meta { text-align: right; width: 210pt; }
+    .meta-line { font-size: 12pt; margin: 0 0 6pt; }
+    .meta-small { font-size: 9pt; color: #333; margin: 0; }
+    .no { font-size: 13pt; font-weight: bold; letter-spacing: .5pt; }
+    .qr { width: 64pt; height: 64pt; }
+    .rule { border-top: 1pt solid black; margin: 10pt 0 22pt; }
+    /* Column additions: right-aligned in a monospace font so place values line up. */
+    table.sums { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table.sums td { text-align: center; vertical-align: top; }
+    .prob { display: inline-block; font-family: DejaVu Sans Mono, monospace; text-align: right; line-height: 1.15; }
+    .prob .line { border-top: 1.5pt solid black; margin-top: 3pt; }
+    ol { padding-left: 25pt; margin: 0; }
     li { margin-bottom: 12pt; page-break-inside: avoid; overflow-wrap: break-word; }
-    .line { height: 20pt; border-bottom: .5pt solid #888; }
-    table { margin-top: 10pt; width: 100%; border-top: .75pt solid #777; page-break-inside: avoid; }
-    td { padding: 8pt 10pt 0 0; vertical-align: middle; }
-    img { width: 95pt; height: 95pt; }
+    .write { height: 20pt; border-bottom: .5pt solid #888; }
   </style>
 </head>
 <body>
   @foreach ($tasks as $task)
+    @php($isSums = $task['template'] === 'addition' && isset($task['worksheet'][0]['top']))
+    @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : null)
+    @php($qr = \App\Modules\Homework\WorksheetQrCode::make($kid['id'], $date, $task))
     <article>
-      @isset($task['number'])<div class="no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</div>@endisset
-      <h1>{{ \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</h1>
-      <p>{{ $kid['name'] }} · {{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
-      <ol>
-        @foreach ($task['worksheet'] as $exercise)
-          <li>
-            {{ $exercise['question'] }}
-            <div class="line"></div>
-            <div class="line"></div>
-          </li>
-        @endforeach
-      </ol>
-      @php($qr = \App\Modules\Homework\WorksheetQrCode::make($kid['id'], $date, $task))
-      <table role="presentation">
+      <table class="head" role="presentation">
         <tr>
-          <td style="width: 95pt"><img src="{{ $qr['image'] }}" alt="Code QR de confirmation"></td>
-          <td><strong>Vérification par un parent</strong><br>Scannez le code QR et entrez votre NIP pour confirmer ce devoir.</td>
+          <td>
+            <p class="title">{{ $isSums ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</p>
+            <p class="inst">{{ $isSums ? 'Calcule chaque somme.' : 'Réponds à chaque question.' }}</p>
+          </td>
+          <td class="meta">
+            <table role="presentation" style="width: 100%; border-collapse: collapse">
+              <tr>
+                <td style="text-align: right; vertical-align: top; padding-right: 8pt">
+                  <p class="meta-line">Nom : ____________</p>
+                  @isset($task['number'])<p class="meta-small"><span class="no">{{ \App\Modules\Homework\HomeworkStore::sheetLabel((int) $task['number']) }}</span></p>@endisset
+                  <p class="meta-small">{{ \Carbon\CarbonImmutable::parse($date)->locale('fr_CA')->isoFormat('D MMMM YYYY') }}</p>
+                </td>
+                <td style="width: 64pt; vertical-align: top"><img class="qr" src="{{ $qr['image'] }}" alt=""></td>
+              </tr>
+            </table>
+          </td>
         </tr>
       </table>
+      <div class="rule"></div>
+
+      @if ($isSums)
+        <table class="sums" role="presentation">
+          @foreach (array_chunk($task['worksheet'], \App\Actions\Homework\BuildAdditionSheet::COLUMNS) as $row)
+            <tr>
+              @foreach ($row as $p)
+                <td style="padding-bottom: {{ $layout['rows'] >= 4 ? 30 : 46 }}pt">
+                  <div class="prob" style="font-size: {{ $layout['font'] }}pt; width: {{ round($layout['chars'] * 0.62, 2) }}em">
+                    <div>{{ $p['top'] }}</div>
+                    <div><span style="float: left">+</span>{{ $p['bottom'] }}</div>
+                    <div class="line">&nbsp;</div>
+                  </div>
+                </td>
+              @endforeach
+            </tr>
+          @endforeach
+        </table>
+      @else
+        <ol>
+          @foreach ($task['worksheet'] as $exercise)
+            <li>
+              {{ $exercise['question'] }}
+              <div class="write"></div>
+              <div class="write"></div>
+            </li>
+          @endforeach
+        </ol>
+      @endif
     </article>
   @endforeach
 </body>
