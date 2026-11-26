@@ -153,15 +153,15 @@ Current conditions, today's high and low, the next 4 hours and a rain/snow note 
 - **Refresh:** the hub re-reads each feed every 15 minutes and keeps the last good copy if one fails. The card refreshes itself every 5 minutes. Recurring events are handled by the `sabre/vobject` library.
 - Code: `app/Actions/Calendar/`, `app/Modules/Calendar/`.
 
-### Kids' homework (in progress)
-- **Committed:** one round avatar button per kid in the side menu (Theo, Arthur; set in `config/dashboard.php`), each opening a near-full-screen "<Name>'s homework" sheet.
-- **In progress, not yet committed:** the homework system was built in another thread and is in the Mac's working copy (uncommitted at the time of writing). It's already deployed on the tablet from that working copy. What it does:
-  - Monday to Friday, each kid picks today's tasks from templates (Addition, Multiplication, Division, Reading…), each worth points, with daily limits.
-  - The kid marks a task done, and an adult approves it with the PIN; then its points are added.
-  - A rewards store: evening rewards and weekend prizes, bought with points and the PIN.
-  - Printable worksheets in French, sized to the kid's grade (Quebec primary).
-  - Data: `storage/app/private/homework.json`.
-  - Files: `app/Actions/Homework/`, `app/Modules/Homework/` (`HomeworkStore`, `HomeworkController`), `resources/views/modules/homework/`, and a Homework section in Settings.
+### Kids' homework
+One round avatar button per kid in the side menu (Theo, Arthur; set in `config/dashboard.php`). Each opens the kid's own area in a near-full-screen overlay:
+- **PIN screen:** avatar, name and a keypad. The kid's own 4-digit PIN opens it, and so does the parent PIN (`HOME_HUB_PIN`). A kid with no PIN yet sees "Ask a parent to set your PIN in Settings". Five wrong tries lock that kid out for a minute. Kid PINs are set in **Settings › Kids** and stored only as hashes in `storage/app/private/homework-pins.json`.
+- **Kid home:** points, today's progress ("1 of 2 checked today"), sheets waiting for a check, and four tiles: Homework, Rewards, History, News. The kid is signed out on ✕, on Home, or after 5 minutes without a tap.
+- **Homework** (Monday to Friday): tap the tasks to do today (tap again for a second sheet, up to each task's daily limit), then **Print all**. Only then are the worksheets generated (OpenAI, `OPENAI_HOMEWORK_MODEL`), turned into one PDF and dropped in the Mac Studio's print folder (`HOMEWORK_PRINT_SPOOL`; `deploy/worksheet-print/`). The kid sees "Done! Your sheets are printing", and the tasks wait for a parent check. If any step fails, the picked tasks are taken back and the kid sees the error.
+- **Rewards:** evening rewards (school days, once all of today's homework is checked) and weekend prizes. Each shows "You can get it now", "Yours once your homework is checked", or how many points are missing. A parent confirms each purchase with the parent PIN.
+- **History:** "To check" (a parent approves each printed sheet with the parent PIN, or marks it "Not done"), and the points day by day. Each printed sheet also has a QR code a parent can scan to approve it.
+- **News:** placeholder for messages from the kids' teachers (emails, to be connected later).
+- Data: `storage/app/private/homework.json`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
 
 ---
 
@@ -175,7 +175,9 @@ Set in `.env` on the Mac (template: `.env.example`).
 | `DASHBOARD_TITLE` | Browser tab title |
 | `DASHBOARD_NIGHT_FROM`, `DASHBOARD_NIGHT_TO` | Hours of the dark look (default 21 to 6) |
 | `HOME_HUB_ALLOWED_IPS` | Addresses that get in through the tunnel without the PIN (the home IP) |
-| `HOME_HUB_PIN` | PIN for visitors outside home and for Settings |
+| `HOME_HUB_PIN` | PIN for visitors outside home, for Settings, and the parent PIN for homework checks and rewards |
+| `OPENAI_HOMEWORK_MODEL` | Model that writes the worksheets |
+| `HOMEWORK_PRINT_SPOOL` | Folder in the container where print-ready PDFs go (mounted from the Mac) |
 | `HOME_HUB_TUNNEL_ID` | Which Cloudflare Tunnel the `cloudflared` container runs |
 | `WEATHER_CITY`, `WEATHER_LAT`, `WEATHER_LON` | Weather card label and location |
 | `YOUTUBE_TV_USER_AGENT` | User agent used for YouTube TV (Premium) |

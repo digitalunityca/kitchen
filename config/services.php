@@ -36,6 +36,7 @@ return [
         'realtime_voice' => env('OPENAI_REALTIME_VOICE', 'marin'),
         // Answers the voice chat's search_web tool (Responses API + web_search).
         'search_model' => env('OPENAI_SEARCH_MODEL', 'gpt-5-mini'),
+        'homework_model' => env('OPENAI_HOMEWORK_MODEL', 'gpt-5-mini'),
     ],
 
     'slack' => [

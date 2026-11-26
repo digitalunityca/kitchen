@@ -34,6 +34,11 @@ class DecideTunnelAccess
         }
 
         if ($this->settings->pinEnabled()) {
+            // A signed worksheet link goes directly to its own parent PIN form.
+            if ($request->is('modules/homework/confirm/*') && ($request->isMethod('GET') || $request->isMethod('POST')) && $request->hasValidRelativeSignature()) {
+                return TunnelAccess::Allow;
+            }
+
             if ($this->verifyUnlockCookie->handle($request->cookies->get(AccessGate::COOKIE))) {
                 return TunnelAccess::Allow;
             }

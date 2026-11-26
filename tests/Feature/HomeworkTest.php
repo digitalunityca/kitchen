@@ -4,26 +4,39 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Actions\Homework\AddHomeworkTasks;
 use App\Dashboard\ModuleRegistry;
 use App\Modules\Homework\HomeworkModule;
+use App\Modules\Homework\HomeworkStore;
+use App\Modules\Homework\KidPinStore;
+use App\Modules\Homework\KidSession;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HomeworkTest extends TestCase
 {
+    private const SHEET = '/modules/homework/kids/theo/sheet';
+
     protected function setUp(): void
     {
         parent::setUp();
         Storage::fake('local');
+        config(['dashboard.pin' => '4821']);
+        // Wednesday 25 November 2026, after school.
+        $this->travelTo(CarbonImmutable::parse('2026-11-25 16:00', HomeworkModule::TIMEZONE));
     }
 
-    public function test_each_kid_gets_a_button_under_home_and_a_homework_sheet(): void
+    public function test_each_kid_gets_a_button_under_home_and_a_homework_area(): void
     {
         $this->get('/')->assertOk()
             ->assertSeeInOrder(['<nav class="side-menu"', 'id="menu-home"', 'data-kid="theo"', 'data-kid="arthur"', 'id="habs-open"', '</nav>'], false)
             ->assertSee('Theo’s homework', false)
             ->assertSee('Arthur’s homework', false)
-            ->assertSee('Coming soon');
+            ->assertSee('/modules/homework/kids/arthur/sheet', false)
+            ->assertSee('--kid-ink: #A66000', false);
     }
 
     public function test_kids_come_from_config(): void
@@ -32,5 +45,367 @@ class HomeworkTest extends TestCase
         $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
 
         $this->get('/')->assertOk()->assertSee('data-kid="lea"', false)->assertSee('🦄')->assertDontSee('data-kid="theo"', false);
+    }
+
+    public function test_the_area_opens_on_the_pin_screen_and_the_kid_pin_opens_it(): void
+    {
+        app(KidPinStore::class)->put('theo', '1234');
+
+        $this->get(self::SHEET)->assertOk()->assertSee('data-screen="pin"', false)->assertSee('Type your PIN')->assertDontSee('data-go="homework"', false);
+        $this->get(self::SHEET.'?screen=rewards')->assertSee('data-screen="pin"', false)->assertDontSee('Choose dessert');
+
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '9999'])->assertForbidden()->assertJson(['error' => 'That’s not the right PIN.']);
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '1234'])->assertOk()
+            ->assertSee('data-screen="home"', false)
+            ->assertSeeInOrder(['Homework', 'Rewards', 'History', 'News']);
+        $this->get(self::SHEET.'?screen=news')->assertOk()->assertSee('Messages from your teachers will show here.');
+
+        // Theo's PIN doesn't open Arthur's homework.
+        app(KidPinStore::class)->put('arthur', '5555');
+        $this->get('/modules/homework/kids/arthur/sheet')->assertSee('data-screen="pin"', false);
+        $this->post('/modules/homework/kids/arthur/unlock', ['pin' => '1234'])->assertForbidden();
+
+        // ✕ signs Theo out.
+        $this->post('/modules/homework/kids/theo/lock')->assertNoContent();
+        $this->get(self::SHEET)->assertSee('data-screen="pin"', false);
+    }
+
+    public function test_the_parent_pin_opens_any_kid_and_a_kid_without_a_pin_is_told_to_ask(): void
+    {
+        $this->get(self::SHEET)->assertSee('Ask a parent to set your PIN in Settings.');
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '4821'])->assertOk()->assertSee('data-screen="home"', false);
+
+        app(KidPinStore::class)->put('arthur', '5555');
+        $this->post('/modules/homework/kids/arthur/unlock', ['pin' => '4821'])->assertOk()->assertSee('Hi Arthur!');
+        $this->assertStringNotContainsString('5555', Storage::disk('local')->get('homework-pins.json'));
+    }
+
+    public function test_wrong_pins_lock_the_kid_out_for_a_minute(): void
+    {
+        app(KidPinStore::class)->put('theo', '1234');
+
+        for ($i = 0; $i < 4; $i++) {
+            $this->post('/modules/homework/kids/theo/unlock', ['pin' => '0000'])->assertForbidden();
+        }
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '0000'])->assertStatus(429)->assertJsonPath('wait', 60);
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '1234'])->assertStatus(429);
+
+        $this->travel(61)->seconds();
+        $this->post('/modules/homework/kids/theo/unlock', ['pin' => '1234'])->assertOk();
+    }
+
+    public function test_the_kid_is_signed_out_after_five_idle_minutes(): void
+    {
+        $this->signIn('theo');
+        $this->travel(4)->minutes();
+        $this->get(self::SHEET)->assertSee('data-screen="home"', false);
+        $this->travel(KidSession::IDLE_SECONDS + 1)->seconds();
+        $this->get(self::SHEET)->assertSee('data-screen="pin"', false);
+    }
+
+    public function test_homework_shows_only_the_choices_for_the_kids_grade_and_print_all(): void
+    {
+        $this->signIn('arthur');
+        $this->get('/modules/homework/kids/arthur/sheet?screen=homework')->assertOk()
+            ->assertSee('data-choice="writing"', false)
+            ->assertSee('15 min')
+            ->assertSee('data-print-all disabled', false)
+            ->assertDontSee('Choose dessert');
+
+        $this->signIn('theo');
+        $this->pick('theo', ['reading' => 1]);
+        $this->get(self::SHEET.'?screen=homework')
+            ->assertSee('data-choice="division"', false)
+            ->assertDontSee('data-choice="writing"', false)
+            ->assertSee('data-choice="reading" data-points="10" data-left="0" aria-pressed="false" disabled', false)
+            ->assertSee('Done for today');
+    }
+
+    public function test_weekends_have_no_homework(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));
+        $this->signIn('theo');
+
+        $this->get(self::SHEET.'?screen=homework')->assertOk()->assertSee('No homework today')->assertDontSee('data-print-all', false);
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertStatus(422);
+    }
+
+    public function test_worksheets_are_generated_only_when_print_all_is_tapped(): void
+    {
+        config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
+        Http::preventStrayRequests();
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->packet(['Multiplications', 'Lecture']))]);
+
+        $this->signIn('theo');
+        $this->get(self::SHEET.'?screen=homework')->assertOk();
+        Http::assertNothingSent();
+
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['multiplication' => 1, 'reading' => 1]])->assertOk()->assertJson(['ok' => true, 'sheets' => 2]);
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request): bool => json_decode($request['input'], true)['topics'] === ['Multiplications', 'Lecture']);
+
+        $tasks = app(HomeworkStore::class)->tasks('theo', '2026-11-25');
+        $this->assertSame(['done', 'done'], array_column($tasks, 'status'));
+        $this->assertArrayHasKey('worksheet', $tasks[0]);
+        $this->assertCount(1, glob($this->spool().'/*.pdf'));
+        $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
+
+        // The daily limit still holds.
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['reading' => 1]])->assertStatus(422)->assertJson(['error' => 'Only 1 Reading per day.']);
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => []])->assertStatus(422)->assertJson(['error' => 'Pick some homework first.']);
+    }
+
+    public function test_a_failed_print_takes_the_picked_tasks_back(): void
+    {
+        config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response('down', 503)]);
+        $this->signIn('theo');
+
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
+        $this->assertSame([], app(HomeworkStore::class)->tasks('theo', '2026-11-25'));
+
+        config(['dashboard.homework_print_spool' => null]);
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertStatus(422)->assertJson(['error' => 'The printer isn’t reachable right now. Ask a parent.']);
+    }
+
+    public function test_signed_out_kids_cannot_print_check_or_buy(): void
+    {
+        $this->pick('theo', ['addition' => 1]);
+
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertUnauthorized()->assertJson(['locked' => true]);
+        $this->postJson('/modules/homework/kids/theo/check/2026-11-25/t1', ['pin' => '4821'])->assertUnauthorized();
+        $this->postJson('/modules/homework/kids/theo/rewards/dessert', ['pin' => '4821'])->assertUnauthorized();
+    }
+
+    public function test_points_count_only_after_a_parent_checks_with_the_parent_pin(): void
+    {
+        $this->pick('arthur', ['addition' => 1, 'writing' => 1, 'reading' => 1]);
+        app(KidPinStore::class)->put('arthur', '1111');
+        $this->signIn('arthur', '1111');
+
+        $this->get('/modules/homework/kids/arthur/sheet?screen=history')->assertOk()
+            ->assertSeeInOrder(['To check', 'Addition', 'Writing', 'Reading', 'Points']);
+
+        $check = '/modules/homework/kids/arthur/check/2026-11-25/t1';
+        $this->post($check)->assertForbidden()->assertJson(['pin' => true]);
+        // The kid's own PIN isn't a parent's.
+        $this->post($check, ['pin' => '1111'])->assertForbidden()->assertJson(['error' => 'Wrong parent PIN.']);
+        $this->assertSame(0, app(HomeworkStore::class)->balance('arthur'));
+
+        $this->post($check, ['pin' => '4821', 'decision' => 'approve'])->assertOk()->assertSee('Addition · 2026-11-25')->assertSee('+10');
+        $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
+
+        // Each check needs the PIN again, and approving twice doesn't pay twice.
+        $this->post($check)->assertForbidden();
+        $this->post($check, ['pin' => '4821'])->assertOk();
+        $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
+
+        // "Not done" takes the task off with no points.
+        $this->post('/modules/homework/kids/arthur/check/2026-11-25/t2', ['pin' => '4821', 'decision' => 'remove'])->assertOk();
+        $this->assertSame(['t1', 't3'], array_column(app(HomeworkStore::class)->tasks('arthur', '2026-11-25'), 'id'));
+
+        $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
+    }
+
+    public function test_rewards_unlock_once_every_task_is_checked(): void
+    {
+        $this->pick('theo', ['multiplication' => 2, 'division' => 1]);
+        $this->signIn('theo');
+
+        // 45 points waiting: the movie (40) is within reach, the PS5 (60) not.
+        $this->get(self::SHEET.'?screen=rewards')->assertSee('+45 points are waiting for a parent check.')
+            ->assertSeeInOrder(['Movie in the evening', 'Yours once your homework is checked'])
+            ->assertSeeInOrder(['30 min PS5', '60 more points'])->assertSee('Tonight’s rewards open once today’s homework is checked.');
+
+        foreach (['t1', 't2', 't3'] as $task) {
+            $this->post("/modules/homework/kids/theo/check/2026-11-25/{$task}", ['pin' => '4821']);
+        }
+
+        $this->get(self::SHEET.'?screen=rewards')
+            ->assertSee('<li class="kz-reward is-ready" data-state="ready">', false)
+            ->assertSeeInOrder(['30 min PS5', '15 more points'])->assertDontSee('Tonight’s rewards open')
+            // The Habs 3rd period needs the 2 periods first: 50 + 30.
+            ->assertSeeInOrder(['Habs game: 3rd period', 'Take the first 2 periods first.', '80']);
+    }
+
+    public function test_kids_buy_rewards_with_the_parent_pin_and_save_up_for_weekend_prizes(): void
+    {
+        $store = app(HomeworkStore::class);
+        $store->addPoints('theo', 200, 'Saved');
+        $this->signIn('theo');
+
+        // School day: nothing to buy until today's homework is checked.
+        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Finish and get today’s homework checked first.']);
+        $this->pick('theo', ['addition' => 1]);
+        $this->post('/modules/homework/kids/theo/check/2026-11-25/t1', ['pin' => '4821']);
+
+        $this->post('/modules/homework/kids/theo/rewards/movie')->assertForbidden()->assertJson(['pin' => true]);
+        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertOk()->assertSee('Enjoy! Movie in the evening is yours.')->assertSee('<b>170</b>', false);
+        $this->post('/modules/homework/kids/theo/rewards/movie', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Already taken today.']);
+        $this->post('/modules/homework/kids/theo/rewards/habs-3rd', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Take the first 2 periods first.']);
+        $this->post('/modules/homework/kids/theo/rewards/weekend-treat', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Weekend prizes are for Saturday and Sunday.']);
+
+        $this->get(self::SHEET.'?screen=history')->assertSee('This week: <b>1</b> sheet, <b>+10</b> points', false)->assertSee('−40');
+
+        // Saturday: the weekend treat (150) can be bought, the outing (300) not yet.
+        $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));
+        $this->signIn('theo');
+        $this->post('/modules/homework/kids/theo/rewards/weekend-outing', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Not enough points yet.']);
+        $this->post('/modules/homework/kids/theo/rewards/weekend-treat', ['pin' => '4821'])->assertOk();
+        $this->assertSame(20, $store->balance('theo'));
+    }
+
+    public function test_parents_set_and_clear_kid_pins_in_settings(): void
+    {
+        $this->get('/modules/homework/kid-pins')->assertRedirect();
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->get('/settings')->assertSee('Kids');
+        $this->get('/modules/homework/kid-pins')->assertOk()->assertSee('No PIN yet');
+
+        $this->post('/modules/homework/kids/theo/pin', ['pin' => '12a4'])->assertSessionHasErrors('pin');
+        $this->post('/modules/homework/kids/theo/pin', ['pin' => '2468'])->assertRedirect('/modules/homework/kid-pins');
+        $this->assertTrue(app(KidPinStore::class)->matches('theo', '2468'));
+        $this->get('/modules/homework/kid-pins')->assertSee('PIN set')->assertDontSee('2468');
+
+        $this->post('/modules/homework/kids/theo/pin', ['clear' => '1'])->assertRedirect();
+        $this->assertFalse(app(KidPinStore::class)->has('theo'));
+    }
+
+    public function test_worksheets_print_the_same_problems_and_the_answer_key_needs_the_pin(): void
+    {
+        $this->pick('theo', ['addition' => 1, 'reading' => 1]);
+
+        $sheet = $this->get('/modules/homework/kids/theo/2026-11-25/t1/worksheet')->assertOk()
+            ->assertSee('Additions')->assertSee('Prénom :', false)->assertSee('mercredi 25 novembre 2026')->assertDontSee('CORRIGÉ');
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/worksheet')->assertSee($this->firstProblem($sheet->getContent()), false);
+
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertRedirect();
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('CORRIGÉ');
+
+        // Reading has no worksheet; unknown days have none either.
+        $this->get('/modules/homework/kids/theo/2026-11-25/t2/worksheet')->assertNotFound();
+        $this->get('/modules/homework/kids/theo/2026-11-20/t1/worksheet')->assertNotFound();
+    }
+
+    public function test_parents_set_the_words_to_copy(): void
+    {
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->get('/modules/homework/settings')->assertOk()->assertSee('Words to copy')->assertSee('maison');
+
+        $this->post('/modules/homework/kids/arthur/words', ['words' => "papillon\n\nmagicien\npapillon"])->assertRedirect('/modules/homework/settings');
+        $this->assertSame(['papillon', 'magicien'], app(HomeworkStore::class)->words('arthur'));
+
+        $this->pick('arthur', ['writing' => 1]);
+        $this->get('/modules/homework/kids/arthur/2026-11-25/t1/worksheet')->assertOk()->assertSee('Écriture')->assertSee('papillon')->assertSee('magicien');
+    }
+
+    public function test_the_packet_prints_ai_worksheets_and_signed_qr_approval_awards_points_once(): void
+    {
+        config(['services.openai.key' => 'test-key', 'dashboard.allowed_ips' => ['192.0.2.1']]);
+        $url = 'https://api.openai.com/v1/responses';
+        $exercise = ['question' => 'Combine 12 et 15.', 'answer' => '27'];
+        $worksheets = [
+            ['topic' => 'Additions', 'exercises' => array_fill(0, 4, $exercise)],
+            ['topic' => 'Lecture', 'exercises' => array_fill(0, 4, ['question' => 'Que lit le personnage?', 'answer' => 'Un livre.'])],
+        ];
+        Http::preventStrayRequests();
+        Http::fake([$url => Http::sequence()
+            ->pushStatus(503)
+            ->push(['status' => 'completed', 'output' => [
+                ['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['worksheets' => $worksheets])]]],
+            ]])]);
+
+        $packet = '/modules/homework/kids/theo/2026-11-25/packet';
+        $this->pick('theo', ['addition' => 1, 'reading' => 1]);
+        $this->get($packet)->assertOk()->assertSee('Generating 2 worksheets');
+        $this->postJson($packet)->assertUnprocessable();
+        $this->assertArrayNotHasKey('worksheet', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]);
+
+        $this->postJson($packet)->assertNoContent();
+        $this->postJson($packet)->assertNoContent(); // A reprint uses the persisted questions.
+        Http::assertSentCount(2);
+        Http::assertSent(fn (Request $request): bool => $request->url() === $url
+            && ! $request['store']
+            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Additions', 'Lecture'], 'copy_words' => []]);
+
+        $html = $this->get($packet)->assertOk()
+            ->assertSee('Print all worksheets')->assertSee('Combine 12 et 15.')->assertSee('Que lit le personnage?')
+            ->assertDontSee('<strong>27</strong>', false)
+            ->getContent();
+        $this->assertSame(2, substr_count($html, 'aria-label="Code QR de confirmation"'));
+        preg_match_all('~href="([^"]+/confirm/[^"]+)"~', $html, $matches);
+        $this->assertCount(2, $matches[1]);
+        $spool = $this->spool();
+        config(['dashboard.homework_print_spool' => $spool]);
+        $job = $packet.'/print/21bbd273-5214-4dd5-b17d-f87a92461330';
+        $this->postJson($job)->assertAccepted()->assertJsonPath('state', 'queued');
+        $this->postJson($job)->assertAccepted()->assertJsonPath('state', 'queued');
+        $files = glob($spool.'/*.pdf');
+        $this->assertCount(1, $files);
+        $this->assertStringStartsWith('%PDF-', file_get_contents($files[0]));
+        rename($files[0], $spool.'/21bbd273-5214-4dd5-b17d-f87a92461330.sent');
+        $this->getJson($job)->assertJsonPath('state', 'sent');
+        $link = html_entity_decode($matches[1][0]);
+        $link = parse_url($link, PHP_URL_PATH).'?'.parse_url($link, PHP_URL_QUERY);
+
+        $this->get('/modules/homework/confirm/theo/2026-11-25/t1')->assertForbidden();
+        $this->get($link.'&tampered=1')->assertForbidden();
+        $headers = ['CF-Connecting-IP' => '198.51.100.10'];
+        $this->get($link, $headers)->assertOk()->assertSee('Parent PIN');
+        $this->post($link, ['pin' => '0000'], $headers)->assertForbidden()->assertSee('Incorrect parent PIN.');
+        $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
+
+        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('Homework confirmed');
+        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('10 points awarded.');
+        $this->assertSame(10, app(HomeworkStore::class)->balance('theo'));
+        $this->assertSame('todo', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[1]['status']);
+
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertRedirect();
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('<strong>27</strong>', false);
+    }
+
+    public function test_unknown_kids_are_not_found(): void
+    {
+        $this->get('/modules/homework/kids/nobody/sheet')->assertNotFound();
+    }
+
+    /** @param  array<string, int>  $counts */
+    private function pick(string $kid, array $counts): void
+    {
+        $profile = app(ModuleRegistry::class)->get('homework')->kid($kid);
+        app(AddHomeworkTasks::class)->handle($profile, CarbonImmutable::now(HomeworkModule::TIMEZONE), $counts);
+    }
+
+    private function signIn(string $kid, string $pin = '4821'): void
+    {
+        $this->post("/modules/homework/kids/{$kid}/unlock", ['pin' => $pin])->assertOk();
+    }
+
+    private function spool(): string
+    {
+        $spool = Storage::disk('local')->path('spool');
+        is_dir($spool) || mkdir($spool, recursive: true);
+
+        return $spool;
+    }
+
+    /**
+     * @param  list<string>  $topics
+     * @return array<string, mixed>
+     */
+    private function packet(array $topics): array
+    {
+        $worksheets = array_map(fn (string $topic): array => ['topic' => $topic, 'exercises' => array_fill(0, 4, ['question' => 'Combien font 6 × 7?', 'answer' => '42'])], $topics);
+
+        return ['status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['worksheets' => $worksheets])]]]]];
+    }
+
+    private function firstProblem(string $html): string
+    {
+        preg_match('/<div class="stack"><div>([^<]+)<\/div>/', $html, $match);
+
+        return $match[0];
     }
 }

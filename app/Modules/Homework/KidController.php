@@ -1,0 +1,327 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Homework;
+
+use App\Actions\Access\AttemptSettingsUnlock;
+use App\Actions\Homework\AttemptKidUnlock;
+use App\Actions\Homework\PrintHomework;
+use App\Actions\Homework\RedeemReward;
+use App\Actions\Homework\RemoveTask;
+use App\Actions\Homework\ReviewTask;
+use App\Dashboard\ModuleRegistry;
+use App\Http\Access\AccessGate;
+use App\Http\Access\AccessSettings;
+use App\Http\Controllers\Controller;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * The kid's own homework area, inside the overlay: a PIN screen, then the kid's
+ * home (points, today's progress, four tiles) and the Homework, Rewards, History
+ * and News screens. Every screen but the PIN needs that kid signed in (KidSession);
+ * approving homework and buying rewards also need the parent PIN, every time.
+ */
+class KidController extends Controller
+{
+    public const SCREENS = ['home', 'homework', 'rewards', 'history', 'news'];
+
+    /** How far back "To check" and History look. */
+    private const HISTORY_DAYS = 14;
+
+    public function __construct(
+        private readonly ModuleRegistry $modules,
+        private readonly HomeworkStore $store,
+        private readonly KidPinStore $pins,
+        private readonly KidSession $session,
+        private readonly AccessSettings $access,
+    ) {}
+
+    /** GET …/kids/{kid}/sheet?screen=home: the screen, or the PIN screen when the kid isn't signed in. */
+    public function screen(Request $request, string $kid): Response
+    {
+        $profile = $this->kidOrFail($kid);
+        if (! $this->signedIn($request, $profile['id'])) {
+            return $this->render('pin', $profile, ['hasPin' => $this->pins->has($profile['id'])]);
+        }
+
+        $screen = in_array($request->query('screen'), self::SCREENS, true) ? (string) $request->query('screen') : 'home';
+
+        return $this->render($screen, $profile, $this->screenData($screen, $profile));
+    }
+
+    /** POST …/kids/{kid}/unlock (pin): the kid's PIN, or the parent PIN, opens the kid's home. */
+    public function unlock(Request $request, string $kid, AttemptKidUnlock $attemptKidUnlock): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        $pin = $request->input('pin');
+        $result = $attemptKidUnlock->handle($profile['id'], AccessGate::clientIp($request), is_string($pin) && strlen($pin) <= 12 ? $pin : '');
+
+        if (! $result['ok']) {
+            return response()->json(
+                ['error' => $result['lockedFor'] ? "Too many tries. Wait {$result['lockedFor']} seconds." : 'That’s not the right PIN.', 'wait' => $result['lockedFor']],
+                $result['lockedFor'] ? 429 : 403,
+            );
+        }
+
+        $this->session->start($request, $profile['id']);
+
+        return $this->render('home', $profile, $this->screenData('home', $profile));
+    }
+
+    /** POST …/kids/{kid}/lock: ✕, Home or 5 minutes idle sign the kid out. */
+    public function lock(Request $request, string $kid): Response
+    {
+        $this->kidOrFail($kid);
+        $this->session->end($request);
+
+        return response()->noContent();
+    }
+
+    /** POST …/kids/{kid}/print (counts[template]=n): Print all. Worksheets are generated only now. */
+    public function print(Request $request, string $kid, PrintHomework $printHomework): JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if (! $this->session->active($request, $profile['id'])) {
+            return response()->json(['locked' => true], 401);
+        }
+
+        $counts = array_map('intval', array_filter((array) $request->input('counts', []), 'is_numeric'));
+
+        try {
+            $sheets = $printHomework->handle($profile, $this->today(), $counts);
+        } catch (ValidationException $e) {
+            return response()->json(['error' => collect($e->errors())->flatten()->first()], 422);
+        }
+
+        return response()->json(['ok' => true, 'sheets' => $sheets]);
+    }
+
+    /** POST …/kids/{kid}/check/{date}/{task} (decision=approve|remove, pin): a parent checks a printed task. */
+    public function check(Request $request, string $kid, string $date, string $task, ReviewTask $reviewTask, RemoveTask $removeTask): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if ($denied = $this->guard($request, $profile['id'])) {
+            return $denied;
+        }
+
+        if ($request->input('decision') === 'remove') {
+            $this->store->synchronized(fn () => $removeTask->handle($profile['id'], $date, $task));
+        } else {
+            $reviewTask->handle($profile['id'], $date, $task, approve: true);
+        }
+
+        return $this->render('history', $profile, $this->screenData('history', $profile));
+    }
+
+    /** POST …/kids/{kid}/rewards/{reward} (pin): a parent confirms buying a reward. */
+    public function redeem(Request $request, string $kid, string $reward, RedeemReward $redeemReward): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if ($denied = $this->guard($request, $profile['id'])) {
+            return $denied;
+        }
+
+        try {
+            $this->store->synchronized(fn () => $redeemReward->handle($profile['id'], $reward, $this->today()));
+        } catch (ValidationException $e) {
+            return response()->json(['error' => collect($e->errors())->flatten()->first()], 422);
+        }
+
+        return $this->render('rewards', $profile, $this->screenData('rewards', $profile) + ['bought' => $reward]);
+    }
+
+    /**
+     * The kid must be signed in, and a parent must type the parent PIN (no
+     * remembered unlock, so a kid can't approve their own work). Null when allowed.
+     */
+    private function guard(Request $request, string $kid): ?JsonResponse
+    {
+        if (! $this->session->active($request, $kid)) {
+            return response()->json(['locked' => true], 401);
+        }
+        if (! $this->access->pinEnabled()) {
+            return null;
+        }
+
+        $pin = $request->input('pin');
+        if (! is_string($pin) || $pin === '') {
+            return response()->json(['pin' => true], 403);
+        }
+
+        $result = app(AttemptSettingsUnlock::class)->handle(AccessGate::clientIp($request), strlen($pin) <= 12 ? $pin : '');
+        if (! $result['ok']) {
+            return response()->json(['pin' => true, 'error' => $result['lockedFor'] ? "Too many tries. Wait {$result['lockedFor']} seconds." : 'Wrong parent PIN.'], 403);
+        }
+
+        return null;
+    }
+
+    private function signedIn(Request $request, string $kid): bool
+    {
+        // Nothing to protect with: no kid PIN and no parent PIN.
+        if (! $this->pins->has($kid) && ! $this->access->pinEnabled()) {
+            $this->session->start($request, $kid);
+
+            return true;
+        }
+
+        return $this->session->active($request, $kid);
+    }
+
+    /**
+     * @param  array{id: string, name: string, badge: string, color: string, grade: int}  $kid
+     * @return array<string, mixed>
+     */
+    private function screenData(string $screen, array $kid): array
+    {
+        $today = $this->today();
+        $tasks = $this->store->tasks($kid['id'], $today->toDateString()) ?? [];
+        $data = ['balance' => $this->store->balance($kid['id'])];
+
+        return $data + match ($screen) {
+            'home' => [
+                'schoolDay' => ! $today->isWeekend(),
+                'todayTotal' => count($tasks),
+                'todayChecked' => collect($tasks)->where('status', 'approved')->count(),
+                'toCheck' => count($this->toCheck($kid['id'])),
+            ],
+            'homework' => $this->homeworkData($kid, $today, $tasks),
+            'rewards' => [
+                'rewards' => $this->rewards($kid['id'], $tasks, $today, $data['balance']),
+                'homeworkFirst' => ! $today->isWeekend() && ($tasks === [] || collect($tasks)->contains(fn (array $t): bool => $t['status'] !== 'approved')),
+                'waiting' => (int) collect($this->toCheck($kid['id']))->sum('points'),
+            ],
+            'history' => [
+                'toCheck' => $this->toCheck($kid['id']),
+                'days' => $this->ledgerByDay($kid['id']),
+                'stats' => $this->store->stats($kid['id']),
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * @param  array{id: string, grade: int}  $kid
+     * @param  list<array<string, mixed>>  $tasks
+     * @return array<string, mixed>
+     */
+    private function homeworkData(array $kid, CarbonImmutable $today, array $tasks): array
+    {
+        $picked = collect($tasks)->countBy('template')->all();
+        $templates = HomeworkModule::templatesFor($kid['grade']);
+
+        return [
+            'schoolDay' => ! $today->isWeekend(),
+            'readingMinutes' => $kid['grade'] <= 3 ? 15 : 20,
+            'choices' => array_values(array_map(fn (array $t, string $key): array => $t + [
+                'key' => $key,
+                'already' => $picked[$key] ?? 0,
+                'left' => max(0, $t['max'] - ($picked[$key] ?? 0)),
+            ], $templates, array_keys($templates))),
+        ];
+    }
+
+    /**
+     * Tasks a parent still has to check, newest day first: printed ones, and any
+     * picked earlier that were never checked.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function toCheck(string $kid): array
+    {
+        $cutoff = $this->today()->subDays(self::HISTORY_DAYS)->toDateString();
+        $days = $this->store->load()['days'];
+        krsort($days);
+        $list = [];
+
+        foreach ($days as $date => $kids) {
+            if ($date < $cutoff) {
+                continue;
+            }
+            foreach ($kids[$kid] ?? [] as $task) {
+                if (in_array($task['status'] ?? '', ['todo', 'done'], true)) {
+                    $list[] = $task + ['date' => (string) $date, 'name' => HomeworkModule::TEMPLATES[$task['template']]['name'] ?? $task['template']];
+                }
+            }
+        }
+
+        return $list;
+    }
+
+    /** @return array<string, list<array<string, mixed>>> date => that day's ledger lines, newest first */
+    private function ledgerByDay(string $kid): array
+    {
+        return collect($this->store->history($kid, 60))
+            ->groupBy(fn (array $entry): string => substr((string) $entry['at'], 0, 10))
+            ->map(fn ($entries) => $entries->values()->all())
+            ->all();
+    }
+
+    /**
+     * The store with each reward's state: "ready" (a parent can confirm it now),
+     * "reach" (enough once the waiting homework is checked), or "locked" with why.
+     *
+     * @param  list<array<string, mixed>>  $tasks
+     * @return list<array<string, mixed>>
+     */
+    private function rewards(string $kid, array $tasks, CarbonImmutable $today, int $balance): array
+    {
+        $bought = app(RedeemReward::class)->boughtToday($kid, $today);
+        $costs = array_column(HomeworkModule::REWARDS, 'cost', 'id');
+        $waiting = (int) collect($this->toCheck($kid))->sum('points');
+
+        return array_map(function (array $r) use ($balance, $tasks, $bought, $today, $costs, $waiting): array {
+            $need = $r['cost'] + (isset($r['after']) && ($bought[$r['after']] ?? 0) === 0 ? $costs[$r['after']] : 0);
+            $state = RedeemReward::state($r, $balance, $tasks, $bought, $today);
+
+            $short = max(0, $need - $balance);
+            $reach = $state !== 'ready' && in_array($state, ['homework', 'points'], true) && $balance + $waiting >= $need;
+
+            return $r + [
+                'need' => $need,
+                'state' => $state === 'ready' ? 'ready' : ($reach ? 'reach' : 'locked'),
+                // One short line a kid can act on: how many points are missing, or the rule that blocks it.
+                'why' => match (true) {
+                    $state === 'ready', $reach => '',
+                    in_array($state, ['limit', 'after'], true) => RedeemReward::REASONS[$state],
+                    $short > 0 => $short.' more points',
+                    $state === 'weekend' => 'Saturday or Sunday',
+                    default => 'Once today’s homework is checked',
+                },
+                'progress' => min(100, (int) round($balance * 100 / max(1, $need))),
+            ];
+        }, HomeworkModule::REWARDS);
+    }
+
+    /**
+     * @param  array{id: string, name: string, badge: string, color: string, grade: int}  $kid
+     * @param  array<string, mixed>  $data
+     */
+    private function render(string $screen, array $kid, array $data): Response
+    {
+        return response()->view('modules.homework.kid.'.$screen, $data + [
+            'kid' => $kid,
+            'screen' => $screen,
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /** @return array{id: string, name: string, badge: string, color: string, grade: int} */
+    private function kidOrFail(string $id): array
+    {
+        $module = $this->modules->get('homework');
+        $kid = $module instanceof HomeworkModule ? $module->kid($id) : null;
+        abort_if($kid === null, 404);
+
+        return $kid;
+    }
+
+    private function today(): CarbonImmutable
+    {
+        return CarbonImmutable::now(HomeworkModule::TIMEZONE)->startOfDay();
+    }
+}

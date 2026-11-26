@@ -6,9 +6,14 @@ services:
     ports:
       - "${HOME_HUB_PORT:-8000}:8080"
     env_file: .env
+    environment:
+      HOMEWORK_PRINT_SPOOL: /var/spool/home-hub
+    group_add:
+      - '20' # macOS staff group owns the Mac print spool
     volumes:
       # Module settings (e.g. storage/app/private/youtube-music.json) survive rebuilds.
       - home-hub-data:/var/www/html/storage/app
+      - ./storage/worksheet-print:/var/spool/home-hub
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/up"]
       interval: 30s

@@ -19,6 +19,7 @@ use App\Modules\YouTubeMusic\YouTubeMusicModule;
 */
 
 return [
+    'homework_print_spool' => env('HOMEWORK_PRINT_SPOOL'),
 
     'title' => env('DASHBOARD_TITLE', 'Kitchen'),
 
@@ -74,11 +75,12 @@ return [
         ],
 
         // One avatar button per kid in the side menu (under Home) for their homework.
-        // 'badge' is the initial or an emoji shown on the button.
+        // 'badge' is the initial or an emoji shown on the button. 'grade' (Quebec primary,
+        // 1-6) sizes the worksheets and picks the templates offered.
         HomeworkModule::class => [
             'kids' => [
-                ['name' => 'Theo', 'badge' => 'T', 'color' => '#FF9500'],
-                ['name' => 'Arthur', 'badge' => 'A', 'color' => '#34C759'],
+                ['name' => 'Theo', 'badge' => 'T', 'color' => '#FF9500', 'grade' => 5],
+                ['name' => 'Arthur', 'badge' => 'A', 'color' => '#34C759', 'grade' => 2],
             ],
         ],
 

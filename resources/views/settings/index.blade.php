@@ -19,7 +19,7 @@
   </div>
   <div class="card">
     @foreach ($sections as $key => [$title, $hint, $route])
-      <a class="item" href="{{ route($route) }}"><span>{{ $key === 'calendar' ? '📅' : '🎵' }}</span><span><b>{{ $title }}</b><small>{{ $hint }}</small></span></a>
+      <a class="item" href="{{ route($route) }}"><span>{{ ['calendar' => '📅', 'youtube-music' => '🎵', 'homework' => '📚', 'kids' => '🧒'][$key] ?? '⚙️' }}</span><span><b>{{ $title }}</b><small>{{ $hint }}</small></span></a>
     @endforeach
   </div>
   <div class="row-actions">
