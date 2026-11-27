@@ -12,7 +12,7 @@ cp .env.example .env && php artisan key:generate
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Point Fully's Start URL at `http://<server-ip>:8000`. No database is needed yet: sessions and cache use files, and module settings live in `storage/app/private/`.
+Point Fully's Start URL at `http://<server-ip>:8000`. The data is in MySQL 8.4, which compose starts as the `mysql` service: set the `DB_*` passwords in `.env` first (see `.env.example`). Sessions and the cache use files.
 
 Add `?theme=night` or `?theme=day` to the URL to preview a look. Otherwise the dark look runs from 21:00 to 06:00 (`DASHBOARD_NIGHT_FROM` / `DASHBOARD_NIGHT_TO`).
 

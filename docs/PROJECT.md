@@ -47,9 +47,25 @@ The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setA
 
 ### The server: Docker on the Mac
 - `compose.yaml` runs `home-hub` (built from `Dockerfile`: production dependencies only, nginx + PHP-FPM, port 8080 inside) and, with `--profile tunnel`, `cloudflared`.
-- **Database: SQLite**, one file: `storage/app/database.sqlite` on the named volume `home-hub-data`, so it survives rebuilds (never in git). Migrations run when the container starts. Tables: `homework_tasks` (each day's sheets per kid), `homework_ledger` (points, + and −), `homework_words` (writing words), `kid_pins` (hashes only), `calendars` (including their secret links), `hub_settings` (sheet number counter, badge positions). Sessions and the cache stay in files.
-  - **Backup = copy that one file**, e.g. `docker compose cp home-hub:/var/www/html/storage/app/database.sqlite ./backup.sqlite`.
-  - Until Nov 27, 2026 the data was JSON files in `storage/app/private/` (`homework.json`, `homework-pins.json`, `calendars.json`). They're kept there untouched as a backup, with a copy in `storage/app/private/backup-pre-sqlite-*`. `php artisan hub:import-json` copies them into the database again (it replaces the database data with the files' content).
+- **Database: MySQL 8.4 LTS**, the `mysql` service in `compose.yaml` (image `mysql:8.4.13`, data in the named volume `home-hub-mysql`, no port published outside Docker). Credentials are in `.env` (`DB_*`, see section 5). Migrations run when the home-hub container starts; it waits for MySQL to be healthy. Sessions and the cache stay in files.
+  - **Tables:**
+    - `kids`: slug, name, letter, colour, grade, menu order. Seeded once from `config/dashboard.php`; after that the database is the source.
+    - `homework_tasks`: each day's sheets per kid.
+    - `homework_ledger`: points + and −; `at` is a UTC date-time.
+    - `homework_words`: writing words.
+    - `kid_pins`: hashes only.
+    - `calendars`: including their secret links.
+    - `hub_settings`: the sheet number counter and badge positions.
+  - **Foreign keys:** the four homework tables point at `kids` by `kid_id`, and a kid with data can't be deleted. Everything is utf8mb4.
+  - **Backup** (from `home-hub/`):
+    ```bash
+    docker compose exec -T mysql sh -c 'exec mysqldump --single-transaction -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' > backup-$(date +%F).sql
+    ```
+    Restore with `docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < backup.sql`.
+  - **History:**
+    - Nov 27, 2026, morning to afternoon: the data was in SQLite (`storage/app/database.sqlite` on the `home-hub-data` volume). The file is kept there untouched as the fallback. A dated copy, `backup-pre-mysql-20261127-1217.sqlite`, sits next to it and outside git in `../backups/`.
+    - `php artisan hub:copy-sqlite-to-mysql [--from=file]` copies a SQLite file (old or new table shape) into the current database. It replaces what is there, then compares counts, totals and a digest of every row on both sides.
+    - Before that, the data was JSON files in `storage/app/private/`, kept there as a backup. `php artisan hub:import-json` reads them.
   - `unload.log` (in `storage/app/private/`): why the dashboard page unloaded (see below).
 - **Unload log:** whenever the page unloads, the tablet sends a short report (how long it ran, whether music was playing, the last taps and setting writes) to `/diagnostics/unload`. That's how the 30-minute reload was traced and confirmed gone.
 
@@ -160,7 +176,7 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
 - **Rewards:** evening rewards (school days, once all of today's homework is checked) and weekend prizes. Each shows "You can get it now", "Yours once your homework is checked", or how many points are missing. A parent confirms each purchase with the parent PIN.
 - **History:** "To check" (a parent approves each printed sheet with the parent PIN, or marks it "Not done"), and the points day by day. Each printed sheet also has a QR code a parent can scan to approve it.
 - **News:** placeholder for messages from the kids' teachers (emails, to be connected later).
-- Data: the SQLite tables `homework_*` and `kid_pins`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
+- Data: the MySQL tables `kids`, `homework_*` and `kid_pins`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
 
 ---
 
@@ -186,7 +202,9 @@ Set in `.env` on the Mac (template: `.env.example`).
 | `OPENAI_SEARCH_MODEL` | Model behind the web search tool |
 | `AI_CHAT_LOCATION` | Location given to the assistant (answers, search, weather) |
 | `AI_CHAT_FAMILY_SAFE` | Kid-safe rules and moderation (on unless set to false) |
-| `SESSION_DRIVER`, `CACHE_STORE`, `FILESYSTEM_DISK` | Sessions and cache in files; app data in SQLite |
+| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | The MySQL database (`mysql`, host `mysql`) |
+| `DB_ROOT_PASSWORD` | MySQL root password, used only by the mysql container (backups, admin) |
+| `SESSION_DRIVER`, `CACHE_STORE`, `FILESYSTEM_DISK` | Sessions and cache in files; app data in MySQL |
 
 Module settings that aren't secrets (grid positions, kids, Habs, volume default) are in `config/dashboard.php`.
 
@@ -241,6 +259,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 
 **27 November 2026**
 - French version (Quebec French), now the default language; English kept as fallback.
+- Data moved from SQLite to MySQL 8.4, with a `kids` table and foreign keys.
 
 (For every change, see `git log`.)
 

@@ -4,10 +4,10 @@ namespace App\Modules\Homework;
 
 use App\Dashboard\Module;
 use App\Http\Middleware\RequireSettingsPin;
+use App\Models\Kid;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Kids' homework. One round avatar button per kid in the side menu, under Home.
@@ -103,16 +103,16 @@ class HomeworkModule extends Module
     /** @return list<array{id: string, name: string, badge: string, color: string, grade: int, photo: string|null}> */
     public function kids(): array
     {
-        return array_values(array_map(fn (array $kid): array => [
-            'id' => Str::slug($kid['name']),
-            'name' => (string) $kid['name'],
-            'badge' => (string) ($kid['badge'] ?? mb_substr((string) $kid['name'], 0, 1)),
-            'color' => (string) ($kid['color'] ?? '#5AC8FA'),
-            'grade' => (int) ($kid['grade'] ?? 2),
-            'photo' => self::photoPath(Str::slug($kid['name'])) !== null
-                ? route('modules.homework.photo', ['kid' => Str::slug($kid['name']), 'v' => Storage::disk('local')->lastModified(self::photoPath(Str::slug($kid['name'])))], absolute: false)
+        return Kid::query()->orderBy('position')->orderBy('id')->get()->map(fn (Kid $kid): array => [
+            'id' => $kid->slug,
+            'name' => $kid->name,
+            'badge' => $kid->badge,
+            'color' => $kid->color,
+            'grade' => $kid->grade,
+            'photo' => self::photoPath($kid->slug) !== null
+                ? route('modules.homework.photo', ['kid' => $kid->slug, 'v' => Storage::disk('local')->lastModified(self::photoPath($kid->slug))], absolute: false)
                 : null,
-        ], (array) $this->config('kids', [])));
+        ])->all();
     }
 
     /**

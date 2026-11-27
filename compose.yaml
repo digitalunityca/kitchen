@@ -8,10 +8,13 @@ services:
     env_file: .env
     environment:
       HOMEWORK_PRINT_SPOOL: /var/spool/home-hub
+    depends_on:
+      mysql:
+        condition: service_healthy
     group_add:
       - '20' # macOS staff group owns the Mac print spool
     volumes:
-      # Module settings (e.g. storage/app/private/youtube-music.json) survive rebuilds.
+      # Files that survive rebuilds: kid photos, the old SQLite file and its backups.
       - home-hub-data:/var/www/html/storage/app
       - ./storage/worksheet-print:/var/spool/home-hub
     healthcheck:
@@ -19,6 +22,27 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # The hub's database. Only reachable from the other containers (no published
+  # port). Credentials come from .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD,
+  # DB_ROOT_PASSWORD); the data lives in the home-hub-mysql volume.
+  mysql:
+    image: mysql:8.4.13
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-home_hub}
+      MYSQL_USER: ${DB_USERNAME:-home_hub}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+    volumes:
+      - home-hub-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   # Optional Cloudflare Tunnel: serves home-hub on a public https hostname without
   # opening ports. Off unless started with --profile tunnel. Uses the tunnel
@@ -37,3 +61,4 @@ services:
 
 volumes:
   home-hub-data:
+  home-hub-mysql:

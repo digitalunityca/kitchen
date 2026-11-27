@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KidWordList extends Model
 {
     protected $table = 'homework_words';
 
-    protected $primaryKey = 'kid';
+    protected $primaryKey = 'kid_id';
 
     public $incrementing = false;
 
-    protected $keyType = 'string';
+    protected $keyType = 'int';
 
     public $timestamps = false;
 
@@ -23,6 +24,12 @@ class KidWordList extends Model
     /** A kid's words to copy on the writing sheets. */
     protected function casts(): array
     {
-        return ['words' => 'array'];
+        return ['kid_id' => 'integer', 'words' => 'array'];
+    }
+
+    /** @return BelongsTo<Kid, $this> */
+    public function kid(): BelongsTo
+    {
+        return $this->belongsTo(Kid::class);
     }
 }

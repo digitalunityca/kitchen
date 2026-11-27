@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Actions\Homework\AddHomeworkTasks;
 use App\Actions\Homework\BuildAdditionSheet;
 use App\Dashboard\ModuleRegistry;
+use App\Models\Kid;
 use App\Models\KidPin;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
@@ -41,12 +42,17 @@ class HomeworkTest extends TestCase
             ->assertSee('--kid-ink: #A66000', false);
     }
 
-    public function test_kids_come_from_config(): void
+    public function test_kids_come_from_the_database_seeded_from_config(): void
     {
+        $this->assertSame(['theo', 'arthur'], Kid::query()->orderBy('position')->pluck('slug')->all());
+
+        // A new kid in the config is added by the seed; a kid's row can then be changed in the database.
         config(['dashboard.modules.'.HomeworkModule::class.'.kids' => [['name' => 'Léa', 'badge' => '🦄', 'color' => '#AF52DE']]]);
+        Kid::seedFromConfig();
+        Kid::query()->where('slug', 'arthur')->update(['name' => 'Arthur B.']);
         $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
 
-        $this->get('/')->assertOk()->assertSee('data-kid="lea"', false)->assertSee('🦄')->assertDontSee('data-kid="theo"', false);
+        $this->get('/')->assertOk()->assertSee('data-kid="lea"', false)->assertSee('🦄')->assertSee('data-kid="theo"', false)->assertSee('Arthur B.');
     }
 
     public function test_the_area_opens_on_the_pin_screen_and_the_kid_pin_opens_it(): void
@@ -93,7 +99,7 @@ class HomeworkTest extends TestCase
 
         app(KidPinStore::class)->put('arthur', '5555');
         $this->post('/modules/homework/kids/arthur/unlock', ['pin' => '4821'])->assertOk()->assertSee('Hi Arthur!');
-        $this->assertStringNotContainsString('5555', (string) KidPin::query()->find('arthur')?->hash);
+        $this->assertStringNotContainsString('5555', (string) KidPin::query()->find(Kid::idFor('arthur'))?->hash);
         $this->assertTrue(app(KidPinStore::class)->matches('arthur', '5555'));
     }
 

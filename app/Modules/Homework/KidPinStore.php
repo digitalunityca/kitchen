@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Homework;
 
+use App\Models\Kid;
 use App\Models\KidPin;
 use Illuminate\Support\Facades\Hash;
 
@@ -15,23 +16,23 @@ class KidPinStore
 {
     public function has(string $kid): bool
     {
-        return KidPin::query()->whereKey($kid)->exists();
+        return KidPin::query()->whereHas('kid', fn ($q) => $q->where('slug', $kid))->exists();
     }
 
     public function matches(string $kid, string $pin): bool
     {
-        $hash = KidPin::query()->find($kid)?->hash;
+        $hash = KidPin::query()->whereHas('kid', fn ($q) => $q->where('slug', $kid))->value('hash');
 
         return is_string($hash) && $pin !== '' && Hash::check($pin, $hash);
     }
 
     public function put(string $kid, string $pin): void
     {
-        KidPin::query()->updateOrCreate(['kid' => $kid], ['hash' => Hash::make($pin)]);
+        KidPin::query()->updateOrCreate(['kid_id' => Kid::idFor($kid)], ['hash' => Hash::make($pin)]);
     }
 
     public function forget(string $kid): void
     {
-        KidPin::query()->whereKey($kid)->delete();
+        KidPin::query()->whereHas('kid', fn ($q) => $q->where('slug', $kid))->delete();
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Kid;
 use App\Models\KidPin;
 use App\Modules\Calendar\CalendarStore;
 use App\Modules\Homework\HomeworkStore;
@@ -51,7 +52,7 @@ class ImportJsonData extends Command
                 KidPin::query()->delete();
                 foreach ($pins as $kid => $hash) {
                     if (is_string($hash)) {
-                        KidPin::query()->create(['kid' => (string) $kid, 'hash' => $hash]);
+                        KidPin::query()->create(['kid_id' => Kid::idFor((string) $kid), 'hash' => $hash]);
                     }
                 }
                 $this->line('Kid PINs: '.KidPin::query()->count().' imported (hashes only)');
