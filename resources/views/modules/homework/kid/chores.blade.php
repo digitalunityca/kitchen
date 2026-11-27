@@ -10,19 +10,22 @@
     @else
       <ul class="kz-rewards-list">
         @foreach ($chores as $chore)
-          <li class="kz-reward kz-chore {{ $chore['left'] > 0 ? 'is-ready' : 'is-done' }}" data-chore="{{ $chore['id'] }}">
+          @php($state = $chore['left'] > 0 ? 'ready' : ($chore['waiting'] > 0 ? 'waiting' : 'done'))
+          <li class="kz-reward kz-chore is-{{ $state }}" data-chore="{{ $chore['id'] }}">
             <span class="kz-chore-emoji" aria-hidden="true">{{ $chore['emoji'] }}</span>
             <span class="kz-reward-text">
               <b>{{ $chore['name'] }}</b>
               <small>
                 +{{ $chore['points'] }} {{ __('points') }}
-                @if ($chore['waiting'] > 0) · {{ __('Waiting for a parent') }}@endif
+                @if ($chore['waiting'] > 0 && $state !== 'waiting') · {{ __('Waiting for a parent') }}@endif
                 @if ($chore['approved'] > 0) · {{ __('Approved') }}{{ $chore['approved'] > 1 ? ' ×'.$chore['approved'] : '' }}@endif
                 @if ($chore['perDay'] > 1 && $chore['left'] > 0) · {{ __(':n more times today', ['n' => $chore['left']]) }}@endif
               </small>
             </span>
             @if ($chore['left'] > 0)
               <button type="button" class="kz-btn" data-chore-done="{{ route('modules.homework.chore.done', [$kid['id'], $chore['id']]) }}">{{ __('I’m done') }}</button>
+            @elseif ($state === 'waiting')
+              <span class="kz-badge is-check">{{ __('Waiting for a parent') }}</span>
             @else
               <span class="kz-chore-check" aria-label="{{ __('Done for today') }}">@include('modules.homework.kid._icon', ['name' => 'ok', 'size' => 26])</span>
             @endif
