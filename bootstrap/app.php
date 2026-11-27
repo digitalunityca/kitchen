@@ -39,9 +39,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // because RestrictTunnelVisitors reads it before EncryptCookies runs.
         $middleware->encryptCookies(except: [AccessGate::COOKIE]);
 
-        // Posted by the script Fully injects into youtube.com, which has no CSRF token.
+        // Posted by MacroDroid on the tablet (token in a header), which has no CSRF token.
         // The unload report is a sendBeacon, which cannot send a CSRF token either.
-        $middleware->validateCsrfTokens(except: ['modules/youtube-music/handoff', 'modules/youtube-music/app/now-playing', 'diagnostics/unload']);
+        $middleware->validateCsrfTokens(except: ['modules/youtube-music/app/now-playing', 'diagnostics/unload']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -20,7 +20,6 @@ class SettingsController extends Controller
     {
         $sections = collect([
             'calendar' => ['Calendars', 'Add calendars, icons, colours and reminders', 'modules.calendar.settings'],
-            'youtube-music' => ['Music playlists', 'Playlists on the music card', 'modules.youtube-music.settings'],
             'homework' => ['Homework', 'Today’s worksheets, answer keys, points and word lists', 'modules.homework.settings'],
             'kids' => ['Kids', 'Each kid’s PIN for their homework', 'modules.homework.pins'],
         ])->filter(fn ($section, string $key): bool => $modules->get($key === 'kids' ? 'homework' : $key) !== null);

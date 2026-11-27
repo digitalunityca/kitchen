@@ -34,7 +34,7 @@ class MusicAppTest extends TestCase
         $this->travel(11)->minutes();
         $this->getJson('/modules/youtube-music/app/now')->assertExactJson(['active' => false]);
 
-        $this->get('/')->assertSee('id="ytm-appnow"', false)->assertDontSee('test-token-123');
+        $this->get('/')->assertSee('id="ytm"', false)->assertDontSee('test-token-123');
     }
 
     public function test_without_a_token_configured_reports_are_refused(): void

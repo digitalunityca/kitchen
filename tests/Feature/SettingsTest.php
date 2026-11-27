@@ -21,7 +21,7 @@ class SettingsTest extends TestCase
     {
         $this->get('/settings')->assertRedirect('/settings/unlock?to=%2Fsettings');
         $this->get('/modules/calendar/settings')->assertRedirect('/settings/unlock?to=%2Fmodules%2Fcalendar%2Fsettings');
-        $this->get('/modules/youtube-music/settings')->assertRedirect();
+        $this->get('/modules/calendar/settings')->assertRedirect();
         $this->post('/modules/calendar/calendars', ['name' => 'X', 'color' => '#0071E3', 'url' => 'https://x.example/a.ics'])->assertRedirect();
         $this->assertSame([], app(CalendarStore::class)->all());
 
@@ -32,7 +32,7 @@ class SettingsTest extends TestCase
     {
         $this->post('/settings/unlock', ['pin' => '4821', 'to' => '/modules/calendar/settings'])->assertRedirect('/modules/calendar/settings');
 
-        $this->get('/settings')->assertOk()->assertSee('Calendars')->assertSee('Music playlists');
+        $this->get('/settings')->assertOk()->assertSee('Calendars')->assertDontSee('Music playlists');
         $this->get('/modules/calendar/settings')->assertOk()->assertSee('Kitchen calendars');
 
         $this->travel(11)->minutes();

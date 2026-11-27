@@ -1,431 +1,119 @@
-@php($settingsUrl = route('modules.youtube-music.settings'))
-<section class="card ytm" aria-label="YouTube Music" data-volume="{{ $volume }}"
-  data-handoff="{{ route('modules.youtube-music.handoff') }}" data-handoff-clear="{{ route('modules.youtube-music.handoff.clear') }}" data-csrf="{{ csrf_token() }}">
-  <div class="ytm-art">
-    {{-- YouTube's player must stay visible (at least 200x200 px) under its terms, so it doubles as the artwork. --}}
-    <div id="ytm-player"></div>
+{{-- The music card: a remote for the YouTube Music app (song, ⏮ ⏯ ⏭, open the app). MacroDroid on the tablet links them (MusicAppController). --}}
+<section class="card ytm idle" id="ytm" aria-label="YouTube Music" data-package="{{ $appPackage }}" data-csrf="{{ csrf_token() }}"
+  data-now="{{ route('modules.youtube-music.app.now') }}" data-control="{{ route('modules.youtube-music.app.control') }}">
+  <div class="ytm-art" aria-hidden="true">
+    <svg width="84" height="84" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#FF0033"/><circle cx="24" cy="24" r="12.5" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M21 18.5v11l9-5.5z" fill="#fff"/></svg>
+    <span class="ytm-eq"><i></i><i></i><i></i></span>
   </div>
 
   <div class="ytm-side">
-    <div class="row ytm-top">
-      <form class="ytm-search" id="ytm-search" role="search" autocomplete="off">
-        <input type="search" name="q" maxlength="100" placeholder="Search" aria-label="Search YouTube" enterkeyhint="search">
-        <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-      </form>
-      <button type="button" class="pill ytm-app" id="ytm-app" data-package="{{ $appPackage }}" aria-label="Open the YouTube Music app">Music app ↗</button>
-      <a class="pill" id="ytm-premium" href="{{ $tvUrl }}" data-tv-ua="{{ $tvUserAgent }}" aria-label="Open YouTube Premium (the YouTube TV app)">TV ↗</a>
+    <p class="label">YouTube Music</p>
+    <div class="ytm-meta">
+      <p class="ytm-title" id="ytm-title">Nothing playing</p>
+      <p class="ytm-artist" id="ytm-artist">Open YouTube Music to start a song</p>
     </div>
 
-    {{-- What the YouTube Music app is playing (reported by MacroDroid), with its buttons. --}}
-    <div class="ytm-appnow" id="ytm-appnow" hidden data-now="{{ route('modules.youtube-music.app.now') }}" data-control="{{ route('modules.youtube-music.app.control') }}">
-      <span class="ytm-appnow-text"><small>In YouTube Music</small><b id="ytm-appnow-title"></b><span id="ytm-appnow-artist"></span></span>
-      <span class="ytm-appnow-buttons" id="ytm-appnow-buttons" hidden>
-        <button type="button" data-app-action="previous" aria-label="Previous in YouTube Music"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
-        <button type="button" data-app-action="play-pause" class="main" aria-label="Play or pause YouTube Music"><svg class="i-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
-        <button type="button" data-app-action="next" aria-label="Next in YouTube Music"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
-      </span>
+    <div class="ytm-controls" id="ytm-controls" hidden>
+      <button type="button" data-app-action="previous" aria-label="Previous"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button type="button" data-app-action="play-pause" class="ytm-main" aria-label="Play or pause"><svg class="i-play" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+      <button type="button" data-app-action="next" aria-label="Next"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
     </div>
 
-    @if (count($playlists))
-      <div class="ytm-meta">
-        <p class="ytm-title" id="ytm-title">Ready to play</p>
-        <p class="ytm-artist" id="ytm-artist">{{ $playlists[0]['name'] }}</p>
-      </div>
-
-      <div class="ytm-progress" aria-hidden="true">
-        <div class="ytm-bar"><i id="ytm-bar"></i></div>
-        <div class="ytm-times"><span id="ytm-now">0:00</span><span id="ytm-dur">0:00</span></div>
-      </div>
-
-      <div class="ytm-controls">
-        <button class="ytm-btn ytm-small" id="ytm-shuffle" aria-label="Shuffle" aria-pressed="false">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-        </button>
-        <button class="ytm-btn" id="ytm-prev" aria-label="Previous">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg>
-        </button>
-        <button class="ytm-btn ytm-play" id="ytm-play" aria-label="Play">
-          <svg class="i-play" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>
-          <svg class="i-pause" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
-        </button>
-        <button class="ytm-btn" id="ytm-next" aria-label="Next">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg>
-        </button>
-        <span class="ytm-small"></span>
-      </div>
-
-      <div class="ytm-lists" id="ytm-lists" role="tablist">
-        @foreach ($playlists as $i => $p)
-          <button class="ytm-chip" role="tab" data-index="{{ $i }}" data-list="{{ $p['id'] }}" data-name="{{ $p['name'] }}">{{ $p['name'] }}</button>
-        @endforeach
-      </div>
-    @else
-      <div class="ytm-meta">
-        <p class="ytm-title">Add your first playlist</p>
-        <p class="ytm-artist">On your phone, open <b>{{ $settingsUrl }}</b> and paste a YouTube Music playlist link.</p>
-      </div>
-      <span></span>
-    @endif
+    <button type="button" class="ytm-open" id="ytm-open">Open YouTube Music ↗</button>
+    <p class="ytm-note" id="ytm-note" role="status" hidden></p>
   </div>
-  <div class="ytm-toast" id="ytm-toast" role="status"></div>
 </section>
 
 @push('styles')
 <style>
-  .ytm { flex-direction: row; gap: 28px; position: relative; }
-  .ytm-art { position: relative; flex: none; height: 100%; aspect-ratio: 16 / 9; min-height: 200px; max-width: 52%;
-             border-radius: 16px; overflow: hidden; background: var(--fill); }
-  .ytm-art iframe, #ytm-player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .ytm-art-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--sub); pointer-events: none; }
-  .ytm.has-video .ytm-art-empty { display: none; }
-  .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; }
-  .ytm-top { gap: 8px; }
-  .ytm-appnow { display: flex; align-items: center; gap: 10px; background: var(--fill); border-radius: 14px; padding: 8px 8px 8px 12px; }
-  .ytm-appnow[hidden], .ytm-appnow-buttons[hidden] { display: none; }
-  .ytm-appnow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
-  .ytm-appnow-text small { font-size: 11px; font-weight: 600; color: #FF0033; text-transform: uppercase; letter-spacing: .04em; }
-  .ytm-appnow-text b, .ytm-appnow-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ytm-appnow-text b { font-size: 15px; font-weight: 600; }
-  .ytm-appnow-text span { font-size: 13px; color: var(--sub); }
-  .ytm-appnow-buttons { display: flex; gap: 4px; flex: none; }
-  .ytm-appnow-buttons button { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); }
-  .ytm-appnow-buttons button.main { background: #FF0033; color: #fff; }
-  .ytm-appnow-buttons button:active { transform: scale(.94); }
-  .ytm-appnow .i-pause, .ytm-appnow.playing .i-play { display: none; }
-  .ytm-appnow.playing .i-pause { display: block; }
-  .ytm.app-mode .ytm-meta { display: none; }
-  .ytm-app { background: #FF0033; color: #fff; border-color: #FF0033; font-weight: 600; cursor: pointer; }
-  .ytm-search { flex: 1; min-width: 0; display: flex; align-items: center; height: 36px; border-radius: 999px; background: var(--fill); padding: 0 4px 0 14px; }
-  .ytm-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 15px; color: var(--text); outline: none; -webkit-appearance: none; appearance: none; }
-  .ytm-search input::placeholder { color: var(--sub); }
-  .ytm-search input::-webkit-search-cancel-button { display: none; }
-  .ytm-search button { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); flex: none; }
-  .ytm-search:focus-within { box-shadow: 0 0 0 2px var(--accent); }
-  .ytm-title { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; line-height: 1.2;
-               display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .ytm-artist { margin: 4px 0 0; font-size: 15px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ytm-artist b { color: var(--text); font-weight: 500; white-space: normal; word-break: break-all; }
-  .ytm-bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
-  .ytm-bar i { display: block; height: 100%; width: 0; background: var(--text); border-radius: 2px; transition: width .9s linear; }
-  .ytm-times { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
-  .ytm-controls { display: flex; align-items: center; justify-content: space-between; max-width: 340px; }
-  .ytm-btn { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform .15s ease, background-color .2s; }
-  .ytm-btn:active { transform: scale(.92); background: var(--fill); }
-  .ytm-small { width: 44px; height: 44px; color: var(--sub); }
-  .ytm-small[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
-  .ytm-play { width: 60px; height: 60px; background: var(--accent); color: #fff; }
-  .ytm-play:active { background: var(--accent); }
-  .ytm-play .i-pause, .ytm.playing .ytm-play .i-play { display: none; }
-  .ytm.playing .ytm-play .i-pause { display: block; }
-  .ytm-lists { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 0 2px; }
-  .ytm-lists::-webkit-scrollbar { display: none; }
-  .ytm-chip { flex: none; font-size: 14px; font-weight: 500; padding: 7px 14px; border-radius: 999px; background: var(--fill); color: var(--text); }
-  .ytm-chip[aria-selected="true"] { background: var(--accent); color: #fff; }
-  .ytm-toast { position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
-               background: var(--text); color: var(--card); font-size: 14px; font-weight: 500; padding: 8px 14px; border-radius: 999px;
-               transition: opacity .25s, transform .25s; white-space: nowrap; }
-  .ytm-toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .ytm { flex-direction: row; align-items: stretch; gap: 28px; }
+  .ytm-art { position: relative; flex: none; width: 42%; max-width: 300px; aspect-ratio: 1; align-self: center; border-radius: 22px; background: linear-gradient(145deg, #fff1f3, #ffe1e6); display: flex; align-items: center; justify-content: center; }
+  body.night .ytm-art { background: linear-gradient(145deg, #2a1418, #1c0e11); }
+  .ytm-eq { position: absolute; bottom: 18px; display: flex; gap: 4px; align-items: flex-end; height: 18px; opacity: 0; transition: opacity .3s ease; }
+  .ytm-eq i { width: 4px; height: 6px; border-radius: 2px; background: #FF0033; }
+  .ytm.playing .ytm-eq { opacity: 1; }
+  .ytm.playing .ytm-eq i { animation: ytm-eq 1s ease-in-out infinite; }
+  .ytm.playing .ytm-eq i:nth-child(2) { animation-delay: .2s; }
+  .ytm.playing .ytm-eq i:nth-child(3) { animation-delay: .4s; }
+  @keyframes ytm-eq { 50% { height: 18px; } }
+  .ytm-side { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+  .ytm-meta { min-width: 0; }
+  .ytm-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ytm-artist { margin: 4px 0 0; font-size: 17px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ytm.idle .ytm-title { color: var(--sub); font-weight: 500; }
+  .ytm-controls { display: flex; align-items: center; gap: 18px; }
+  .ytm-controls[hidden], .ytm-note[hidden] { display: none; }
+  .ytm-controls button { width: 56px; height: 56px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--text); }
+  .ytm-controls .ytm-main { width: 72px; height: 72px; background: #FF0033; color: #fff; box-shadow: 0 6px 18px rgba(255, 0, 51, .25); }
+  .ytm-controls button:active, .ytm-open:active { transform: scale(.95); }
+  .ytm .i-pause, .ytm.playing .i-play { display: none; }
+  .ytm.playing .i-pause { display: block; }
+  .ytm-open { align-self: flex-start; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--fill); color: #D70030; font-size: 16px; font-weight: 600; }
+  .ytm.idle .ytm-open { background: #FF0033; color: #fff; }
+  body.night .ytm-open { color: #FF4D6D; }
+  body.night .ytm.idle .ytm-open { color: #fff; }
+  .ytm-note { margin: 0; font-size: 14px; color: var(--sub); }
+  @media (prefers-reduced-motion: reduce) { .ytm.playing .ytm-eq i { animation: none; height: 12px; } }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-// Fully Kiosk: the YouTube TV app needs a TV user agent, but the IFrame Player
-// above won't play under one. So "Open YouTube Premium" switches Fully to the TV
-// user agent, and the dashboard switches it back whenever it loads.
-// Fully settings: userAgent "0" = default, "custom" = use customUserAgent.
-// Song handoff: the button opens YouTube TV at the card's song and position
-// (window.ytmNowPlaying), and the script installed below as Fully's "Inject
-// JavaScript" reports what YouTube TV plays so the card can carry on afterwards.
-// "Music app": opens the YouTube Music app (installed with Google Play) through Fully,
-// after pausing this card so two players never play at once. Back: the tablet's Home
-// button, then the Fully Kiosk icon.
+// The YouTube Music remote. The song comes from MacroDroid through the hub (checked
+// every 5 s while the dashboard is visible); the buttons queue a press that MacroDroid
+// fetches. "Open YouTube Music" launches the app through Fully; Back returns here.
 (function () {
-  var btn = document.getElementById('ytm-app');
-  if (!btn) return;
-  btn.addEventListener('click', function () {
-    document.dispatchEvent(new CustomEvent('dashboard:audio-claim', { detail: { by: 'music-app' } }));
-    try {
-      if (window.fully && typeof fully.startApplication === 'function') { fully.startApplication(btn.dataset.package); return; }
-    } catch (err) {}
-    var note = document.getElementById('ytm-artist');
-    if (note) note.textContent = 'Open YouTube Music from the tablet’s home screen.';
-  });
-})();
+  var card = document.getElementById('ytm'), $ = function (id) { return document.getElementById(id); };
+  var state = { active: false, playing: false }, claimed = false;
 
-// Now playing in the YouTube Music app (MacroDroid tells the hub), with ⏮ ⏯ ⏭ that the
-// hub passes back to MacroDroid. Checked every 5 s while the dashboard is visible.
-(function () {
-  var box = document.getElementById('ytm-appnow'); if (!box) return;
-  var card = box.closest('.ytm'), csrf = card.dataset.csrf;
+  // Leftovers from the old YouTube TV mode: Fully's injected script and TV user agent.
+  if (window.fully) {
+    try {
+      if ((fully.getStringSetting('injectJsCode') || '').indexOf('__homeHubHandoff') !== -1) fully.setStringSetting('injectJsCode', '');
+      if (fully.getStringSetting('userAgent') === 'custom' && /SMART-TV/.test(fully.getStringSetting('customUserAgent') || '')) fully.setStringSetting('userAgent', '0');
+    } catch (err) {}
+  }
+
   function render(d) {
-    box.hidden = !d.active; card.classList.toggle('app-mode', !!d.active);
-    if (!d.active) return;
-    document.getElementById('ytm-appnow-title').textContent = d.title;
-    document.getElementById('ytm-appnow-artist').textContent = d.artist || '';
-    document.getElementById('ytm-appnow-buttons').hidden = !d.controls;
-    box.classList.toggle('playing', !!d.playing);
+    state = d;
+    card.classList.toggle('idle', !d.active);
+    card.classList.toggle('playing', !!(d.active && d.playing));
+    $('ytm-title').textContent = d.active ? d.title : 'Nothing playing';
+    $('ytm-artist').textContent = d.active ? (d.artist || '') : 'Open YouTube Music to start a song';
+    $('ytm-controls').hidden = !(d.active && d.controls);
   }
   function poll() {
     if (document.hidden) return;
-    fetch(box.dataset.now, { cache: 'no-store', headers: { Accept: 'application/json' } })
+    fetch(card.dataset.now, { cache: 'no-store', headers: { Accept: 'application/json' } })
       .then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d) render(d); }).catch(function () {});
   }
-  box.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-app-action]'); if (!b) return;
-    var form = new FormData(); form.append('action', b.dataset.appAction);
-    if (b.dataset.appAction === 'play-pause') box.classList.toggle('playing');
-    fetch(box.dataset.control, { method: 'POST', body: form, headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } })
-      .then(function () { setTimeout(poll, 1500); }).catch(function () {});
+  function press(action) {
+    var form = new FormData(); form.append('action', action);
+    if (action === 'play-pause') card.classList.toggle('playing');
+    return fetch(card.dataset.control, { method: 'POST', body: form, headers: { 'X-CSRF-TOKEN': card.dataset.csrf, Accept: 'application/json' } })
+      .then(function () { setTimeout(poll, 2500); }).catch(function () {});
+  }
+  card.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-app-action]');
+    if (b) press(b.dataset.appAction);
   });
+  $('ytm-open').addEventListener('click', function () {
+    try { if (window.fully && typeof fully.startApplication === 'function') { fully.startApplication(card.dataset.package); return; } } catch (err) {}
+    var note = $('ytm-note'); note.hidden = false; note.textContent = 'Open YouTube Music from the tablet’s home screen.';
+  });
+
+  // The voice chat needs the speaker: pause the app, and resume afterwards if it was playing.
+  document.addEventListener('dashboard:audio-claim', function () {
+    claimed = !!(state.active && state.playing && state.controls);
+    if (claimed) press('play-pause');
+  });
+  document.addEventListener('dashboard:audio-release', function () {
+    if (claimed) press('play-pause');
+    claimed = false;
+  });
+
   setInterval(poll, 5000); poll();
   document.addEventListener('visibilitychange', poll);
 })();
-
-window.ytmRestoreUserAgent = (function () {
-  var link = document.getElementById('ytm-premium'), tvUa = link.dataset.tvUa;
-  if (!window.fully || !tvUa) {
-    // Outside Fully (a computer or phone): regular YouTube search in a new tab.
-    document.getElementById('ytm-search').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var q = this.q.value.trim(); if (q) window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), '_blank', 'noopener');
-    });
-    return false;
-  }
-
-  var inject = @json($injectScript);
-  try { if (fully.getStringSetting('injectJsCode') !== inject) fully.setStringSetting('injectJsCode', inject); } catch (err) {}
-
-  // Search: YouTube TV is hard to type in by touch, so the query is typed here and
-  // YouTube TV opens on its results (#/search?q=...).
-  document.getElementById('ytm-search').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var q = this.q.value.trim(); if (!q) return;
-    this.q.blur();
-    fully.setStringSetting('customUserAgent', tvUa);
-    fully.setStringSetting('userAgent', 'custom');
-    location.href = link.href.replace(/#.*$/, '') + '?h=' + Date.now() + '#/search?q=' + encodeURIComponent(q);
-  });
-
-  link.addEventListener('click', function (e) {
-    e.preventDefault();
-    var href = link.href, now = window.ytmNowPlaying && window.ytmNowPlaying();
-    // No &list=: YouTube TV ignores &t= when a list is given (checked on the tablet).
-    // The query string forces a real load even if YouTube TV is already open.
-    if (now) href = link.href.replace(/#.*$/, '') + '?h=' + Date.now() + '#/watch?v=' + now.v + '&t=' + now.t;
-    fully.setStringSetting('customUserAgent', tvUa);
-    fully.setStringSetting('userAgent', 'custom');
-    location.href = href;
-  });
-
-  if (fully.getStringSetting('userAgent') === 'custom' && fully.getStringSetting('customUserAgent') === tvUa) {
-    fully.setStringSetting('userAgent', '0');
-  }
-  // This page itself was loaded with the TV agent: reload once under the normal one.
-  // The timestamp guard stops a reload loop if Fully ever ignores the change.
-  if (navigator.userAgent === tvUa) {
-    var last = 0;
-    try { last = parseInt(sessionStorage.getItem('ytm.uaReload'), 10) || 0; sessionStorage.setItem('ytm.uaReload', Date.now()); } catch (err) {}
-    if (Date.now() - last > 15000) { location.reload(); return true; }
-  }
-  return false;
-})();
 </script>
 @endpush
-
-@if (count($playlists))
-@push('scripts')
-<script>
-(function () {
-  if (window.ytmRestoreUserAgent) return; // reloading under the normal user agent
-  var card = document.querySelector('.ytm'), $ = function (id) { return document.getElementById(id); };
-  var chips = [].slice.call(document.querySelectorAll('.ytm-chip'));
-  var player = null, ready = false, current = 0, shuffle = false, toastTimer;
-  var pending = null, single = false; // handoff: a song to find in the playlist / a lone song outside the playlists
-
-  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
-  var saved = parseInt(store('ytm.playlist'), 10);
-  if (saved >= 0 && saved < chips.length) current = saved;
-  shuffle = store('ytm.shuffle') === '1';
-
-  function toast(msg) {
-    var t = $('ytm-toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3500);
-  }
-  function fmt(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
-  function selectChip(i) {
-    chips.forEach(function (c, k) { c.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
-    chips[i].scrollIntoView({ inline: 'nearest', block: 'nearest' });
-  }
-  function setShuffle(on) {
-    shuffle = on; store('ytm.shuffle', on ? '1' : '0');
-    $('ytm-shuffle').setAttribute('aria-pressed', on ? 'true' : 'false');
-    if (ready) player.setShuffle(on);
-  }
-  function showMeta() {
-    if (!ready) return;
-    var d = player.getVideoData() || {};
-    if (d.title) {
-      $('ytm-title').textContent = d.title;
-      $('ytm-artist').textContent = (d.author || '').replace(/ - Topic$/, '') || chips[current].dataset.name;
-      card.classList.add('has-video');
-    }
-  }
-
-  // For "Open YouTube Premium": the song, position and playlist, then pause here.
-  window.ytmNowPlaying = function () {
-    if (!ready) return null;
-    var d = player.getVideoData() || {};
-    if (!d.video_id) return null;
-    var now = { v: d.video_id, t: Math.floor(player.getCurrentTime() || 0), list: single ? null : chips[current].dataset.list };
-    player.pauseVideo();
-    return now;
-  };
-
-  // If the page reloads while music plays (Fully's timed auto reload, an update),
-  // remember the song and position, and carry on after the reload.
-  window.addEventListener('pagehide', function () {
-    if (!ready) return;
-    var s = player.getPlayerState(), d = player.getVideoData() || {};
-    if ((s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING) && d.video_id) {
-      store('ytm.resume', JSON.stringify({ v: d.video_id, t: Math.floor(player.getCurrentTime() || 0), list: single ? null : chips[current].dataset.list, at: Date.now() }));
-    }
-  });
-  function resumeAfterReload() {
-    var r = null; try { r = JSON.parse(store('ytm.resume') || 'null'); } catch (e) {}
-    store('ytm.resume', '');
-    if (!r || !r.v || Date.now() - r.at > 2 * 60 * 1000) return false;
-    var i = -1;
-    chips.forEach(function (c, k) { if (r.list && c.dataset.list === r.list) i = k; });
-    pending = { v: r.v, t: r.t + 1, list: r.list };
-    loadList(i < 0 ? current : i, false);
-    return true;
-  }
-
-  // Back from YouTube Premium: carry on with the song it was playing (under 10 minutes old).
-  function resumeHandoff() {
-    if (resumeAfterReload()) return;
-    fetch(card.dataset.handoff, { cache: 'no-store', headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (h) {
-        if (!h || !h.v) return;
-        fetch(card.dataset.handoffClear, { method: 'POST', headers: { 'X-CSRF-TOKEN': card.dataset.csrf } }).catch(function () {});
-        var i = -1;
-        chips.forEach(function (c, k) { if (h.list && c.dataset.list === h.list) i = k; });
-        if (i < 0) i = current;
-        pending = h;
-        loadList(i, false); // cue the playlist, then find the song in it (onStateChange)
-      })
-      .catch(function () {});
-  }
-  function playPending() {
-    var h = pending, idx = (player.getPlaylist() || []).indexOf(h.v);
-    pending = null;
-    if (idx >= 0) player.loadPlaylist({ listType: 'playlist', list: chips[current].dataset.list, index: idx, startSeconds: h.t });
-    else { single = true; player.loadVideoById({ videoId: h.v, startSeconds: h.t }); }
-  }
-
-  function loadList(i, autoplay) {
-    single = false;
-    current = i; store('ytm.playlist', i); selectChip(i);
-    var args = { listType: 'playlist', list: chips[i].dataset.list, index: 0 };
-    // Without stopVideo() first, YouTube keeps the old playlist's tracks and only swaps the list id.
-    player.stopVideo();
-    if (autoplay) player.loadPlaylist(args); else player.cuePlaylist(args);
-  }
-
-  window.onYouTubeIframeAPIReady = function () {
-    player = new YT.Player('ytm-player', {
-      host: 'https://www.youtube.com',
-      playerVars: {
-        listType: 'playlist', list: chips[current].dataset.list,
-        controls: 0, playsinline: 1, rel: 0, iv_load_policy: 3, disablekb: 1, fs: 0,
-        origin: location.origin
-      },
-      events: {
-        onReady: function () {
-          ready = true;
-          // In Fully loudness is the tablet's media volume (side-menu slider), so the player runs at 100.
-          var vol = window.Dashboard && Dashboard.volume;
-          player.setVolume(vol && !vol.system ? vol.level : (vol ? 100 : (parseInt(card.dataset.volume, 10) || 60)));
-          selectChip(current);
-          if (shuffle) setShuffle(true);
-          resumeHandoff();
-        },
-        onStateChange: function (e) {
-          if (pending && e.data === YT.PlayerState.CUED) { playPending(); return; }
-          if (single && e.data === YT.PlayerState.ENDED) { loadList(current, true); return; }
-          card.classList.toggle('playing', e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.BUFFERING);
-          $('ytm-play').setAttribute('aria-label', card.classList.contains('playing') ? 'Pause' : 'Play');
-          showMeta();
-        },
-        onError: function (e) {
-          // 101/150: the label blocks playback outside YouTube. 100: removed. Skip to the next song.
-          if ((e.data === 101 || e.data === 150 || e.data === 100) && single) { toast('That song only plays on YouTube itself. Back to your playlist.'); loadList(current, true); }
-          else if (e.data === 101 || e.data === 150 || e.data === 100) { toast('Skipped a song that only plays on YouTube itself'); player.nextVideo(); }
-          else if (e.data === 153) toast('YouTube rejected the player (missing referrer)');
-          else if (e.data === 2) toast('That playlist link looks wrong. Check it in settings.');
-          else toast('YouTube error ' + e.data);
-        }
-      }
-    });
-  };
-
-  $('ytm-play').addEventListener('click', function () {
-    if (!ready) return;
-    var s = player.getPlayerState();
-    if (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING) player.pauseVideo(); else player.playVideo();
-  });
-  // Volume comes from the side menu's slider (App\Modules\Volume). In Fully it sets
-  // the tablet's media volume and the player stays at 100; elsewhere it drives the player.
-  document.addEventListener('dashboard:volume', function (e) {
-    if (ready && !e.detail.system) player.setVolume(e.detail.level);
-  });
-
-  // A short sound from another card (a calendar reminder): lower the music, then bring it back.
-  var duckedFrom = null;
-  document.addEventListener('dashboard:duck', function () {
-    if (!ready || duckedFrom !== null) return;
-    duckedFrom = player.getVolume();
-    player.setVolume(Math.round(duckedFrom * 0.25));
-  });
-  document.addEventListener('dashboard:unduck', function () {
-    if (ready && duckedFrom !== null) player.setVolume(duckedFrom);
-    duckedFrom = null;
-  });
-
-  // Another card (the voice chat) needs the speaker: pause, then resume afterwards only if music was playing.
-  var pausedForOther = false;
-  document.addEventListener('dashboard:audio-claim', function () {
-    if (!ready) return;
-    var s = player.getPlayerState();
-    pausedForOther = s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING;
-    if (pausedForOther) player.pauseVideo();
-  });
-  document.addEventListener('dashboard:audio-release', function () {
-    if (pausedForOther && ready) player.playVideo();
-    pausedForOther = false;
-  });
-  $('ytm-next').addEventListener('click', function () { if (ready) player.nextVideo(); });
-  $('ytm-prev').addEventListener('click', function () {
-    if (!ready) return;
-    if (player.getCurrentTime() > 5) player.seekTo(0, true); else player.previousVideo();
-  });
-  $('ytm-shuffle').addEventListener('click', function () { setShuffle(!shuffle); toast(shuffle ? 'Shuffle on' : 'Shuffle off'); });
-  chips.forEach(function (c, i) { c.addEventListener('click', function () { if (ready) loadList(i, true); }); });
-
-  document.addEventListener('dashboard:tick', function () {
-    if (!ready || !player.getDuration) return;
-    var t = player.getCurrentTime(), d = player.getDuration();
-    $('ytm-now').textContent = fmt(t); $('ytm-dur').textContent = fmt(d);
-    $('ytm-bar').style.width = d ? (100 * t / d) + '%' : '0';
-  });
-
-  var s = document.createElement('script');
-  s.src = 'https://www.youtube.com/iframe_api';
-  s.onerror = function () { $('ytm-title').textContent = 'Can’t reach YouTube'; $('ytm-artist').textContent = 'Check the tablet’s internet connection.'; };
-  document.head.appendChild(s);
-})();
-</script>
-@endpush
-@endif

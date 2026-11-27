@@ -30,13 +30,12 @@ Fully settings that matter (changed on the tablet, not in code):
 | **Start URL** `https://kitchen.casahub.cloud/` (with the trailing slash) | The slash must match the page's real address, so Fully's "skip auto reload when showing the Start URL" works. Without it, Fully reloaded the dashboard every 30 minutes, which stopped the music. |
 | **Auto reload after idle** (30 min) | Kept as a safety net for other pages; skipped on the dashboard (see above). |
 | **Action Bar Title** | The dashboard writes the date, weather and Habs note there through Fully's JavaScript interface (`fully.setStringSetting('actionBarTitle', …)`). |
-| **Custom Button Action** `javascript:openSettings()` | The ≡ button next to Fully's 🏠 opens the PIN-protected Settings sheet without a reload. Fully draws that button with its own icon, which can't be changed. It doesn't work on YouTube pages (their security policy blocks it). |
-| **Inject JavaScript** (set by the dashboard itself) | A small script Fully runs on youtube.com that reports the playing song back to the hub, so music can be handed between the card and YouTube TV. |
+| **Custom Button Action** `javascript:openSettings()` | The ≡ button next to Fully's 🏠 opens the PIN-protected Settings sheet without a reload. Fully draws that button with its own icon, which can't be changed. |
 | **Enable Microphone Access** + Android mic permission | For the Ask ChatGPT voice chat. |
 | **Custom Error URL** (local `offline.html`) | Shown when the tablet can't reach the hub; it returns to the dashboard once `/up` answers. Source: `deploy/offline/`. |
 | **Web content debugging** | Lets the Mac inspect and control the page over USB (adb), which is how it was tested. |
 
-The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setAudioVolume(level, 3)` sets the tablet's media volume), **speech** (`fully.textToSpeech` for spoken reminders) and switching the **user agent** for YouTube TV.
+The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setAudioVolume(level, 3)` sets the tablet's media volume), **speech** (`fully.textToSpeech` for spoken reminders) and **starting apps** (`fully.startApplication` for YouTube Music).
 
 ### The network: Cloudflare Tunnel
 - `cloudflared` runs as a second container (Compose profile `tunnel`) and connects out to Cloudflare. Nothing on the home router is opened. Config: `deploy/cloudflared/config.yml` (the credentials file there is git-ignored).
@@ -49,15 +48,13 @@ The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setA
 ### The server: Docker on the Mac
 - `compose.yaml` runs `home-hub` (built from `Dockerfile`: production dependencies only, nginx + PHP-FPM, port 8080 inside) and, with `--profile tunnel`, `cloudflared`.
 - **No database.** Laravel uses file sessions and the file cache. Saved data is JSON files in `storage/app/private/` on the named volume `home-hub-data`, so it survives rebuilds:
-  - `youtube-music.json`: playlists
-  - `youtube-handoff.json`: the song handed over from YouTube TV (expires after 10 minutes)
   - `calendars.json`: connected calendars (their secret links are only stored here)
   - `homework.json`: homework tasks and points (in progress, see below)
   - `unload.log`: why the dashboard page unloaded (see below)
 - **Unload log:** whenever the page unloads, the tablet sends a short report (how long it ran, whether music was playing, the last taps and setting writes) to `/diagnostics/unload`. That's how the 30-minute reload was traced and confirmed gone.
 
 ### Settings behind the PIN
-`/settings` (opened in a sheet from Fully's ≡ button) asks for the same PIN on a number keypad (5 tries, then a 1-minute lockout). It stays unlocked for 10 minutes of use on that device (`app/Http/Middleware/RequireSettingsPin.php`). It contains Calendars and Music playlists (and Homework when that's finished). Those pages also need the PIN when opened from a phone.
+`/settings` (opened in a sheet from Fully's ≡ button) asks for the same PIN on a number keypad (5 tries, then a 1-minute lockout). It stays unlocked for 10 minutes of use on that device (`app/Http/Middleware/RequireSettingsPin.php`). It contains Calendars, Homework and Kids (PINs). Those pages also need the PIN when opened from a phone.
 
 ---
 
@@ -74,7 +71,7 @@ home-hub/
 │   │   ├── Habs/                NHL schedule, highlights, game details, standings, stats sheet
 │   │   ├── Homework/            (in progress) daily tasks, points, rewards, worksheets
 │   │   ├── Weather/             Forecast fetch, parsing, rain note, summary line
-│   │   └── YouTubeMusic/        Playlists, song handoff
+│   │   └── YouTubeMusic/        YouTube Music app remote (MacroDroid link)
 │   ├── Dashboard/               Module base class, ModuleRegistry, DashboardServiceProvider
 │   ├── Http/
 │   │   ├── Access/              Access settings and helpers (client IP, safe redirects)
@@ -89,7 +86,6 @@ home-hub/
 │   ├── modules/<key>/              Each module's card, sheets and settings page (HTML + its JS)
 │   └── settings/                   PIN keypad and the Settings list
 ├── public/css/dashboard.css     Shared look (Apple-like, day and night themes)
-├── resources/inject/            The script Fully injects into youtube.com
 ├── routes/web.php               Dashboard, unlock, settings, diagnostics (modules add their own)
 ├── tests/                       PHPUnit: Feature (pages and endpoints) and Unit (actions);
 │                                Fixtures/ holds trimmed real NHL and iCal responses
@@ -125,11 +121,14 @@ The time, weekday and "Good morning / afternoon / evening" on the first card. Th
 ### Weather
 Current conditions, today's high and low, the next 4 hours and a rain/snow note ("Rain likely 3–6 PM") from **Open-Meteo** (free, no key), for the coordinates in `.env`. It refreshes every 15 minutes, and the hub caches it 15 minutes too. It also feeds the top-bar summary and the voice chat's weather tool (7-day forecast). Code: `app/Actions/Weather/`.
 
-### YouTube Music and the YouTube TV handoff
-- The card plays your playlists through YouTube's official embedded player, with Apple-style controls and playlist chips. Playlists are added on the Music playlists settings page.
-- **Open YouTube Premium** switches Fully to a TV user agent and opens `youtube.com/tv` at the current song and position. The injected script reports what's playing, so on return the card carries on with that song. The user agent switches back automatically.
-- If the page reloads while music plays, the card remembers the song and position and carries on.
-- **Volume** is the slider in the right-side menu: it sets the tablet's real media volume through Fully (the player itself stays at 100).
+### YouTube Music (the app, through MacroDroid)
+- The music card is a remote for the **YouTube Music app** on the tablet (Google Play sideloaded; YouTube Premium account). It shows the song playing ("title · artist"), big ⏮ ⏯ ⏭, and **Open YouTube Music** (launches the app through Fully; the tablet's ◀ Back returns to the dashboard). With nothing playing it shows only the open button.
+- The link is **MacroDroid** on the tablet, two macros:
+  - **Song to Hub**: on each YouTube Music notification, POSTs `title`/`artist` to `/modules/youtube-music/app/now-playing` with the `X-Hub-Token` header (`YTM_APP_TOKEN`).
+  - **Music commands**: every 2 s, GETs `/modules/youtube-music/app/command` (same token) and presses Play/Pause, Next or Previous in YouTube Music. (MacroDroid's webhooks use Firebase push, which Fire OS blocks for a sideloaded Google Play services, hence polling.)
+- The voice chat pauses the app while it talks and resumes it after.
+- **Volume** is the slider in the right-side menu (the tablet's real media volume, through Fully).
+- Code: `app/Modules/YouTubeMusic/MusicAppController.php`.
 
 ### Ask ChatGPT (voice)
 - The blue mic in the side menu: tap to talk, tap again to end. It shows a spinner while connecting, rings that follow your voice, a glow while it answers, and captions in a bubble.
@@ -180,7 +179,7 @@ Set in `.env` on the Mac (template: `.env.example`).
 | `HOMEWORK_PRINT_SPOOL` | Folder in the container where print-ready PDFs go (mounted from the Mac) |
 | `HOME_HUB_TUNNEL_ID` | Which Cloudflare Tunnel the `cloudflared` container runs |
 | `WEATHER_CITY`, `WEATHER_LAT`, `WEATHER_LON` | Weather card label and location |
-| `YOUTUBE_TV_USER_AGENT` | User agent used for YouTube TV (Premium) |
+| `YTM_APP_TOKEN` | Shared secret MacroDroid sends to the music endpoints |
 | `OPENAI_API_KEY` | Key for the voice chat (restricted key: Realtime, Moderations, Responses) |
 | `OPENAI_REALTIME_MODEL`, `OPENAI_REALTIME_VOICE` | Voice chat model and voice |
 | `OPENAI_SEARCH_MODEL` | Model behind the web search tool |
@@ -188,7 +187,7 @@ Set in `.env` on the Mac (template: `.env.example`).
 | `AI_CHAT_FAMILY_SAFE` | Kid-safe rules and moderation (on unless set to false) |
 | `SESSION_DRIVER`, `CACHE_STORE`, `FILESYSTEM_DISK` | Files (no database) |
 
-Module settings that aren't secrets (grid positions, kids, playlist defaults, Habs, volume default) are in `config/dashboard.php`.
+Module settings that aren't secrets (grid positions, kids, Habs, volume default) are in `config/dashboard.php`.
 
 ---
 
@@ -214,7 +213,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 **24 November 2026**
 - **Foundation:** the module system and dashboard; Docker and Cloudflare Tunnel; PIN for outside access with rate limits; the offline page.
 - **Weather:** real Open-Meteo forecast with icons and rain hours; summary in Fully's top bar.
-- **YouTube Music:** playlists, YouTube TV for Premium with the TV user agent, and song handoff both ways.
+- **YouTube Music:** first an embedded player with YouTube TV handoff; since Nov 27 a remote for the YouTube Music app through MacroDroid.
 - **Code quality:** Laravel Boost (guidelines, skills, MCP); a SOLID/testing audit; business logic moved into Action classes; CI fixed to run on `main`; the lock file made installable on PHP 8.3.
 - **Ask ChatGPT:** Realtime voice chat with ephemeral sessions; the mic button with animations and captions; family-safe rules and moderation; weather and web-search tools.
 - **Canadiens:** game strip, live and final scores, stats sheet with Game, Standings and Schedule tabs; Fully top-bar note.
@@ -233,7 +232,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 
 ## 8. Known limits and next ideas
 
-- **Fully's top-bar button** always shows Fully's own ≡ icon (no setting for its picture), and doesn't work on YouTube pages. Use 🏠 first.
+- **Fully's top-bar button** always shows Fully's own ≡ icon (no setting for its picture).
 - **Shared calendar links** carry no alarms and often no notes; reminders come from the hub's own per-calendar setting. Work calendars on Google Workspace need the admin setting "Share all information" before a secret link is offered.
 - **Unload log** is the only log kept across rebuilds; the app log resets with each container rebuild.
 - **Homework:** the system in the working copy still needs reviewing and committing. Later phases: printing worksheets, more reward rules and history, and settings for templates.

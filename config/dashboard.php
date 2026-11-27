@@ -58,25 +58,13 @@ return [
             'column' => '3', 'row' => '1 / span 2',
         ],
 
+        // The music card: a remote for the YouTube Music app on the tablet, linked
+        // through MacroDroid (MusicAppController). The token MacroDroid sends with
+        // the song and when it fetches button presses is secret, in .env only.
         YouTubeMusicModule::class => [
             'column' => '1 / span 2', 'row' => '2',
-            // Playlists added on /modules/youtube-music/settings are stored in
-            // storage/app/youtube-music.json. These are only the first-run defaults.
-            'playlists' => [
-                // ['name' => 'Kitchen mix', 'id' => 'PLxxxxxxxx'],
-            ],
-            'volume' => 60,
-            // "Open YouTube Premium" loads the YouTube TV app (youtube.com/tv), which
-            // only serves TV browsers. In Fully Kiosk the button switches Fully's user
-            // agent to this one for the trip; the dashboard switches it back on return.
-            'tv_url' => 'https://www.youtube.com/tv',
-            // The YouTube Music app link through MacroDroid (MusicAppController): the
-            // token MacroDroid sends with "now playing", and MacroDroid's device webhook
-            // address; the hub calls <address>/play-pause, /next or /previous. Both secret, in .env only.
+            'app_package' => 'com.google.android.apps.youtube.music',
             'app_token' => (string) env('YTM_APP_TOKEN', ''),
-            'app_webhook' => (string) env('YTM_APP_WEBHOOK', ''),
-            'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
-                'Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1'),
         ],
 
         // One avatar button per kid in the side menu (under Home) for their homework.
