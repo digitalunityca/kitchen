@@ -1,14 +1,14 @@
 @php($deg = fn ($t) => \App\Modules\Weather\WeatherFormat::deg($t))
-<section class="card" aria-label="Weather">
+<section class="card" aria-label="{{ __('Weather') }}">
   <div class="row">
-    <p class="label">Outside · {{ $city }}</p>
-    <span class="pill" id="weather-sample"{{ $weather['real'] ? ' hidden' : '' }}>Sample data</span>
+    <p class="label">{{ __('Outside') }} · {{ $city }}</p>
+    <span class="pill" id="weather-sample"{{ $weather['real'] ? ' hidden' : '' }}>{{ __('Sample data') }}</span>
   </div>
   <div style="display:flex;align-items:center;gap:20px">
     <span id="weather-icon" style="display:flex">@include('modules.weather.icon', ['icon' => $weather['icon'], 'size' => 72])</span>
     <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
       <span class="big" style="font-size:72px" id="weather-temp">{{ $deg($weather['temp']) }}</span>
-      <span style="font-size:17px;color:var(--sub)" id="weather-line">{{ $weather['label'] }} · H {{ $deg($weather['high']) }} L {{ $deg($weather['low']) }}</span>
+      <span style="font-size:17px;color:var(--sub)" id="weather-line">{{ $weather['label'] }} · {{ __('weather.high') }} {{ $deg($weather['high']) }} {{ __('weather.low') }} {{ $deg($weather['low']) }}</span>
     </div>
   </div>
   <div class="hours" id="weather-hours">
@@ -27,7 +27,7 @@
     var url = @json(route('modules.weather.now'));
     var weather = @json($weather), lastHour = -1;
     function deg(t) { return (t < 0 ? '−' + Math.abs(t) : t) + '°'; }
-    function hourLabel(h) { return (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
+    function hourLabel(h) { return window.LOCALE === 'fr-CA' ? h + ' h' : (h % 12 || 12) + (h < 12 ? ' AM' : ' PM'); }
 
     function renderHours(now) {
       var hours = weather.hours;
@@ -51,7 +51,7 @@
       weather = w;
       $('weather-sample').hidden = !!w.real;
       $('weather-temp').textContent = deg(w.temp);
-      $('weather-line').textContent = w.label + ' · H ' + deg(w.high) + ' L ' + deg(w.low);
+      $('weather-line').textContent = w.label + ' · ' + __('weather.high') + ' ' + deg(w.high) + ' ' + __('weather.low') + ' ' + deg(w.low);
       if (w.icon_svg) $('weather-icon').innerHTML = w.icon_svg;
       renderHours(new Date());
       setTitle();

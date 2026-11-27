@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>{{ $answers ? 'Answer key' : 'Homework worksheets' }} · {{ $kid['name'] }}</title>
+  <title>{{ $answers ? __('Answer key') : __('Homework worksheets') }} · {{ $kid['name'] }}</title>
   <style>
     :root { color-scheme: light; font: 16px/1.4 system-ui, sans-serif; color: #202124; background: #f2f2f7; }
     body { margin: 0; }
@@ -44,28 +44,28 @@
   @unless ($preview ?? false)
   <header class="toolbar">
     <div>
-      <a href="{{ route('dashboard', absolute: false) }}">← Dashboard</a>
-      <h1>{{ $answers ? 'Answer key' : 'Homework worksheets' }} · {{ $kid['name'] }}</h1>
+      <a href="{{ route('dashboard', absolute: false) }}">← {{ __('Dashboard') }}</a>
+      <h1>{{ $answers ? __('Answer key') : __('Homework worksheets') }} · {{ $kid['name'] }}</h1>
       @if ($tasks === [])
-        <p>There is no homework to print.</p>
+        <p>{{ __('There is no homework to print.') }}</p>
       @elseif ($needsGeneration ?? false)
-        <p role="status" data-packet-status>Generating {{ count($tasks) }} {{ count($tasks) === 1 ? 'worksheet' : 'worksheets' }}…</p>
+        <p role="status" data-packet-status>{{ trans_choice('{1} Generating :n worksheet…|[2,*] Generating :n worksheets…', count($tasks), ['n' => count($tasks)]) }}</p>
       @endif
     </div>
     @if ($needsGeneration ?? false)
       <form method="post" action="{{ route('modules.homework.packet.generate', [$kid['id'], $date], absolute: false) }}" data-packet-generate>
         @csrf
-        <button type="submit" hidden>Try again</button>
+        <button type="submit" hidden>{{ __('Try again') }}</button>
       </form>
     @elseif ($tasks !== [])
       @if ($macPrint ?? false)
         <form method="post" action="{{ route('modules.homework.packet.print', [$kid['id'], $date, '00000000-0000-0000-0000-000000000000'], absolute: false) }}" data-mac-print>
           @csrf
-          <button type="submit">Print all worksheets</button>
-          <p role="status" data-print-status>Printer: Mac Studio</p>
+          <button type="submit">{{ __('Print all worksheets') }}</button>
+          <p role="status" data-print-status>{{ __('Printer: Mac Studio') }}</p>
         </form>
       @else
-        <button type="button" data-print>Print worksheet</button>
+        <button type="button" data-print>{{ __('Print worksheet') }}</button>
       @endif
     @endif
   </header>
@@ -120,6 +120,10 @@
     @endforeach
   @endunless
 
+  <script>
+    window.LANG = @json(json_decode((string) @file_get_contents(lang_path(app()->getLocale().'.json')), true) ?: new \stdClass);
+    window.__ = function (s) { return (window.LANG && window.LANG[s]) || s; };
+  </script>
   <script src="{{ asset('js/homework-packet.js') }}"></script>
   <script>
     const print = document.querySelector('[data-print]');
@@ -148,7 +152,7 @@
           }
           window.location.reload();
         } catch {
-          status.textContent = 'Couldn’t generate the worksheets. Try again.';
+          status.textContent = window.__('Couldn’t generate the worksheets. Try again.');
           button.hidden = false;
         }
       };

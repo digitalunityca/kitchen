@@ -41,7 +41,7 @@ class LoadHomeworkEvents
                 $events[$key]['points'] += (int) $entry['points'];
                 $events[$key]['sheets']++;
             } elseif (! empty($entry['rewardId'])) {
-                $events[] = ['kind' => 'reward', 'kid' => $entry['kid'], 'points' => (int) $entry['points'], 'name' => (string) $entry['reason']];
+                $events[] = ['kind' => 'reward', 'kid' => $entry['kid'], 'points' => (int) $entry['points'], 'name' => __((string) $entry['reason'])];
             }
         }
 

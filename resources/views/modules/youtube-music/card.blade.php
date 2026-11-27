@@ -9,17 +9,17 @@
   <div class="ytm-side">
     <p class="label">YouTube Music</p>
     <div class="ytm-meta">
-      <p class="ytm-title" id="ytm-title">Nothing playing</p>
-      <p class="ytm-artist" id="ytm-artist">Open YouTube Music to start a song</p>
+      <p class="ytm-title" id="ytm-title">{{ __('Nothing playing') }}</p>
+      <p class="ytm-artist" id="ytm-artist">{{ __('Open YouTube Music to start a song') }}</p>
     </div>
 
     <div class="ytm-controls" id="ytm-controls" hidden>
-      <button type="button" data-app-action="previous" aria-label="Previous"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
-      <button type="button" data-app-action="play-pause" class="ytm-main" aria-label="Play or pause"><svg class="i-play" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
-      <button type="button" data-app-action="next" aria-label="Next"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <button type="button" data-app-action="previous" aria-label="{{ __('Previous') }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button type="button" data-app-action="play-pause" class="ytm-main" aria-label="{{ __('Play or pause') }}"><svg class="i-play" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" width="34" height="34" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+      <button type="button" data-app-action="next" aria-label="{{ __('Next') }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
     </div>
 
-    <button type="button" class="ytm-open" id="ytm-open">Open YouTube Music ↗</button>
+    <button type="button" class="ytm-open" id="ytm-open">{{ __('Open YouTube Music') }} ↗</button>
     <p class="ytm-note" id="ytm-note" role="status" hidden></p>
   </div>
 </section>
@@ -78,8 +78,8 @@
     state = d;
     card.classList.toggle('idle', !d.active);
     card.classList.toggle('playing', !!(d.active && d.playing));
-    $('ytm-title').textContent = d.active ? d.title : 'Nothing playing';
-    $('ytm-artist').textContent = d.active ? (d.artist || '') : 'Open YouTube Music to start a song';
+    $('ytm-title').textContent = d.active ? d.title : __('Nothing playing');
+    $('ytm-artist').textContent = d.active ? (d.artist || '') : __('Open YouTube Music to start a song');
     $('ytm-controls').hidden = !(d.active && d.controls);
   }
   function poll() {
@@ -99,7 +99,7 @@
   });
   $('ytm-open').addEventListener('click', function () {
     try { if (window.fully && typeof fully.startApplication === 'function') { fully.startApplication(card.dataset.package); return; } } catch (err) {}
-    var note = $('ytm-note'); note.hidden = false; note.textContent = 'Open YouTube Music from the tablet’s home screen.';
+    var note = $('ytm-note'); note.hidden = false; note.textContent = __('Open YouTube Music from the tablet’s home screen.');
   });
 
   // The voice chat needs the speaker: pause the app, and resume afterwards if it was playing.

@@ -43,7 +43,7 @@ class CalendarController extends Controller
         $addCalendar->handle($request->validated('name'), $request->validated('color'), $request->validated('url'), $request->validated('icon'),
             $request->filled('reminder') ? (int) $request->validated('reminder') : null, $request->boolean('speak'));
 
-        return redirect()->route('modules.calendar.settings')->with('status', 'Calendar added.');
+        return redirect()->route('modules.calendar.settings')->with('status', __('Calendar added.'));
     }
 
     public function update(string $id, UpdateCalendarRequest $request, UpdateCalendar $updateCalendar): RedirectResponse
@@ -65,14 +65,14 @@ class CalendarController extends Controller
 
         $updateCalendar->handle($id, $changes);
 
-        return redirect()->route('modules.calendar.settings')->with('status', 'Saved.');
+        return redirect()->route('modules.calendar.settings')->with('status', __('Saved.'));
     }
 
     public function destroy(string $id, RemoveCalendar $removeCalendar): RedirectResponse
     {
         $removeCalendar->handle($id);
 
-        return redirect()->route('modules.calendar.settings')->with('status', 'Calendar removed.');
+        return redirect()->route('modules.calendar.settings')->with('status', __('Calendar removed.'));
     }
 
     public function moveUp(string $id, MoveCalendarUp $moveCalendarUp): RedirectResponse

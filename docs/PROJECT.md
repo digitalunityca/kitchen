@@ -171,6 +171,7 @@ Set in `.env` on the Mac (template: `.env.example`).
 | Variable | What it does |
 |---|---|
 | `APP_KEY`, `APP_URL`, `APP_ENV`, `APP_DEBUG` | Standard Laravel settings |
+| `APP_LOCALE` | Language of the hub: `fr` (default, Quebec French) or `en` |
 | `DASHBOARD_TITLE` | Browser tab title |
 | `DASHBOARD_NIGHT_FROM`, `DASHBOARD_NIGHT_TO` | Hours of the dark look (default 21 to 6) |
 | `HOME_HUB_ALLOWED_IPS` | Addresses that get in through the tunnel without the PIN (the home IP) |
@@ -185,9 +186,21 @@ Set in `.env` on the Mac (template: `.env.example`).
 | `OPENAI_SEARCH_MODEL` | Model behind the web search tool |
 | `AI_CHAT_LOCATION` | Location given to the assistant (answers, search, weather) |
 | `AI_CHAT_FAMILY_SAFE` | Kid-safe rules and moderation (on unless set to false) |
-| `SESSION_DRIVER`, `CACHE_STORE`, `FILESYSTEM_DISK` | Files (no database) |
+| `SESSION_DRIVER`, `CACHE_STORE`, `FILESYSTEM_DISK` | Sessions and cache in files; app data in SQLite |
 
 Module settings that aren't secrets (grid positions, kids, Habs, volume default) are in `config/dashboard.php`.
+
+### Language
+
+The hub speaks Quebec French by default (`APP_LOCALE=fr`), with English as the fallback.
+
+- **Text:** every string is written in English in the code and wrapped in `__()`. `lang/fr.json` holds the French; a key missing there shows in English. `lang/en.json` holds only special keys (`weather.high`/`weather.low` → H/L).
+- **JavaScript:** the dashboard and the packet page load the current JSON as `window.LANG`. `window.__(s)` translates, `window.LOCALE` (`fr-CA`/`en-CA`) formats dates, and `window.hm(date)` writes times as "17 h 45".
+- **PHP times and dates:** `App\Support\TimeFormat` gives "17 h 45" in French. Carbon follows the app locale (`translatedFormat`, `isoFormat`).
+- **Voice:** spoken messages use the `fr_CA` voice. The voice chat answers in Quebec French (or in the language it is spoken to), and transcription is set to French.
+- **Printed sheets:** always in French (Quebec school).
+- **Not translated:** NHL team, division and conference names; song titles; calendar events.
+- **Tests:** they run in English (`APP_LOCALE=en` in `phpunit.xml`). `FrenchLocaleTest` checks the French pages and that `fr.json` has no empty value.
 
 ---
 
@@ -225,6 +238,9 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 
 **25 November 2026**
 - Canadiens sheet opens at full size with a centred spinner; homework sheet made near full screen, over the side menu.
+
+**27 November 2026**
+- French version (Quebec French), now the default language; English kept as fallback.
 
 (For every change, see `git log`.)
 

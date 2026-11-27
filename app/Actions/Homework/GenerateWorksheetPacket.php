@@ -145,6 +145,6 @@ class GenerateWorksheetPacket
 
     private function unavailable(): ValidationException
     {
-        return ValidationException::withMessages(['packet' => 'Couldn’t generate the worksheets. Try again.']);
+        return ValidationException::withMessages(['packet' => __('Couldn’t generate the worksheets. Try again.')]);
     }
 }

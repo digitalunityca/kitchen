@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Homework</title>
+<title>{{ __('Homework') }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
@@ -35,33 +35,33 @@
 <body>
 <div class="page">
   <div>
-    <p class="eyebrow">Homework</p>
-    <h1>Kids’ homework</h1>
+    <p class="eyebrow">{{ __('Homework') }}</p>
+    <h1>{{ __('Kids’ homework') }}</h1>
   </div>
 
   @if (session('status')) <p class="ok">{{ session('status') }}</p> @endif
-  <p>Open a worksheet on this computer and press Imprimer (⌘P) to print it. The answer key shows the same sheet with the answers.</p>
+  <p>{{ __('Open a worksheet on this computer and press Print (⌘P) to print it. The answer key shows the same sheet with the answers.') }}</p>
 
   @foreach ($kids as $kid)
     <div class="card">
-      <h2><span class="avatar" style="background: {{ $kid['color'] }}">{{ $kid['badge'] }}</span>{{ $kid['name'] }} <small style="color: var(--sub); font-size: 15px; font-weight: 400">{{ $kid['grade'] }}e année</small><span class="total">⭐ {{ $kid['balance'] }} points</span></h2>
+      <h2><span class="avatar" style="background: {{ $kid['color'] }}">{{ $kid['badge'] }}</span>{{ $kid['name'] }} <small style="color: var(--sub); font-size: 15px; font-weight: 400">{{ __(':grade grade', ['grade' => $kid['grade']]) }}</small><span class="total">⭐ {{ __(':n points', ['n' => $kid['balance']]) }}</span></h2>
 
-      <h3>Today</h3>
+      <h3>{{ __('Today') }}</h3>
       @if ($kid['tasks'] === [])
-        <p>No homework today (Monday to Friday only).</p>
+        <p>{{ __('No homework today (Monday to Friday only).') }}</p>
       @else
         <ul>
           @foreach ($kid['tasks'] as $task)
             <li>
               <span>{{ $templates[$task['template']]['emoji'] }}</span>
-              <span class="grow">{{ $templates[$task['template']]['name'] }} <small>· {{ $task['points'] }} pts · {{ ['todo' => 'to do', 'done' => 'waiting for a check', 'approved' => 'approved', 'missed' => 'not done'][$task['status']] ?? $task['status'] }}</small></span>
+              <span class="grow">{{ __($templates[$task['template']]['name']) }} <small>· {{ $task['points'] }} pts · {{ __(['todo' => 'to do', 'done' => 'waiting for a check', 'approved' => 'approved', 'missed' => 'not done'][$task['status']] ?? $task['status']) }}</small></span>
               @if (isset($task['worksheet']) || $templates[$task['template']]['printable'])
                 <span class="links">
                   @if (isset($task['worksheet']) || $task['status'] === 'approved')
-                    <a href="{{ route('modules.homework.worksheet', [$kid['id'], $today, $task['id']]) }}" target="_blank">Worksheet</a>
-                    <a href="{{ route('modules.homework.answers', [$kid['id'], $today, $task['id']]) }}" target="_blank">Answer key</a>
+                    <a href="{{ route('modules.homework.worksheet', [$kid['id'], $today, $task['id']]) }}" target="_blank">{{ __('Worksheet') }}</a>
+                    <a href="{{ route('modules.homework.answers', [$kid['id'], $today, $task['id']]) }}" target="_blank">{{ __('Answer key') }}</a>
                   @else
-                    <a href="{{ route('modules.homework.packet', [$kid['id'], $today]) }}">Open worksheets</a>
+                    <a href="{{ route('modules.homework.packet', [$kid['id'], $today]) }}">{{ __('Open worksheets') }}</a>
                   @endif
                 </span>
               @endif
@@ -71,28 +71,28 @@
       @endif
 
       @if ($kid['history'] !== [])
-        <h3>Recent points</h3>
+        <h3>{{ __('Recent points') }}</h3>
         <ul>
           @foreach ($kid['history'] as $entry)
-            <li><span class="grow">{{ $entry['reason'] }}</span><span class="plus">{{ $entry['points'] > 0 ? '+' : '' }}{{ $entry['points'] }}</span></li>
+            <li><span class="grow">{{ __($entry['reason']) }}</span><span class="plus">{{ $entry['points'] > 0 ? '+' : '' }}{{ $entry['points'] }}</span></li>
           @endforeach
         </ul>
       @endif
 
       @if ($kid['writes'])
-        <h3>Words to copy (writing sheets)</h3>
+        <h3>{{ __('Words to copy (writing sheets)') }}</h3>
         <form method="post" action="{{ route('modules.homework.words', $kid['id']) }}" style="display: flex; flex-direction: column; gap: 10px">
           @csrf
-          <textarea name="words" aria-label="{{ $kid['name'] }}’s words">{{ implode("\n", $kid['words']) }}</textarea>
+          <textarea name="words" aria-label="{{ __(':name’s words', ['name' => $kid['name']]) }}">{{ implode("\n", $kid['words']) }}</textarea>
           @error('words') <p class="err">{{ $message }}</p> @enderror
-          <p><small style="color: var(--sub)">One word or short sentence per line, for example the school’s list of the week. Each sheet picks 6.</small></p>
-          <button class="btn">Save words</button>
+          <p><small style="color: var(--sub)">{{ __('One word or short sentence per line, for example the school’s list of the week. Each sheet picks 6.') }}</small></p>
+          <button class="btn">{{ __('Save words') }}</button>
         </form>
       @endif
     </div>
   @endforeach
 
-  <p><a href="{{ route('settings') }}">← Settings</a> · <a href="{{ route('dashboard') }}">Back to the dashboard</a></p>
+  <p><a href="{{ route('settings') }}">← {{ __('Settings') }}</a> · <a href="{{ route('dashboard') }}">{{ __('Back to the dashboard') }}</a></p>
 </div>
 </body>
 </html>

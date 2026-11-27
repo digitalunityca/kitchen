@@ -23,14 +23,14 @@ class RedeemReward
     {
         $reward = collect(HomeworkModule::REWARDS)->firstWhere('id', $rewardId);
         if ($reward === null) {
-            throw ValidationException::withMessages(['reward' => 'That reward isn’t in the store.']);
+            throw ValidationException::withMessages(['reward' => __('That reward isn’t in the store.')]);
         }
 
         $bought = $this->boughtToday($kid, $today);
         $state = self::state($reward, $this->store->balance($kid), $this->store->tasks($kid, $today->toDateString()) ?? [], $bought, $today);
 
         if ($state !== 'ready') {
-            throw ValidationException::withMessages(['reward' => self::REASONS[$state]]);
+            throw ValidationException::withMessages(['reward' => __(self::REASONS[$state])]);
         }
 
         $this->store->addPoints($kid, -$reward['cost'], $reward['name'], rewardId: $reward['id']);

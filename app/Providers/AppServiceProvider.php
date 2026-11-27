@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\Access\AccessGate;
 use App\Http\Access\AccessSettings;
+use Carbon\Carbon;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -28,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Dates ("jeudi 27 novembre") follow the dashboard's language.
+        Carbon::setLocale((string) config('app.locale'));
+
         // Every request, per visitor IP: 120 a minute, enough for one visitor and low
         // enough to stop scripts hammering the public hostname. The home's own address
         // (HOME_HUB_ALLOWED_IPS) is shared by the tablet, phones and computers, so it

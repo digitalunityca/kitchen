@@ -30,7 +30,7 @@ class AddHomeworkTasks
     public function handle(array $kid, CarbonInterface $date, array $counts): void
     {
         if ($date->isWeekend()) {
-            throw ValidationException::withMessages(['counts' => 'Homework is Monday to Friday.']);
+            throw ValidationException::withMessages(['counts' => __('Homework is Monday to Friday.')]);
         }
 
         $day = $date->toDateString();
@@ -39,7 +39,7 @@ class AddHomeworkTasks
         $next = collect($tasks)->map(fn (array $t): int => (int) substr($t['id'], 1))->max() ?? 0;
 
         if (array_sum(array_map('intval', $counts)) > self::MAX_PER_PRINT) {
-            throw ValidationException::withMessages(['counts' => 'That’s a lot! Print up to '.self::MAX_PER_PRINT.' sheets at a time.']);
+            throw ValidationException::withMessages(['counts' => __('That’s a lot! Print up to :n sheets at a time.', ['n' => self::MAX_PER_PRINT])]);
         }
 
         foreach ($counts as $template => $count) {
@@ -49,7 +49,7 @@ class AddHomeworkTasks
             }
 
             if (! isset($templates[$template])) {
-                throw ValidationException::withMessages(['counts' => 'That homework isn’t available.']);
+                throw ValidationException::withMessages(['counts' => __('That homework isn’t available.')]);
             }
 
             for ($i = 0; $i < $count; $i++) {

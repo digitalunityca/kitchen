@@ -29,7 +29,7 @@ class QueueWorksheetPrint
     {
         $spool = (string) config('dashboard.homework_print_spool');
         if (! $this->available()) {
-            throw ValidationException::withMessages(['print' => 'The Mac Studio print queue is unavailable.']);
+            throw ValidationException::withMessages(['print' => __('The Mac Studio print queue is unavailable.')]);
         }
 
         Cache::lock('homework:print:'.$job, 30)->block(5, fn () => $this->queue($spool, $job, $kid, $date, $tasks));
@@ -49,7 +49,7 @@ class QueueWorksheetPrint
 
         if ($this->files->put($temp, $pdf->output(), lock: true) === false || ! $this->files->move($temp, $spool.'/'.$job.'.pdf')) {
             $this->files->delete($temp);
-            throw ValidationException::withMessages(['print' => 'The worksheet packet could not be sent to the Mac Studio.']);
+            throw ValidationException::withMessages(['print' => __('The worksheet packet could not be sent to the Mac Studio.')]);
         }
     }
 

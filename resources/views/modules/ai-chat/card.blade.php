@@ -12,7 +12,7 @@
     <span class="aic-ring aic-ring-2" aria-hidden="true"></span>
     <span class="aic-spin" aria-hidden="true"></span>
     <button type="button" class="aic-fab {{ $configured ? '' : 'aic-off' }}" id="aic-fab"
-      aria-label="{{ $configured ? 'Talk to ChatGPT' : 'Ask ChatGPT (not set up)' }}" aria-pressed="false">
+      aria-label="{{ $configured ? __('Talk to ChatGPT') : __('Ask ChatGPT (not set up)') }}" aria-pressed="false">
       <svg class="aic-mic" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3" fill="#fff"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
     </button>
   </div>
@@ -91,7 +91,7 @@
   var pc = null, dc = null, mic = null, ctx = null, micMeter = null, outMeter = null, raf = 0, quietTimer = 0, bubbleTimer = 0;
   var active = false, lastActivity = 0, level = 0, userItem = null, botText = '';
 
-  function state(s) { root.dataset.state = s; fab.setAttribute('aria-pressed', s === 'idle' ? 'false' : 'true'); fab.setAttribute('aria-label', s === 'idle' ? 'Talk to ChatGPT' : 'End the chat'); }
+  function state(s) { root.dataset.state = s; fab.setAttribute('aria-pressed', s === 'idle' ? 'false' : 'true'); fab.setAttribute('aria-label', s === 'idle' ? __('Talk to ChatGPT') : __('End the chat')); }
   function say(text, who, sticky) {
     bubble.innerHTML = '';
     if (who) { var w = document.createElement('small'); w.textContent = who; bubble.appendChild(w); }
@@ -129,7 +129,7 @@
       case 'input_audio_buffer.speech_started': state('listening'); break;
       case 'input_audio_buffer.speech_stopped': state('thinking'); break;
       case 'conversation.item.input_audio_transcription.completed':
-        if (ev.transcript && root.dataset.state !== 'speaking') say(ev.transcript, 'You');
+        if (ev.transcript && root.dataset.state !== 'speaking') say(ev.transcript, __('You'));
         moderate(ev.transcript); break;
       case 'response.created': botText = ''; moderatedUpTo = 0; break;
       case 'output_audio_buffer.started': state('speaking'); break;
@@ -161,7 +161,7 @@
     if (ev.name === 'get_weather') {
       request = fetch(root.dataset.weather + (args.day ? '?day=' + encodeURIComponent(args.day) : ''), { headers: { 'Accept': 'application/json' } });
     } else if (ev.name === 'search_web') {
-      say('Searching the web…', 'ChatGPT', true);
+      say(__('Searching the web…'), 'ChatGPT', true);
       request = fetch(root.dataset.search, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': root.dataset.csrf, 'Accept': 'application/json', 'Content-Type': 'application/json' },
@@ -195,7 +195,7 @@
       send({ type: 'response.cancel' });
       send({ type: 'output_audio_buffer.clear' });
       var audio = document.getElementById('aic-audio'); if (audio) audio.muted = true;
-      say('Let’s talk about something else.');
+      say(__('Let’s talk about something else.'));
       end();
       if (audio) audio.muted = false;
     }).catch(function () {});
@@ -212,12 +212,12 @@
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.RTCPeerConnection) {
-      return fail(location.protocol === 'https:' ? 'This browser can’t do voice chat.' : 'Voice chat needs the https address.');
+      return fail(location.protocol === 'https:' ? __('This browser can’t do voice chat.') : __('Voice chat needs the https address.'));
     }
     try {
       mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (e) {
-      return fail(e && e.name === 'NotAllowedError' ? 'The microphone is blocked. Allow it in Fully: Web Content Settings › Enable Microphone Access.' : 'No microphone found.');
+      return fail(e && e.name === 'NotAllowedError' ? __('The microphone is blocked. Allow it in Fully: Web Content Settings › Enable Microphone Access.') : __('No microphone found.'));
     }
     if (!active) return end();
 
@@ -226,11 +226,11 @@
       var r = await fetch(root.dataset.session, { method: 'POST', headers: { 'X-CSRF-TOKEN': root.dataset.csrf, 'Accept': 'application/json' } });
       var body = await r.json().catch(function () { return {}; });
       if (!r.ok) {
-        return fail(body.error === 'not_configured' ? 'Add OPENAI_API_KEY to the hub’s .env to turn this on.'
-          : r.status === 429 ? 'Too many tries. Wait a minute.' : 'Can’t reach ChatGPT right now.');
+        return fail(body.error === 'not_configured' ? __('Add OPENAI_API_KEY to the hub’s .env to turn this on.')
+          : r.status === 429 ? __('Too many tries. Wait a minute.') : __('Can’t reach ChatGPT right now.'));
       }
       secret = body.value;
-    } catch (e) { return fail('Can’t reach the hub.'); }
+    } catch (e) { return fail(__('Can’t reach the hub.')); }
     if (!active) return end();
 
     try {
@@ -239,25 +239,25 @@
         var audio = document.getElementById('aic-audio'); audio.srcObject = e.streams[0]; audio.play().catch(function () {});
         if (ctx) outMeter = meter(e.streams[0]);
       };
-      pc.onconnectionstatechange = function () { if (active && pc && (pc.connectionState === 'failed' || pc.connectionState === 'disconnected')) fail('The connection dropped.'); };
+      pc.onconnectionstatechange = function () { if (active && pc && (pc.connectionState === 'failed' || pc.connectionState === 'disconnected')) fail(__('The connection dropped.')); };
       pc.addTrack(mic.getTracks()[0], mic);
       dc = pc.createDataChannel('oai-events');
       dc.addEventListener('message', onEvent);
       dc.addEventListener('open', function () {
         state('listening');
-        dc.send(JSON.stringify({ type: 'response.create', response: { instructions: 'Greet the cook in one short, warm sentence and ask what they are making.' } }));
+        dc.send(JSON.stringify({ type: 'response.create', response: { instructions: 'Greet the cook in one short, warm sentence and ask what they are making.' + (window.LOCALE === 'fr-CA' ? ' Speak Quebec French.' : '') } }));
       });
       var offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       var answer = await fetch(CALLS_URL, { method: 'POST', body: offer.sdp, headers: { 'Authorization': 'Bearer ' + secret, 'Content-Type': 'application/sdp' } });
-      if (!answer.ok) return fail('ChatGPT refused the call (' + answer.status + ').');
+      if (!answer.ok) return fail(__('ChatGPT refused the call (:status).').replace(':status', answer.status));
       if (!active) return end();
       await pc.setRemoteDescription({ type: 'answer', sdp: await answer.text() });
-    } catch (e) { return fail('Couldn’t start the voice chat.'); }
+    } catch (e) { return fail(__('Couldn’t start the voice chat.')); }
 
     if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(function () {}); micMeter = meter(mic); }
     cancelAnimationFrame(raf); animate();
-    quietTimer = setInterval(function () { if (Date.now() - lastActivity > QUIET_MS) { say('Ended after 2 minutes of quiet.'); end(); } }, 5000);
+    quietTimer = setInterval(function () { if (Date.now() - lastActivity > QUIET_MS) { say(__('Ended after 2 minutes of quiet.')); end(); } }, 5000);
   }
 
   function end() {
@@ -281,7 +281,7 @@
 (function () {
   var fab = document.getElementById('aic-fab'), bubble = document.getElementById('aic-bubble'), t = 0;
   fab.addEventListener('click', function () {
-    bubble.textContent = 'Add OPENAI_API_KEY to the hub’s .env to turn on Ask ChatGPT.';
+    bubble.textContent = __('Add OPENAI_API_KEY to the hub’s .env to turn on Ask ChatGPT.');
     bubble.classList.add('show'); clearTimeout(t); t = setTimeout(function () { bubble.classList.remove('show'); }, 4000);
   });
 })();

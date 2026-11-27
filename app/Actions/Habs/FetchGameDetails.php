@@ -49,11 +49,13 @@ class FetchGameDetails
     public static function periodLabel(int $number, string $type): string
     {
         return match (true) {
-            $type === 'SO' => 'SO',
-            $type === 'OT' => $number > 4 ? ($number - 3).'OT' : 'OT',
-            default => $number.match ($number) {
-                1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th'
-            },
+            $type === 'SO' => __('SO'),
+            $type === 'OT' => $number > 4 ? ($number - 3).__('OT') : __('OT'),
+            default => str_starts_with(app()->getLocale(), 'fr')
+                ? $number.($number === 1 ? 're' : 'e')
+                : $number.match ($number) {
+                    1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th'
+                },
         };
     }
 

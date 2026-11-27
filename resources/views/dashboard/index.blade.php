@@ -1,7 +1,7 @@
 {{-- Render cards first so their @push('styles') lands in <head>. --}}
 @php($cards = $modules->map(fn ($m) => $m->render()->render()))
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,6 +12,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}?v={{ filemtime(public_path('css/dashboard.css')) }}">
 @stack('styles')
+{{-- Translations for the cards' scripts: __('English text') gives the text in the dashboard's language (lang/fr.json). --}}
+<script>
+  window.LOCALE = @json(app()->getLocale() === 'fr' ? 'fr-CA' : 'en-CA');
+  window.LANG = @json(json_decode((string) @file_get_contents(lang_path(app()->getLocale().'.json')), true) ?: new \stdClass);
+  window.__ = function (s) { return (window.LANG && window.LANG[s]) || s; };
+  /** "17 h 45" in French, "5:45 PM" in English. */
+  window.hm = function (d) {
+    var h = d.getHours(), m = d.getMinutes();
+    if (window.LOCALE === 'fr-CA') return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') : '');
+    return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM');
+  };
+</script>
 </head>
 <body>
 {{-- No header: the day and date are in Fully's top bar, the greeting is on the clock card. --}}
@@ -35,8 +47,8 @@
   a button either with 'placement' => 'menu' (their whole card is the button) or
   by pushing to the 'menu-items' stack alongside their normal card.
 --}}
-<nav class="side-menu" aria-label="Menu">
-  <button type="button" class="menu-button menu-home" id="menu-home" aria-label="Home">
+<nav class="side-menu" aria-label="{{ __('Menu') }}">
+  <button type="button" class="menu-button menu-home" id="menu-home" aria-label="{{ __('Home') }}">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
   </button>
   <span class="menu-divider" aria-hidden="true"></span>
@@ -112,7 +124,8 @@
       if (/[?&]theme=night/.test(location.search)) isNight = true;
       if (/[?&]theme=day/.test(location.search)) isNight = false;
       document.body.classList.toggle('night', isNight);
-      var date = now.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
+      var date = now.toLocaleDateString(window.LOCALE, { weekday: 'long', month: 'long', day: 'numeric' });
+      date = date.charAt(0).toUpperCase() + date.slice(1);
       if (date !== lastDate) { lastDate = date; Dashboard.setTitlePart('date', date); } // also rolls over at midnight
       document.dispatchEvent(new CustomEvent('dashboard:tick', { detail: now }));
     }
@@ -124,10 +137,10 @@
   Opened from Fully's ⚙ action bar button (Custom Button Action runs window.openSettings(),
   or loads /?settings=1 from other pages such as YouTube TV).
 --}}
-<div class="settings-overlay" id="settings-overlay" hidden role="dialog" aria-modal="true" aria-label="Settings">
+<div class="settings-overlay" id="settings-overlay" hidden role="dialog" aria-modal="true" aria-label="{{ __('Settings') }}">
   <div class="settings-sheet">
-    <button type="button" class="settings-close" id="settings-close" aria-label="Close settings">✕</button>
-    <iframe id="settings-frame" title="Settings"></iframe>
+    <button type="button" class="settings-close" id="settings-close" aria-label="{{ __('Close settings') }}">✕</button>
+    <iframe id="settings-frame" title="{{ __('Settings') }}"></iframe>
   </div>
 </div>
 <script>

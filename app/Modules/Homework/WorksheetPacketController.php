@@ -87,7 +87,7 @@ class WorksheetPacketController
                 $review->handle($kid, $date, $task, approve: true, printedSeed: (int) $found['seed']);
                 $found = $this->printedTask($kid, $date, $task);
             } else {
-                $error = $result['lockedFor'] ? "Too many tries. Wait {$result['lockedFor']} seconds." : 'Incorrect parent PIN.';
+                $error = $result['lockedFor'] ? __('Too many tries. Wait :n seconds.', ['n' => $result['lockedFor']]) : __('Incorrect parent PIN.');
                 $status = $result['lockedFor'] ? 429 : 403;
             }
         }

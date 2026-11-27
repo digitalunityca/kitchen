@@ -3,7 +3,7 @@
 @push('menu-items')
   @foreach ($kids as $kid)
     <span class="kid-btn-wrap">
-      <button type="button" class="kid-btn{{ $kid['photo'] ? ' has-photo' : '' }}" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ $kid['name'] }}’s homework">@if ($kid['photo'])<img src="{{ $kid['photo'] }}" alt="" width="56" height="56">@else{{ $kid['badge'] }}@endif</button>
+      <button type="button" class="kid-btn{{ $kid['photo'] ? ' has-photo' : '' }}" data-kid="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}" aria-label="{{ __(':name’s homework', ['name' => $kid['name']]) }}">@if ($kid['photo'])<img src="{{ $kid['photo'] }}" alt="" width="56" height="56">@else{{ $kid['badge'] }}@endif</button>
       <span class="kid-badge" data-kid-badge="{{ $kid['id'] }}" @if (! $kid['unseen']) hidden @endif>+{{ $kid['unseen'] }}</span>
     </span>
   @endforeach
@@ -16,7 +16,7 @@
   <div class="hw-cheer-card">
     <span class="hw-cheer-face" data-cheer-face></span>
     <p class="hw-cheer-title" data-cheer-title></p>
-    <p class="hw-cheer-points"><b data-cheer-points>0</b> points</p>
+    <p class="hw-cheer-points"><b data-cheer-points>0</b> {{ __('points') }}</p>
     <p class="hw-cheer-note" data-cheer-note></p>
   </div>
 </div>
@@ -25,12 +25,12 @@
 
 <div class="kid-overlay" id="kid-overlay" hidden role="dialog" aria-modal="true" data-csrf="{{ csrf_token() }}">
   @foreach ($kids as $kid)
-    <section class="kid-sheet" data-kid-sheet="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}; --kid-ink: {{ \App\Modules\Homework\HomeworkModule::ink($kid['color']) }}" hidden aria-label="{{ $kid['name'] }}’s homework"
+    <section class="kid-sheet" data-kid-sheet="{{ $kid['id'] }}" style="--kid: {{ $kid['color'] }}; --kid-ink: {{ \App\Modules\Homework\HomeworkModule::ink($kid['color']) }}" hidden aria-label="{{ __(':name’s homework', ['name' => $kid['name']]) }}"
       data-lock="{{ route('modules.homework.lock', $kid['id']) }}">
-      <button type="button" class="kid-close" aria-label="Close">
+      <button type="button" class="kid-close" aria-label="{{ __('Close') }}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
-      <div class="kid-body" data-src="{{ route('modules.homework.sheet', $kid['id']) }}"><p class="kz-loading">Loading…</p></div>
+      <div class="kid-body" data-src="{{ route('modules.homework.sheet', $kid['id']) }}"><p class="kz-loading">{{ __('Loading…') }}</p></div>
     </section>
   @endforeach
 </div>
@@ -282,11 +282,11 @@
       var el = body(); if (!el) { return; }
       var url = el.dataset.src + (screen ? '?screen=' + screen : '');
       return fetch(url, { headers: { 'Accept': 'text/html' } }).then(function (r) { return r.text(); }).then(show)
-        .catch(function () { el.innerHTML = '<p class="kz-loading">Couldn’t load. Check the Wi-Fi and try again.</p>'; });
+        .catch(function () { el.innerHTML = '<p class="kz-loading">' + __('Couldn’t load. Check the Wi-Fi and try again.') + '</p>'; });
     }
     function open(id) {
       overlay.querySelectorAll('[data-kid-sheet]').forEach(function (s) { s.hidden = s.dataset.kidSheet !== id; });
-      overlay.hidden = false; body().innerHTML = '<p class="kz-loading">Loading…</p>'; poke(); go();
+      overlay.hidden = false; body().innerHTML = '<p class="kz-loading">' + __('Loading…') + '</p>'; poke(); go();
     }
     /** ✕, Home, a tap outside or 5 minutes without a tap: close and sign the kid out. */
     function close() {
@@ -316,7 +316,7 @@
       if (wait) {
         keys.classList.add('locked'); keys.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
         var left = wait, timer = setInterval(function () {
-          left--; err.textContent = 'Too many tries. Wait ' + left + ' seconds.';
+          left--; err.textContent = __('Too many tries. Wait :n seconds.').replace(':n', left);
           if (left <= 0 || !keys.isConnected) {
             clearInterval(timer); keys.classList.remove('locked'); err.hidden = true;
             keys.querySelectorAll('button').forEach(function (b) { b.disabled = false; }); setPin(p, '');
@@ -344,10 +344,10 @@
         if (r.ok) { return r.text().then(show); }
         return r.json().catch(function () { return {}; }).then(function (j) {
           // A 429 without our own message comes from the route throttle, not a wrong PIN.
-          if (r.status === 429 && !j.error) { return wrong(p, 'Too many tries. Wait a minute.', +(r.headers.get('Retry-After') || 60)); }
-          wrong(p, j.error || 'That’s not the right PIN.', j.wait);
+          if (r.status === 429 && !j.error) { return wrong(p, __('Too many tries. Wait a minute.'), +(r.headers.get('Retry-After') || 60)); }
+          wrong(p, j.error || __('That’s not the right PIN.'), j.wait);
         });
-      }).catch(function () { wrong(p, 'Couldn’t check. Try again.'); })
+      }).catch(function () { wrong(p, __('Couldn’t check. Try again.')); })
         .finally(function () { delete p.dataset.busy; });
     }
 
@@ -355,7 +355,7 @@
     function openParent(btn) {
       var screen = btn.closest('[data-screen]'), p = screen.querySelector('[data-parent]');
       p.dataset.url = btn.dataset.parentOpen;
-      p.querySelector('[data-parent-title]').textContent = btn.dataset.parentTitle || 'Parent check';
+      p.querySelector('[data-parent-title]').textContent = btn.dataset.parentTitle || __('Parent check');
       p.dataset.decision = btn.dataset.parentDecision || 'approve';
       p.querySelector('[data-error]').hidden = true;
       setPin(p, ''); p.hidden = false;
@@ -369,17 +369,17 @@
     }
     function decide(p, decision) {
       if (decision === 'cancel') { p.hidden = true; setPin(p, ''); return; }
-      if (digits(p).length < 4) { wrong(p, 'Type the parent PIN first.'); return; }
+      if (digits(p).length < 4) { wrong(p, __('Type the parent PIN first.')); return; }
       p.dataset.busy = '1';
       post(p.dataset.url, { pin: digits(p), decision: decision }).then(function (r) {
         if (r.ok) { return r.text().then(show); }
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401) { return go(); }
-          if (r.status === 429 && !j.error) { return wrong(p, 'Too many tries. Wait a minute.'); }
+          if (r.status === 429 && !j.error) { return wrong(p, __('Too many tries. Wait a minute.')); }
           if (r.status === 422 && j.error) { p.hidden = true; setPin(p, ''); return showError(p, j.error); }
-          wrong(p, j.error || 'Wrong parent PIN.');
+          wrong(p, j.error || __('Wrong parent PIN.'));
         });
-      }).catch(function () { wrong(p, 'Something went wrong. Try again.'); })
+      }).catch(function () { wrong(p, __('Something went wrong. Try again.')); })
         .finally(function () { delete p.dataset.busy; });
     }
 
@@ -395,7 +395,7 @@
       });
       var sum = screen.querySelector('[data-summary]'), btn = screen.querySelector('[data-print-all]');
       if (!sum) { return; }
-      sum.innerHTML = sheets === 0 ? 'Pick at least one sheet' : '<b>' + sheets + ' ' + (sheets === 1 ? 'sheet' : 'sheets') + '</b> · +' + points + ' points once checked';
+      sum.innerHTML = sheets === 0 ? __('Pick at least one sheet') : '<b>' + sheets + ' ' + (sheets === 1 ? __('sheet') : __('sheets')) + '</b> · ' + __('+:n points once checked').replace(':n', points);
       btn.disabled = sheets === 0 || !!screen.dataset.busy;
     }
     function total(screen) { var t = 0; screen.querySelectorAll('[data-choice]').forEach(function (c) { t += +(c.dataset.count || 0); }); return t; }
@@ -408,18 +408,18 @@
       var btn = screen.querySelector('[data-print-all]'), label = btn.querySelector('[data-print-label]'), err = screen.querySelector('[data-error]'), data = {};
       screen.querySelectorAll('[data-choice]').forEach(function (c) { if (+(c.dataset.count || 0) > 0) { data['counts[' + c.dataset.choice + ']'] = c.dataset.count; } });
       screen.dataset.busy = '1'; btn.disabled = true; btn.classList.add('busy'); err.hidden = true;
-      label.textContent = 'Making your sheets…';
+      label.textContent = __('Making your sheets…');
       post(screen.dataset.print, data).then(function (r) {
         return r.json().then(function (j) {
           if (r.status === 401) { return go(); }
-          if (!r.ok) { throw new Error(j.error || 'Couldn’t print. Try again.'); }
+          if (!r.ok) { throw new Error(j.error || __('Couldn’t print. Try again.')); }
           screen.querySelector('[data-pick]').hidden = true;
           var done = screen.querySelector('[data-done]'); done.hidden = false; done.focus();
         });
       }).catch(function (e) {
-        err.hidden = false; err.textContent = e.message && e.message.indexOf('Failed to fetch') === -1 ? e.message : 'Couldn’t reach the hub. Try again.';
+        err.hidden = false; err.textContent = e.message && e.message.indexOf('Failed to fetch') === -1 ? e.message : __('Couldn’t reach the hub. Try again.');
       }).finally(function () {
-        delete screen.dataset.busy; btn.classList.remove('busy'); label.textContent = 'Print all'; tally(screen);
+        delete screen.dataset.busy; btn.classList.remove('busy'); label.textContent = __('Print all'); tally(screen);
       });
     }
 
@@ -484,7 +484,7 @@
     function say(text) {
       if (cheer.dataset.voice !== '1' || !window.fully || typeof fully.textToSpeech !== 'function') { return; }
       if (document.querySelector('.ytm.playing')) { return; } // never talk over the music
-      try { fully.textToSpeech(text); } catch (e) {}
+      try { fully.textToSpeech(text, window.LOCALE.replace('-', '_')); } catch (e) {}
     }
     function confetti() {
       var c = cheer.querySelector('canvas'), ctx = c.getContext && c.getContext('2d'); if (!ctx) { return; }
@@ -512,15 +512,15 @@
       cheer.querySelector('[data-cheer-face]').innerHTML = kid.photo ? '<img src="' + kid.photo + '" alt="">' : kid.badge;
       var title, note, spoken;
       if (e.kind === 'approved') {
-        title = 'Bravo ' + kid.name + '! +' + e.points + ' ⭐';
-        note = e.sheets === 1 ? 'A parent approved your sheet.' : 'A parent approved ' + e.sheets + ' sheets.';
-        spoken = 'Bravo ' + kid.name + '! ' + e.points + ' points!';
+        title = __('Bravo :name! +:n ⭐').replace(':name', kid.name).replace(':n', e.points);
+        note = e.sheets === 1 ? __('A parent approved your sheet.') : __('A parent approved :n sheets.').replace(':n', e.sheets);
+        spoken = __('Bravo :name! :n points!').replace(':name', kid.name).replace(':n', e.points);
         countUp(cheer.querySelector('[data-cheer-points]'), e.balance - e.points, e.balance);
         confetti();
       } else {
-        title = 'Enjoy, ' + kid.name + '! 🎉';
+        title = __('Enjoy, :name! 🎉').replace(':name', kid.name);
         note = e.name;
-        spoken = 'Enjoy, ' + kid.name + '! ' + e.name + '.';
+        spoken = __('Enjoy, :name!').replace(':name', kid.name) + ' ' + e.name + '.';
         cheer.querySelector('[data-cheer-points]').textContent = e.balance;
       }
       cheer.querySelector('[data-cheer-title]').textContent = title;

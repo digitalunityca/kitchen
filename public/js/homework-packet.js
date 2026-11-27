@@ -1,3 +1,5 @@
+const t = (s) => (typeof window.__ === 'function' ? window.__(s) : s);
+
 window.HomeworkPacket = {
   bind(form) {
     if (!form) return;
@@ -18,34 +20,34 @@ window.HomeworkPacket = {
     async function prepare() {
       if (!form.dataset.generate) return;
 
-      status.textContent = 'Generating worksheets…';
-      await post(form.dataset.generate, 'Couldn’t generate the worksheets.');
+      status.textContent = t('Generating worksheets…');
+      await post(form.dataset.generate, t('Couldn’t generate the worksheets.'));
       delete form.dataset.generate;
       status.textContent = '';
     }
 
     async function print() {
-      status.textContent = 'Sending to the Mac Studio…';
+      status.textContent = t('Sending to the Mac Studio…');
       jobUrl ??= form.action.replace(/[^/]+$/, crypto.randomUUID());
-      await post(jobUrl, 'Couldn’t send the packet to the Mac Studio.');
+      await post(jobUrl, t('Couldn’t send the packet to the Mac Studio.'));
 
       for (let check = 0; check < 20 && form.isConnected; check++) {
         const response = await fetch(jobUrl, {cache: 'no-store', headers});
-        if (!response.ok) throw new Error('Couldn’t check the Mac Studio print status.');
+        if (!response.ok) throw new Error(t('Couldn’t check the Mac Studio print status.'));
 
         const {state} = await response.json();
         if (state === 'sent') {
-          status.textContent = 'Sent to the printer by the Mac Studio.';
+          status.textContent = t('Sent to the printer by the Mac Studio.');
           jobUrl = undefined;
           return;
         }
         if (state === 'failed') {
           jobUrl = undefined;
-          throw new Error('The Mac Studio couldn’t send the packet to the printer.');
+          throw new Error(t('The Mac Studio couldn’t send the packet to the printer.'));
         }
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
-      status.textContent = 'Still waiting for the Mac Studio.';
+      status.textContent = t('Still waiting for the Mac Studio.');
     }
 
     form.addEventListener('submit', async (event) => {
@@ -65,7 +67,7 @@ window.HomeworkPacket = {
 
     if (form.dataset.generate) {
       prepare()
-        .catch(() => { status.textContent = 'Couldn’t generate worksheets. Tap Print all to try again.'; })
+        .catch(() => { status.textContent = t('Couldn’t generate worksheets. Tap Print all to try again.'); })
         .finally(() => { button.disabled = false; });
     }
   }

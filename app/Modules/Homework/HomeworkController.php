@@ -62,7 +62,7 @@ class HomeworkController extends Controller
         ))));
         $this->store->synchronized(fn () => $this->store->putWords($profile['id'], $words));
 
-        return redirect()->route('modules.homework.settings')->with('status', "{$profile['name']}’s word list saved (".count($words).' words).');
+        return redirect()->route('modules.homework.settings')->with('status', __(':name’s word list saved (:n words).', ['name' => $profile['name'], 'n' => count($words)]));
     }
 
     /** GET …/kids-pins: each kid's homework PIN (set or not), behind the settings PIN. */
@@ -81,13 +81,13 @@ class HomeworkController extends Controller
         if ($request->boolean('clear')) {
             $pins->forget($profile['id']);
 
-            return redirect()->route('modules.homework.pins')->with('status', "{$profile['name']}’s PIN is cleared. The parent PIN still opens their homework.");
+            return redirect()->route('modules.homework.pins')->with('status', __(':name’s PIN is cleared. The parent PIN still opens their homework.', ['name' => $profile['name']]));
         }
 
-        $request->validate(['pin' => ['required', 'digits:4']], ['pin.digits' => 'The PIN must be exactly 4 digits.', 'pin.required' => 'Type a 4-digit PIN.']);
+        $request->validate(['pin' => ['required', 'digits:4']], ['pin.digits' => __('The PIN must be exactly 4 digits.'), 'pin.required' => __('Type a 4-digit PIN.')]);
         $pins->put($profile['id'], (string) $request->input('pin'));
 
-        return redirect()->route('modules.homework.pins')->with('status', "{$profile['name']}’s PIN is saved.");
+        return redirect()->route('modules.homework.pins')->with('status', __(':name’s PIN is saved.', ['name' => $profile['name']]));
     }
 
     private function renderWorksheet(string $kid, string $date, string $task, BuildWorksheet $buildWorksheet, bool $answers): View

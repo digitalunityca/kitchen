@@ -7,7 +7,7 @@ namespace Tests\Unit\Actions\Weather;
 use App\Actions\Weather\BuildWeatherSummary;
 use App\Actions\Weather\DescribePrecipitation;
 use App\Actions\Weather\ParseForecast;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ParseForecastTest extends TestCase
 {

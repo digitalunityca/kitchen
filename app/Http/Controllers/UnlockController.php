@@ -49,7 +49,7 @@ class UnlockController extends Controller
             UnlockOutcome::WrongPin => response()->view('access.unlock', [
                 'to' => $to,
                 'enabled' => true,
-                'error' => 'That PIN isn’t right. Try again.',
+                'error' => __('That PIN isn’t right. Try again.'),
             ], 422),
         };
     }

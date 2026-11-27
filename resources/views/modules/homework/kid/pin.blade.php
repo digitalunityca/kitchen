@@ -2,11 +2,11 @@
 <div class="kz kz-pin" data-screen="pin" data-pad data-max="{{ $hasPin ? 4 : 8 }}" data-submit="{{ route('modules.homework.unlock', $kid['id']) }}">
   <div class="kz-pin-who">
     @include('modules.homework.kid._avatar', ['big' => true])
-    <h2>Hi {{ $kid['name'] }}!</h2>
+    <h2>{{ __('Hi :name!', ['name' => $kid['name']]) }}</h2>
     @if ($hasPin)
-      <p>Type your PIN</p>
+      <p>{{ __('Type your PIN') }}</p>
     @else
-      <p>Ask a parent to set your PIN in Settings.<br>A parent can open it now with their PIN.</p>
+      <p>{{ __('Ask a parent to set your PIN in Settings.') }}<br>{{ __('A parent can open it now with their PIN.') }}</p>
     @endif
     <p class="kz-error" role="alert" data-error hidden></p>
   </div>

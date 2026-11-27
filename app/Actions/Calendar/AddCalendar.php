@@ -22,7 +22,7 @@ class AddCalendar
         $url = FetchCalendarFeed::httpUrl($url);
 
         if ($this->fetchCalendarFeed->handle(['name' => $name, 'url' => $url], fresh: true) === null) {
-            throw ValidationException::withMessages(['url' => 'That link didn’t give a calendar. Copy the iCal (.ics) address again and check it is the secret/public one.']);
+            throw ValidationException::withMessages(['url' => __('That link didn’t give a calendar. Copy the iCal (.ics) address again and check it is the secret/public one.')]);
         }
 
         $calendars = $this->store->all();

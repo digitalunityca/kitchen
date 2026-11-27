@@ -67,7 +67,7 @@ class KidController extends Controller
 
         if (! $result['ok']) {
             return response()->json(
-                ['error' => $result['lockedFor'] ? "Too many tries. Wait {$result['lockedFor']} seconds." : 'That’s not the right PIN.', 'wait' => $result['lockedFor']],
+                ['error' => $result['lockedFor'] ? __('Too many tries. Wait :n seconds.', ['n' => $result['lockedFor']]) : __('That’s not the right PIN.'), 'wait' => $result['lockedFor']],
                 $result['lockedFor'] ? 429 : 403,
             );
         }
@@ -203,7 +203,7 @@ class KidController extends Controller
 
         $result = app(AttemptSettingsUnlock::class)->handle(AccessGate::clientIp($request), strlen($pin) <= 12 ? $pin : '');
         if (! $result['ok']) {
-            return response()->json(['pin' => true, 'error' => $result['lockedFor'] ? "Too many tries. Wait {$result['lockedFor']} seconds." : 'Wrong parent PIN.'], 403);
+            return response()->json(['pin' => true, 'error' => $result['lockedFor'] ? __('Too many tries. Wait :n seconds.', ['n' => $result['lockedFor']]) : __('Wrong parent PIN.')], 403);
         }
 
         return null;
@@ -404,11 +404,11 @@ class KidController extends Controller
                 // One short line a kid can act on: how many points are missing, or the rule that blocks it.
                 'why' => match (true) {
                     $state === 'ready', $reach => '',
-                    $state === 'limit' => 'Already taken tonight',
-                    $state === 'after' => 'After the first 2 periods',
-                    $state === 'weekend' => 'Weekends only',
-                    $short > 0 => $short.' more points',
-                    default => 'Once today’s homework is checked',
+                    $state === 'limit' => __('Already taken tonight'),
+                    $state === 'after' => __('After the first 2 periods'),
+                    $state === 'weekend' => __('Weekends only'),
+                    $short > 0 => __(':n more points', ['n' => $short]),
+                    default => __('Once today’s homework is checked'),
                 },
                 'progress' => min(100, (int) round($balance * 100 / max(1, $need))),
                 'blocker' => $state,

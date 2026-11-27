@@ -51,12 +51,12 @@ class CreateRealtimeSession
                     'session' => [
                         'type' => 'realtime',
                         'model' => $this->settings->model,
-                        'instructions' => $this->buildAssistantInstructions->handle($this->settings->location, $this->settings->familySafe),
+                        'instructions' => $this->buildAssistantInstructions->handle($this->settings->location, $this->settings->familySafe, app()->getLocale()),
                         'tools' => [self::weatherTool(), self::searchTool()],
                         'tool_choice' => 'auto',
                         'audio' => [
                             'input' => [
-                                'transcription' => ['model' => 'gpt-4o-mini-transcribe'],
+                                'transcription' => array_filter(['model' => 'gpt-4o-mini-transcribe', 'language' => str_starts_with(app()->getLocale(), 'fr') ? 'fr' : null]),
                                 'noise_reduction' => ['type' => 'far_field'],
                                 'turn_detection' => ['type' => 'server_vad', 'silence_duration_ms' => 600],
                             ],

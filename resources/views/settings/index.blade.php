@@ -1,5 +1,5 @@
 @extends('settings.layout')
-@section('title', 'Settings')
+@section('title', __('Settings'))
 @push('head')
 <style>
   .item { display: flex; align-items: center; gap: 14px; padding: 16px 4px; border-top: 1px solid var(--line); text-decoration: none; color: var(--text); }
@@ -14,16 +14,16 @@
 @endpush
 @section('content')
   <div>
-    <p class="eyebrow">Kitchen hub</p>
-    <h1>Settings</h1>
+    <p class="eyebrow">{{ __('Kitchen hub') }}</p>
+    <h1>{{ __('Settings') }}</h1>
   </div>
   <div class="card">
     @foreach ($sections as $key => [$title, $hint, $route])
-      <a class="item" href="{{ route($route) }}"><span>{{ ['calendar' => '📅', 'homework' => '📚', 'kids' => '🧒'][$key] ?? '⚙️' }}</span><span><b>{{ $title }}</b><small>{{ $hint }}</small></span></a>
+      <a class="item" href="{{ route($route) }}"><span>{{ ['calendar' => '📅', 'homework' => '📚', 'kids' => '🧒'][$key] ?? '⚙️' }}</span><span><b>{{ __($title) }}</b><small>{{ __($hint) }}</small></span></a>
     @endforeach
   </div>
   <div class="row-actions">
-    <a class="ghost" href="{{ route('dashboard') }}">⌂ Home</a>
-    <form method="post" action="{{ route('settings.lock') }}">@csrf<button class="ghost">🔒 Lock settings</button></form>
+    <a class="ghost" href="{{ route('dashboard') }}">⌂ {{ __('Home') }}</a>
+    <form method="post" action="{{ route('settings.lock') }}">@csrf<button class="ghost">🔒 {{ __('Lock settings') }}</button></form>
   </div>
 @endsection

@@ -14,7 +14,7 @@ class BuildWeatherSummary
     public function handle(array $forecast): string
     {
         $line = WeatherCodes::emoji($forecast['icon']).' '.WeatherFormat::deg($forecast['temp']).' '.$forecast['label']
-            .' · H '.WeatherFormat::deg($forecast['high']).' L '.WeatherFormat::deg($forecast['low']);
+            .' · '.__('weather.high').' '.WeatherFormat::deg($forecast['high']).' '.__('weather.low').' '.WeatherFormat::deg($forecast['low']);
 
         if (! $forecast['precip']) {
             return $line;

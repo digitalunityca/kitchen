@@ -1,13 +1,13 @@
-<section class="card cal" aria-label="Calendar" id="cal" data-events="{{ route('modules.calendar.events') }}" data-card="{{ route('modules.calendar.card') }}">
+<section class="card cal" aria-label="{{ __('Calendar') }}" id="cal" data-events="{{ route('modules.calendar.events') }}" data-card="{{ route('modules.calendar.card') }}">
   <div class="row">
-    <button type="button" class="label cal-month" id="cal-month" aria-label="Open the month view"></button>
+    <button type="button" class="label cal-month" id="cal-month" aria-label="{{ __('Open the month view') }}"></button>
     <span class="row" style="gap:8px">
-      @if ($sample)<a class="pill" href="{{ route('modules.calendar.settings') }}">Sample data</a>@endif
+      @if ($sample)<a class="pill" href="{{ route('modules.calendar.settings') }}">{{ __('Sample data') }}</a>@endif
       <span class="cal-pick">
-        <button type="button" class="cal-pick-btn" id="cal-pick" aria-haspopup="true" aria-expanded="false" aria-label="Choose calendars to show"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <button type="button" class="cal-pick-btn" id="cal-pick" aria-haspopup="true" aria-expanded="false" aria-label="{{ __('Choose calendars to show') }}"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
         <span class="cal-menu" id="cal-menu" hidden role="menu"></span>
       </span>
-      <button type="button" class="cal-icon-btn" id="cal-open" aria-label="Open the month view">
+      <button type="button" class="cal-icon-btn" id="cal-open" aria-label="{{ __('Open the month view') }}">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3M7.5 13.5h3M7.5 17h6"/></svg>
       </button>
     </span>
@@ -21,36 +21,36 @@
 {{-- Reminder banner, shown at the top of the screen at an event's reminder time. --}}
 <div class="cal-reminder" id="cal-reminder" hidden role="alert"></div>
 
-<div class="calx-overlay" id="calx-overlay" hidden role="dialog" aria-modal="true" aria-label="Calendar">
+<div class="calx-overlay" id="calx-overlay" hidden role="dialog" aria-modal="true" aria-label="{{ __('Calendar') }}">
   <div class="calx-sheet">
     <header class="calx-head">
       <label class="calx-search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" id="calx-q" placeholder="Search events" autocomplete="off" aria-label="Search events">
-        <button type="button" id="calx-clear" hidden aria-label="Clear search">✕</button>
+        <input type="search" id="calx-q" placeholder="{{ __('Search events') }}" autocomplete="off" aria-label="{{ __('Search events') }}">
+        <button type="button" id="calx-clear" hidden aria-label="{{ __('Clear search') }}">✕</button>
       </label>
       <span class="calx-spacer"></span>
       <span class="cal-pick">
-        <button type="button" class="cal-pick-btn" id="calx-pick" aria-haspopup="true" aria-expanded="false" aria-label="Choose calendars to show"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><span class="pick-label">Calendars</span></button>
+        <button type="button" class="cal-pick-btn" id="calx-pick" aria-haspopup="true" aria-expanded="false" aria-label="{{ __('Choose calendars to show') }}"><svg class="pick-lines" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><svg class="pick-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><span class="pick-label">Calendars</span></button>
         <span class="cal-menu" id="calx-menu" hidden role="menu"></span>
       </span>
-      <a class="calx-settings" href="{{ route('modules.calendar.settings') }}">Calendars…</a>
-      <button type="button" class="calx-close" id="calx-close" aria-label="Close">
+      <a class="calx-settings" href="{{ route('modules.calendar.settings') }}">{{ __('Calendars…') }}</a>
+      <button type="button" class="calx-close" id="calx-close" aria-label="{{ __('Close') }}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
-    <p class="calx-sample" id="calx-sample" hidden>Sample events. <a href="{{ route('modules.calendar.settings') }}">Add your calendars</a> to see your own.</p>
+    <p class="calx-sample" id="calx-sample" hidden>{{ __('Sample events.') }} <a href="{{ route('modules.calendar.settings') }}">{{ __('Add your calendars') }}</a> {{ __('to see your own.') }}</p>
     <div class="calx-main">
-      <section class="calx-month" aria-label="Month">
+      <section class="calx-month" aria-label="{{ __('Month') }}">
         <div class="calx-month-head">
-          <button type="button" class="calx-nav" id="calx-prev" aria-label="Previous month">‹</button>
+          <button type="button" class="calx-nav" id="calx-prev" aria-label="{{ __('Previous month') }}">‹</button>
           <h2 id="calx-month-title"></h2>
-          <button type="button" class="calx-nav" id="calx-next" aria-label="Next month">›</button>
-          <button type="button" class="calx-today" id="calx-today">Today</button>
+          <button type="button" class="calx-nav" id="calx-next" aria-label="{{ __('Next month') }}">›</button>
+          <button type="button" class="calx-today" id="calx-today">{{ __('Today') }}</button>
         </div>
         <div class="calx-grid" id="calx-grid"></div>
       </section>
-      <section class="calx-side" id="calx-side" aria-live="polite"><p class="cal-none">Loading…</p></section>
+      <section class="calx-side" id="calx-side" aria-live="polite"><p class="cal-none">{{ __('Loading…') }}</p></section>
     </div>
   </div>
 </div>
@@ -187,8 +187,8 @@
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function parse(s) { var p = s.split(/[-T:]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0); }
     function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-    function clock(d) { var h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); }
-    function timeLabel(ev) { if (ev.allDay) return 'All day'; var s = parse(ev.start), e = parse(ev.end); return clock(s) + (e > s ? ' – ' + clock(e) : ''); }
+    function clock(d) { return window.hm(d); }
+    function timeLabel(ev) { if (ev.allDay) return __('All day'); var s = parse(ev.start), e = parse(ev.end); return clock(s) + (e > s ? ' – ' + clock(e) : ''); }
     /** "past" once a timed event ends or an all-day event's last day is over; "now" while a timed event runs. */
     function phase(ev) {
       var now = new Date(), s = parse(ev.start), e = parse(ev.end);
@@ -199,7 +199,7 @@
     function title(ev) { return (ev.icon ? ev.icon + ' ' : '') + ev.title; }
     /** The leading column: the calendar's icon spanning both lines, or its colour dot. */
     function lead(ev) { return '<span class="ev-lead">' + (ev.icon ? '<span class="ev-icon">' + esc(ev.icon) + '</span>' : '<span class="ev-dot"></span>') + '</span>'; }
-    function badge(ev) { return phase(ev) === 'now' ? '<em class="cal-now">Now</em>' : ''; }
+    function badge(ev) { return phase(ev) === 'now' ? '<em class="cal-now">' + __('Now') + '</em>' : ''; }
     function hidden(list) {
       try { if (list === undefined) return JSON.parse(localStorage.getItem('calendar-hidden') || '[]'); localStorage.setItem('calendar-hidden', JSON.stringify(list)); } catch (e) { return []; }
       document.dispatchEvent(new CustomEvent('calendar:filter'));
@@ -236,9 +236,9 @@
     function renderWeeks() {
       var start = U.parse(data.weekStart), end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 13);
       var spans = end.getMonth() !== start.getMonth(), fmt = { month: spans ? 'short' : 'long' };
-      var label = start.toLocaleDateString('en-CA', fmt).replace('.', '') + (spans ? ' – ' + end.toLocaleDateString('en-CA', fmt).replace('.', '') : '') + ' ' + end.getFullYear();
+      var label = start.toLocaleDateString(window.LOCALE, fmt).replace('.', '') + (spans ? ' – ' + end.toLocaleDateString(window.LOCALE, fmt).replace('.', '') : '') + ' ' + end.getFullYear();
       document.getElementById('cal-month').textContent = label;
-      var html = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<span class="dow">' + x + '</span>'; }).join('');
+      var html = (window.LOCALE === 'fr-CA' ? ['D', 'L', 'M', 'M', 'J', 'V', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (x) { return '<span class="dow">' + x + '</span>'; }).join('');
       for (var i = 0; i < 14; i++) {
         var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), key = U.ymd(d), colors = [];
         (byDay[key] || []).forEach(function (ev) { if (on(ev) && colors.indexOf(ev.color) < 0 && colors.length < 4) colors.push(ev.color); });
@@ -249,21 +249,21 @@
     }
     function row(ev, withDate) {
       var loc = ev.location ? ' · ' + ev.location.split(',')[0] : '';
-      var date = withDate ? U.parse(ev.start).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }).replace(/\./g, '') + ' · ' : '';
+      var date = withDate ? U.parse(ev.start).toLocaleDateString(window.LOCALE, { weekday: 'short', month: 'short', day: 'numeric' }).replace(/\./g, '') + ' · ' : '';
       return '<button type="button" class="ev ' + U.phase(ev) + '" data-event="' + U.esc(ev.id) + '" data-day="' + U.esc(ev.days[0] || '') + '" style="--c:' + U.esc(ev.color) + '">' + U.lead(ev) + '<div><b>' + U.esc(ev.title) + U.badge(ev) + '</b><small>' + U.esc(date + U.timeLabel(ev) + loc) + '</small></div></button>';
     }
     function section(title, events, extra) {
-      return '<p class="cal-day">' + title + (extra || '') + '</p>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">Nothing planned</p>');
+      return '<p class="cal-day">' + title + (extra || '') + '</p>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">' + __('Nothing planned') + '</p>');
     }
     function renderList() {
       var html;
       if (selected) {
         var d = U.parse(selected);
-        html = section(U.esc(d.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })), (byDay[selected] || []).filter(on), '<button type="button" class="cal-back" id="cal-back">Back to today</button>');
+        html = section(U.esc(d.toLocaleDateString(window.LOCALE, { weekday: 'long', month: 'long', day: 'numeric' })), (byDay[selected] || []).filter(on), '<button type="button" class="cal-back" id="cal-back">' + __('Back to today') + '</button>');
       } else {
-        html = section('Today', (byDay[data.today] || []).filter(on)) + section('Tomorrow', (byDay[add(1)] || []).filter(on));
+        html = section(__('Today'), (byDay[data.today] || []).filter(on)) + section(__('Tomorrow'), (byDay[add(1)] || []).filter(on));
         var next = data.next.filter(on).sort(function (a, b) { return a.start < b.start ? -1 : 1; })[0];
-        if (next) html += '<p class="cal-day">Next</p>' + row(next, true);
+        if (next) html += '<p class="cal-day">' + __('Next up') + '</p>' + row(next, true);
       }
       list.innerHTML = html;
       // Never fade or cut an event: drop rows that don't fit and offer "+N more".
@@ -278,7 +278,7 @@
       var off = U.hidden();
       menu.innerHTML = data.calendars.map(function (c) {
         return '<label><input type="checkbox" data-cal="' + U.esc(c.id) + '"' + (off.indexOf(c.id) < 0 ? ' checked' : '') + '><i style="background:' + U.esc(c.color) + '"></i>' + U.esc((c.icon ? c.icon + ' ' : '') + c.name) + '</label>';
-      }).join('') || '<label>No calendars yet</label>';
+      }).join('') || '<label>' + __('No calendars yet') + '</label>';
     }
     function render() { renderWeeks(); renderList(); }
     function openMonth(eventId, day) { if (window.CalendarSheet) CalendarSheet.open(eventId || null, day || selected || data.today); }
@@ -332,21 +332,21 @@
       } catch (e) {}
     }
     function say(text) {
-      if (window.fully && typeof fully.textToSpeech === 'function') { try { fully.textToSpeech(text); return; } catch (e) {} }
-      if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(text); u.lang = 'en-CA'; speechSynthesis.speak(u); }
+      if (window.fully && typeof fully.textToSpeech === 'function') { try { fully.textToSpeech(text, window.LOCALE.replace('-', '_')); return; } catch (e) {} }
+      if (window.speechSynthesis) { var u = new SpeechSynthesisUtterance(text); u.lang = window.LOCALE; speechSynthesis.speak(u); }
     }
     function remind(ev) {
       var start = U.parse(ev.start), mins = Math.max(1, Math.round((start - new Date()) / 60000));
-      var when = mins >= 120 ? U.timeLabel(ev) : 'In ' + mins + ' min';
+      var when = mins >= 120 ? U.timeLabel(ev) : __('In :n min').replace(':n', mins);
       showing = ev;
       banner.style.setProperty('--c', ev.color);
       banner.innerHTML = U.lead(ev) + '<div class="cal-reminder-text"><small>' + U.esc(when) + '</small><b>' + U.esc(ev.title) + '</b><span>' +
-        U.esc(start.toLocaleDateString('en-CA', { weekday: 'short' }).replace('.', '') + ' ' + U.clock(start) + (ev.location ? ' · ' + ev.location.split(',')[0] : '')) + '</span></div>' +
-        '<button type="button" aria-label="Dismiss">✕</button>';
+        U.esc(start.toLocaleDateString(window.LOCALE, { weekday: 'short' }).replace('.', '') + ' ' + U.clock(start) + (ev.location ? ' · ' + ev.location.split(',')[0] : '')) + '</span></div>' +
+        '<button type="button" aria-label="' + __('Dismiss') + '">✕</button>';
       banner.hidden = false;
       document.dispatchEvent(new CustomEvent('dashboard:duck'));
       chime();
-      var text = ev.title + ', ' + (mins >= 120 ? 'at ' + U.clock(start) : 'in ' + mins + ' minutes') + (ev.location ? ', at ' + ev.location.split(',')[0] : '');
+      var text = ev.title + ', ' + (mins >= 120 ? __('at :time').replace(':time', U.clock(start)) : __('in :n minutes').replace(':n', mins)) + (ev.location ? ', ' + __('at :place').replace(':place', ev.location.split(',')[0]) : '');
       if (ev.speak) setTimeout(function () { say(text); }, 900);
       setTimeout(function () { document.dispatchEvent(new CustomEvent('dashboard:unduck')); }, ev.speak ? 1500 + text.length * 80 : 1500);
     }
@@ -380,7 +380,7 @@
     var card = document.getElementById('cal'), overlay = document.getElementById('calx-overlay'), side = document.getElementById('calx-side');
     var q = document.getElementById('calx-q'), clear = document.getElementById('calx-clear');
     var data = null, byDay = {}, month = null, selected = null, idleTimer = 0, detailFrom = null;
-    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var MONTHS = window.LOCALE === 'fr-CA' ? ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'] : ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function fold(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
@@ -388,17 +388,17 @@
     function on(ev) { return hidden().indexOf(ev.calendarId) < 0; }
     function parse(s) { var p = s.split(/[-T:]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0); }
     function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-    function clock(d) { var h = d.getHours(); return (h % 12 || 12) + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); }
-    function longDate(d) { return d.toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' }); }
+    function clock(d) { return window.hm(d); }
+    function longDate(d) { var t = d.toLocaleDateString(window.LOCALE, { weekday: 'long', month: 'long', day: 'numeric' }); return t.charAt(0).toUpperCase() + t.slice(1); }
     function timeLabel(ev) {
-      if (ev.allDay) return 'All day';
+      if (ev.allDay) return __('All day');
       var s = parse(ev.start), e = parse(ev.end);
       return clock(s) + (e > s ? ' – ' + clock(e) : '');
     }
     function dayLabel(key) {
-      if (key === data.today) return 'Today';
+      if (key === data.today) return __('Today');
       var t = parse(data.today); t.setDate(t.getDate() + 1);
-      return key === ymd(t) ? 'Tomorrow' : longDate(parse(key));
+      return key === ymd(t) ? __('Tomorrow') : longDate(parse(key));
     }
     function mark(text, term) {
       var safe = esc(text); if (!term) return safe;
@@ -417,12 +417,12 @@
       var off = hidden(), menuEl = document.getElementById('calx-menu');
       menuEl.innerHTML = data.calendars.map(function (c) {
         return '<label><input type="checkbox" data-cal="' + esc(c.id) + '"' + (off.indexOf(c.id) < 0 ? ' checked' : '') + '><i style="background:' + esc(c.color) + '"></i>' + esc((c.icon ? c.icon + ' ' : '') + c.name) + '</label>';
-      }).join('') || '<label>No calendars yet</label>';
+      }).join('') || '<label>' + __('No calendars yet') + '</label>';
     }
     function renderMonth() {
       var y = month.getFullYear(), m = month.getMonth();
       document.getElementById('calx-month-title').textContent = MONTHS[m] + ' ' + y;
-      var html = ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (d) { return '<span class="calx-dow">' + d + '</span>'; }).join('');
+      var html = (window.LOCALE === 'fr-CA' ? ['D', 'L', 'M', 'M', 'J', 'V', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (d) { return '<span class="calx-dow">' + d + '</span>'; }).join('');
       var start = new Date(y, m, 1 - new Date(y, m, 1).getDay()); // weeks start on Sunday
       for (var i = 0; i < 42; i++) {
         var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), key = ymd(d);
@@ -437,7 +437,7 @@
     function renderDay() {
       detailFrom = 'day';
       var events = (byDay[selected] || []).filter(on);
-      side.innerHTML = '<h3>' + esc(dayLabel(selected)) + '</h3>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">Nothing planned</p>');
+      side.innerHTML = '<h3>' + esc(dayLabel(selected)) + '</h3>' + (events.length ? events.map(function (ev) { return row(ev); }).join('') : '<p class="cal-none">' + __('Nothing planned') + '</p>');
     }
     function renderSearch() {
       detailFrom = 'search';
@@ -450,27 +450,27 @@
         var key = ev.start.slice(0, 10); (groups[key] = groups[key] || []).push(ev); count++;
       });
       var keys = Object.keys(groups).sort();
-      side.innerHTML = '<h3>' + count + (count === 1 ? ' result' : ' results') + '</h3>' + (keys.length ? keys.map(function (k) {
+      side.innerHTML = '<h3>' + count + ' ' + (count === 1 ? __('result') : __('results')) + '</h3>' + (keys.length ? keys.map(function (k) {
         return '<h4>' + esc(dayLabel(k)) + '</h4>' + groups[k].map(function (ev) { return row(ev, term); }).join('');
-      }).join('') : '<p class="cal-none">No events match.</p>');
+      }).join('') : '<p class="cal-none">' + __('No events match.') + '</p>');
     }
     function renderDetail(id) {
       var ev = data.events.filter(function (e) { return e.id === id; })[0]; if (!ev) return;
       var s = parse(ev.start), e = parse(ev.end), when;
-      if (ev.allDay) { var last = new Date(e.getFullYear(), e.getMonth(), e.getDate() - 1); when = longDate(s) + (ymd(last) !== ymd(s) ? ' – ' + longDate(last) : '') + ' · All day'; }
+      if (ev.allDay) { var last = new Date(e.getFullYear(), e.getMonth(), e.getDate() - 1); when = longDate(s) + (ymd(last) !== ymd(s) ? ' – ' + longDate(last) : '') + ' · ' + __('All day'); }
       else when = longDate(s) + ' · ' + clock(s) + ' – ' + (ymd(s) === ymd(e) ? clock(e) : longDate(e) + ' · ' + clock(e));
-      side.innerHTML = '<div class="calx-detail-head"><button type="button" class="calx-back" id="calx-back" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>' +
+      side.innerHTML = '<div class="calx-detail-head"><button type="button" class="calx-back" id="calx-back" aria-label="' + __('Back') + '"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button></div>' +
         '<article class="calx-detail" style="--c:' + esc(ev.color) + '"><h2>' + esc(window.CalendarUi.title(ev)) + '</h2><p class="calx-meta">' + esc(ev.calendar) + '</p><dl>' +
-        '<dt>When</dt><dd>' + esc(when) + '</dd>' +
-        (ev.location ? '<dt>Where</dt><dd>📍 ' + esc(ev.location) + '</dd>' : '') +
-        (ev.notes ? '<dt>Notes</dt><dd>' + esc(ev.notes) + '</dd>' : '') +
-        (ev.organizer ? '<dt>Organizer</dt><dd>' + esc(ev.organizer) + '</dd>' : '') +
-        (ev.attendees.length ? '<dt>Guests</dt><dd>' + esc(ev.attendees.join(', ')) + '</dd>' : '') +
-        (ev.url ? '<dt>Link</dt><dd class="calx-url">' + esc(ev.url) + '</dd>' : '') +
-        (ev.remind ? '<dt>Reminder</dt><dd>' + esc(remindLabel(ev.remind)) + ' before' + (ev.speak ? ', spoken' : '') + '</dd>' : '') + '</dl></article>';
+        '<dt>' + __('When') + '</dt><dd>' + esc(when) + '</dd>' +
+        (ev.location ? '<dt>' + __('Where') + '</dt><dd>📍 ' + esc(ev.location) + '</dd>' : '') +
+        (ev.notes ? '<dt>' + __('Notes') + '</dt><dd>' + esc(ev.notes) + '</dd>' : '') +
+        (ev.organizer ? '<dt>' + __('Organizer') + '</dt><dd>' + esc(ev.organizer) + '</dd>' : '') +
+        (ev.attendees.length ? '<dt>' + __('Guests') + '</dt><dd>' + esc(ev.attendees.join(', ')) + '</dd>' : '') +
+        (ev.url ? '<dt>' + __('Link') + '</dt><dd class="calx-url">' + esc(ev.url) + '</dd>' : '') +
+        (ev.remind ? '<dt>' + __('Reminder') + '</dt><dd>' + esc(__(':time before').replace(':time', remindLabel(ev.remind))) + (ev.speak ? ', ' + __('spoken') : '') + '</dd>' : '') + '</dl></article>';
       side.scrollTop = 0;
     }
-    function remindLabel(m) { return m >= 1440 ? (m / 1440) + (m === 1440 ? ' day' : ' days') : m >= 60 ? (m / 60) + (m === 60 ? ' hour' : ' hours') : m + ' minutes'; }
+    function remindLabel(m) { return m >= 1440 ? (m / 1440) + ' ' + (m === 1440 ? __('day') : __('days')) : m >= 60 ? (m / 60) + ' ' + (m === 60 ? __('hour') : __('hours')) : m + ' ' + __('minutes'); }
     function back() { if (detailFrom === 'search' && q.value.trim()) renderSearch(); else renderDay(); }
     function select(key) {
       selected = key; var d = parse(key);
@@ -479,7 +479,7 @@
     }
     function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(close, 2 * 60 * 1000); }
     function open(eventId, day) {
-      overlay.hidden = false; resetIdle(); side.innerHTML = '<p class="cal-none">Loading…</p>';
+      overlay.hidden = false; resetIdle(); side.innerHTML = '<p class="cal-none">' + __('Loading…') + '</p>';
       fetch(card.dataset.events, { cache: 'no-store', headers: { Accept: 'application/json' } })
         .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function (d) {
@@ -493,7 +493,7 @@
           select(start);
           if (target) renderDetail(target.id);
         })
-        .catch(function () { side.innerHTML = '<p class="cal-none">Can’t load the calendars right now.</p>'; });
+        .catch(function () { side.innerHTML = '<p class="cal-none">' + __('Can’t load the calendars right now.') + '</p>'; });
     }
     function close() { overlay.hidden = true; clearTimeout(idleTimer); q.blur(); }
     function shiftMonth(n) {

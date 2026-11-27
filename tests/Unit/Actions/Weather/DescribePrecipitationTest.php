@@ -6,7 +6,7 @@ namespace Tests\Unit\Actions\Weather;
 
 use App\Actions\Weather\DescribePrecipitation;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class DescribePrecipitationTest extends TestCase
 {

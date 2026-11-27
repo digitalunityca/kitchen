@@ -3,7 +3,7 @@
   <template id="habs-face-html">@if ($today)@include('modules.habs.face', ['item' => $today])@endif</template>
 </div>
 
-<div class="habs-overlay" id="habs-overlay" hidden role="dialog" aria-modal="true" aria-label="Canadiens scores and stats">
+<div class="habs-overlay" id="habs-overlay" hidden role="dialog" aria-modal="true" aria-label="{{ __('Canadiens scores and stats') }}">
   <div class="habs-sheet">
     <header class="habs-sheet-head">
       <span class="habs-sheet-title">
@@ -11,16 +11,16 @@
         <img class="habs-logo-dark" src="https://assets.nhle.com/logos/nhl/svg/MTL_dark.svg" alt="" width="40" height="40">
         Canadiens
       </span>
-      <button type="button" class="habs-close" id="habs-close" aria-label="Close">
+      <button type="button" class="habs-close" id="habs-close" aria-label="{{ __('Close') }}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
-    <div class="habs-sheet-body" id="habs-sheet-body"><div class="habs-loading" role="status" aria-label="Loading"><span></span></div></div>
+    <div class="habs-sheet-body" id="habs-sheet-body"><div class="habs-loading" role="status" aria-label="{{ __('Loading') }}"><span></span></div></div>
   </div>
 </div>
 
 @push('menu-items')
-<button type="button" class="habs-open menu-button" id="habs-open" aria-label="Canadiens scores and stats">
+<button type="button" class="habs-open menu-button" id="habs-open" aria-label="{{ __('Canadiens scores and stats') }}">
   <img class="habs-logo-light" src="https://assets.nhle.com/logos/nhl/svg/MTL_light.svg" alt="" width="36" height="36">
   <img class="habs-logo-dark" src="https://assets.nhle.com/logos/nhl/svg/MTL_dark.svg" alt="" width="36" height="36">
 </button>
@@ -201,11 +201,11 @@
   function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(close, IDLE_MS); }
   function open() {
     overlay.hidden = false; resetIdle();
-    body.innerHTML = '<div class="habs-loading" role="status" aria-label="Loading"><span></span></div>';
+    body.innerHTML = '<div class="habs-loading" role="status" aria-label="' + __('Loading') + '"><span></span></div>';
     fetch(root.dataset.sheet, { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (html) { body.innerHTML = html; setupTabs(); })
-      .catch(function () { body.innerHTML = '<p class="habs-empty">Can’t reach the NHL right now.</p>'; });
+      .catch(function () { body.innerHTML = '<p class="habs-empty">' + __('Can’t reach the NHL right now.') + '</p>'; });
   }
   function close() { overlay.hidden = true; clearTimeout(idleTimer); }
 

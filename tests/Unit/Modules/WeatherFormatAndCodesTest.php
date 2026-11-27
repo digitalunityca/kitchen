@@ -6,7 +6,7 @@ namespace Tests\Unit\Modules;
 
 use App\Modules\Weather\WeatherCodes;
 use App\Modules\Weather\WeatherFormat;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class WeatherFormatAndCodesTest extends TestCase
 {

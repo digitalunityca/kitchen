@@ -36,10 +36,10 @@ class PrintHomework
     {
         $counts = array_filter($counts, fn (int $count): bool => $count > 0);
         if ($counts === []) {
-            throw ValidationException::withMessages(['print' => 'Pick some homework first.']);
+            throw ValidationException::withMessages(['print' => __('Pick some homework first.')]);
         }
         if (! $this->queueWorksheetPrint->available()) {
-            throw ValidationException::withMessages(['print' => 'The printer isn’t reachable right now. Ask a parent.']);
+            throw ValidationException::withMessages(['print' => __('The printer isn’t reachable right now. Ask a parent.')]);
         }
 
         $date = $today->toDateString();
@@ -49,7 +49,7 @@ class PrintHomework
 
         try {
             if (! $this->generateWorksheetPacket->handle($kid, $date, $picked)) {
-                throw ValidationException::withMessages(['print' => 'Your sheets are already being made. Try again in a minute.']);
+                throw ValidationException::withMessages(['print' => __('Your sheets are already being made. Try again in a minute.')]);
             }
 
             $this->store->numberSheets();

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Actions\Weather;
 
 use App\Actions\Weather\BuildWeatherSummary;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class BuildWeatherSummaryTest extends TestCase
 {

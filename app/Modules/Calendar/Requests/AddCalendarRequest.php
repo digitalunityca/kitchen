@@ -26,6 +26,6 @@ class AddCalendarRequest extends FormRequest
     /** @return array<string, string> */
     public function messages(): array
     {
-        return ['url.regex' => 'Paste the full iCal link, starting with https:// or webcal://.'];
+        return ['url.regex' => __('Paste the full iCal link, starting with https:// or webcal://.')];
     }
 }

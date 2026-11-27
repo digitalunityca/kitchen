@@ -1,10 +1,10 @@
 {{-- Volume slider for the side menu: drag or tap anywhere in the column; the speaker mutes. --}}
 <div class="vol" id="vol" data-default="{{ $default }}">
-  <div class="vol-slider" id="vol-slider" role="slider" aria-label="Volume" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $default }}" tabindex="0">
+  <div class="vol-slider" id="vol-slider" role="slider" aria-label="{{ __('Volume') }}" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $default }}" tabindex="0">
     <div class="vol-track"><i id="vol-fill"></i></div>
     <span class="vol-thumb" aria-hidden="true"></span>
   </div>
-  <button type="button" class="vol-mute" id="vol-mute" aria-label="Mute">
+  <button type="button" class="vol-mute" id="vol-mute" aria-label="{{ __('Mute') }}">
     <svg class="i-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
     <svg class="i-off" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path d="m16 9 6 6M22 9l-6 6"/></svg>
   </button>
@@ -55,7 +55,7 @@
     slider.style.setProperty('--level', String(v / 100));
     slider.setAttribute('aria-valuenow', String(v));
     root.classList.toggle('muted', v === 0);
-    document.getElementById('vol-mute').setAttribute('aria-label', v === 0 ? 'Unmute' : 'Mute');
+    document.getElementById('vol-mute').setAttribute('aria-label', v === 0 ? __('Unmute') : __('Mute'));
   }
   /** Set the loudness: the tablet's media volume through Fully, else the YouTube player. */
   function apply(v) {

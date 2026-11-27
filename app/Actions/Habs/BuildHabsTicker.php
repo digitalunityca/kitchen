@@ -29,7 +29,7 @@ class BuildHabsTicker
         $items = array_map(function (array $item) use ($isDemo): array {
             $game = $item['game'];
             $item['status'] = match ($item['kind']) {
-                'final' => 'Final'.($game['lastPeriodType'] && $game['lastPeriodType'] !== 'REG' ? '/'.$game['lastPeriodType'] : ''),
+                'final' => __('Final').($game['lastPeriodType'] && $game['lastPeriodType'] !== 'REG' ? '/'.$game['lastPeriodType'] : ''),
                 'live' => $this->liveStatus($game, $isDemo),
                 default => null,
             };
@@ -48,7 +48,7 @@ class BuildHabsTicker
         $details = $isDemo ? ['clock' => '12:34', 'intermission' => false] : $this->fetchGameDetails->handle($game['id'], true);
 
         if ($details && $details['intermission']) {
-            return $period.' intermission';
+            return $period.' '.__('intermission');
         }
 
         return $details && $details['clock'] ? $period.' · '.$details['clock'] : $period;

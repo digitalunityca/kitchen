@@ -1,5 +1,5 @@
 @extends('settings.layout')
-@section('title', 'Settings')
+@section('title', __('Settings'))
 @push('head')
 <style>
   .pin { align-items: center; gap: 18px; padding: 28px; }
@@ -15,24 +15,24 @@
 @endpush
 @section('content')
   <div>
-    <p class="eyebrow">Kitchen hub</p>
-    <h1>Settings</h1>
+    <p class="eyebrow">{{ __('Kitchen hub') }}</p>
+    <h1>{{ __('Settings') }}</h1>
   </div>
   <form class="card pin" method="post" action="{{ route('settings.unlock.store') }}" id="pin-form">
     @csrf
     <input type="hidden" name="to" value="{{ $to }}">
     <input type="hidden" name="pin" id="pin" value="">
-    <p class="hint">Enter the PIN</p>
+    <p class="hint">{{ __('Enter the PIN') }}</p>
     <div class="dots" id="dots"></div>
     <p class="err">{{ $error ?? '' }}</p>
     <div class="keys" id="keys">
       @foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $n)<button type="button" data-k="{{ $n }}">{{ $n }}</button>@endforeach
-      <button type="button" data-k="back" aria-label="Delete">⌫</button>
+      <button type="button" data-k="back" aria-label="{{ __('Delete') }}">⌫</button>
       <button type="button" data-k="0">0</button>
-      <button type="submit" aria-label="Unlock">→</button>
+      <button type="submit" aria-label="{{ __('Unlock') }}">→</button>
     </div>
   </form>
-  <p><a href="{{ route('dashboard') }}">← Back to the dashboard</a></p>
+  <p><a href="{{ route('dashboard') }}">← {{ __('Back to the dashboard') }}</a></p>
   <script>
     (function () {
       var pin = document.getElementById('pin'), dots = document.getElementById('dots');

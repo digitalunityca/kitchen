@@ -27,7 +27,7 @@ class WeatherCodes
 
     public static function label(int $code): string
     {
-        return self::LABELS[$code] ?? 'Cloudy';
+        return __(self::LABELS[$code] ?? 'Cloudy');
     }
 
     public static function isSnow(int $code): bool

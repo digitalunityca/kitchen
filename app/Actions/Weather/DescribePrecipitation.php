@@ -46,13 +46,13 @@ class DescribePrecipitation
         $icon = strtolower($word);
 
         if ($start === $thisHour) {
-            return [$end ? "$word likely until ".WeatherFormat::hourLabel($end) : "$word likely today", $icon];
+            return [$end ? __(':word likely until :time', ['word' => __($word), 'time' => WeatherFormat::hourLabel($end)]) : __(':word likely today', ['word' => __($word)]), $icon];
         }
 
         if (! $end) {
-            return ["$word likely from ".WeatherFormat::hourLabel($start), $icon];
+            return [__(':word likely from :time', ['word' => __($word), 'time' => WeatherFormat::hourLabel($start)]), $icon];
         }
 
-        return ["$word likely ".WeatherFormat::hourRange($start, $end), $icon];
+        return [__(':word likely :range', ['word' => __($word), 'range' => WeatherFormat::hourRange($start, $end)]), $icon];
     }
 }

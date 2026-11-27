@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Habs;
 
+use App\Support\TimeFormat;
 use Carbon\CarbonImmutable;
 
 /**
@@ -77,13 +78,13 @@ class FindHabsHighlights
     /** "Tonight 7:00 PM", "Today 1:00 PM", "Tomorrow 7:30 PM". */
     public static function when(CarbonImmutable $start, CarbonImmutable $now): string
     {
-        $time = $start->format('g:i A');
+        $time = TimeFormat::hm($start);
 
         if ($start->isSameDay($now)) {
-            return ($start->hour >= 17 ? 'Tonight ' : 'Today ').$time;
+            return ($start->hour >= 17 ? __('Tonight') : __('Today')).' '.$time;
         }
 
-        return ($start->isSameDay($now->addDay()) ? 'Tomorrow ' : $start->format('D ')).$time;
+        return ($start->isSameDay($now->addDay()) ? __('Tomorrow') : ucfirst($start->translatedFormat('D'))).' '.$time;
     }
 
     /**
@@ -101,7 +102,7 @@ class FindHabsHighlights
             }
 
             if ($item['kind'] === 'upcoming' && $game['start']->isSameDay($now->setTimezone(FetchHabsSchedule::TIMEZONE))) {
-                return '🏒 Habs '.str_replace(':00', '', $game['start']->format('g:i A'));
+                return '🏒 Habs '.TimeFormat::hm($game['start'], short: true);
             }
         }
 

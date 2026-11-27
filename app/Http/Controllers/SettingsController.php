@@ -45,7 +45,7 @@ class SettingsController extends Controller
 
         return response()->view('settings.unlock', [
             'to' => $to,
-            'error' => $result['lockedFor'] ? 'Too many tries. Wait '.$result['lockedFor'].' seconds.' : 'That PIN isn’t right.',
+            'error' => $result['lockedFor'] ? __('Too many tries. Wait :n seconds.', ['n' => $result['lockedFor']]) : __('That PIN isn’t right.'),
         ], $result['lockedFor'] ? 429 : 422);
     }
 
