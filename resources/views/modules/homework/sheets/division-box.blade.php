@@ -9,14 +9,17 @@
     $answer = ($answers ?? false) ? (string) $p['answer'] : '';
 @endphp
 @if ($layout['kind'] === 'fact')
+  {{-- The numbers stay whole (merged cells); one answer box per quotient digit. --}}
   @php
-    $pad = fn (string $v, int $n, int $side): array => str_split(str_pad($v, $n, ' ', $side));
-    $cells = array_merge($pad((string) $p['top'], $layout['dividend'], STR_PAD_LEFT), ['÷'], $pad((string) $p['bottom'], $layout['divisor'], STR_PAD_RIGHT), ['=']);
+    $boxes = str_split(str_pad($answer, $layout['quotient'], ' ', STR_PAD_LEFT));
   @endphp
   <table role="presentation" style="border-collapse: collapse; margin: 0 auto">
     <tr>
-      @foreach ($cells as $c)<td style="{{ $td }}">{{ trim($c) }}</td>@endforeach
-      @foreach ($pad($answer, $layout['quotient'], STR_PAD_LEFT) as $c)<td style="{{ $td }} border: .6pt solid #9a9a9a">{{ trim($c) }}</td>@endforeach
+      <td colspan="{{ $layout['dividend'] }}" style="{{ $td }} width: {{ round($cell * $layout['dividend'], 2) }}pt; text-align: right; padding-right: 3pt">{{ $p['top'] }}</td>
+      <td style="{{ $td }}">÷</td>
+      <td colspan="{{ $layout['divisor'] }}" style="{{ $td }} width: {{ round($cell * $layout['divisor'], 2) }}pt; text-align: left; padding-left: 3pt">{{ $p['bottom'] }}</td>
+      <td style="{{ $td }}">=</td>
+      @foreach ($boxes as $c)<td style="{{ $td }} border: .6pt solid #9a9a9a">{{ trim($c) }}</td>@endforeach
     </tr>
   </table>
 @else
