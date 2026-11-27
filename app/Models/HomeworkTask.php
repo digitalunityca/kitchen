@@ -4,32 +4,33 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 
-class HomeworkTask extends Model
+/**
+ * The homework sheets among the tasks (task type "homework"). Queries only see
+ * homework, and a new row gets its type, exercise type, points, score and times
+ * from the task data, so the homework code keeps working with plain arrays.
+ */
+class HomeworkTask extends Task
 {
-    protected $table = 'homework_tasks';
-
-    protected $primaryKey = 'id';
-
-    public $incrementing = true;
-
-    protected $keyType = 'int';
-
-    public $timestamps = false;
-
-    protected $guarded = [];
-
-    /** One picked task of one day; "data" holds the whole task as the homework code uses it. */
-    protected function casts(): array
+    protected static function booted(): void
     {
-        return ['kid_id' => 'integer', 'data' => 'array', 'date' => 'date:Y-m-d'];
+        static::addGlobalScope('homework', fn (Builder $query) => $query->where('task_type_id', TaskType::idFor(TaskType::HOMEWORK)));
+
+        static::creating(function (HomeworkTask $task): void {
+            $data = (array) $task->data;
+            $task->task_type_id = TaskType::idFor(TaskType::HOMEWORK);
+            $task->exercise_type_id ??= ExerciseType::idFor((string) $task->template);
+            $task->points = (int) ($data['points'] ?? 0);
+            $task->score = $data['score'] ?? null;
+            $task->done_at = self::utc($data['doneAt'] ?? null);
+            $task->approved_at = self::utc($data['approvedAt'] ?? null);
+        });
     }
 
-    /** @return BelongsTo<Kid, $this> */
-    public function kid(): BelongsTo
+    private static function utc(?string $time): ?CarbonImmutable
     {
-        return $this->belongsTo(Kid::class);
+        return $time ? CarbonImmutable::parse($time)->utc() : null;
     }
 }

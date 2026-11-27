@@ -9,16 +9,28 @@ use App\Modules\Homework\HomeworkStore;
 
 /**
  * An adult checks a task: approve adds its points to the kid's total, redo sends
- * it back to the kid with no points.
+ * it back to the kid with no points. An approval carries the parent's score:
+ * "bien" and "erreurs" (a few mistakes) give the full points, "revoir" (to go
+ * over again) half, rounded up. The score will steer the next sheets' level.
  */
 class ReviewTask
 {
+    public const SCORES = ['bien', 'erreurs', 'revoir'];
+
     public function __construct(private readonly HomeworkStore $store) {}
 
-    /** A printed worksheet can be approved directly from its signed task link. */
-    public function handle(string $kid, string $date, string $taskId, bool $approve, ?int $printedSeed = null): bool
+    /** Points a sheet earns with that score. */
+    public static function pointsFor(int $points, string $score): int
     {
-        return $this->store->synchronized(function () use ($kid, $date, $taskId, $approve, $printedSeed): bool {
+        return $score === 'revoir' ? (int) ceil($points / 2) : $points;
+    }
+
+    /** A printed worksheet can be approved directly from its signed task link. */
+    public function handle(string $kid, string $date, string $taskId, bool $approve, ?int $printedSeed = null, string $score = 'bien'): bool
+    {
+        $score = in_array($score, self::SCORES, true) ? $score : 'bien';
+
+        return $this->store->synchronized(function () use ($kid, $date, $taskId, $approve, $printedSeed, $score): bool {
             $data = $this->store->load();
             $tasks = $data['days'][$date][$kid] ?? [];
 
@@ -36,9 +48,10 @@ class ReviewTask
                     $tasks[$i]['status'] = 'approved';
                     $tasks[$i]['doneAt'] ??= $now;
                     $tasks[$i]['approvedAt'] = $now;
+                    $tasks[$i]['score'] = $score;
                     $data['ledger'][] = [
                         'kid' => $kid,
-                        'points' => (int) $task['points'],
+                        'points' => self::pointsFor((int) $task['points'], $score),
                         'reason' => HomeworkModule::TEMPLATES[$task['template']]['name'].' · '.$date,
                         'at' => $now,
                         'taskId' => $taskId,

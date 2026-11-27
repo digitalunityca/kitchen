@@ -24,7 +24,7 @@ class LedgerEntry extends Model
     /** One line of a kid's points: + for an approved sheet (task_id), − for a reward (reward_id). */
     protected function casts(): array
     {
-        return ['kid_id' => 'integer', 'points' => 'integer', 'at' => 'datetime'];
+        return ['kid_id' => 'integer', 'points' => 'integer', 'at' => 'datetime', 'task_ref' => 'integer'];
     }
 
     /** @return BelongsTo<Kid, $this> */

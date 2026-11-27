@@ -135,7 +135,12 @@
   .kz-steps { display: flex; gap: 6px; }
   .kz-steps i { flex: 1; height: 10px; border-radius: 99px; background: var(--fill); }
   .kz-steps i.on { background: var(--kid); }
-  .kz-tiles { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 18px; }
+  .kz-tiles { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 18px; }
+  .kz-tiles .kz-tile:first-child { grid-row: span 2; }
+  .kz-chore-emoji { font-size: 34px; line-height: 1; flex: none; }
+  .kz-row-icon.kz-chore-emoji { font-size: 24px; }
+  .kz-chore.is-done { opacity: .6; box-shadow: none; background: var(--fill); }
+  .kz-chore-check { flex: none; width: 52px; height: 52px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: rgba(52,199,89,.16); color: #1E7A34; }
   .kz-tile { background: var(--card); box-shadow: var(--shadow); border-radius: 26px; padding: 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 4px; text-align: left; color: var(--text); }
   .kz-tile-icon { width: 64px; height: 64px; border-radius: 20px; background: var(--kid); color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: auto; }
   .kz-tile b { font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
@@ -254,6 +259,16 @@
   .kz-parent-card .kz-keys { grid-template-columns: repeat(3, 72px); gap: 10px; }
   .kz-parent-card .kz-keys button { height: 72px; font-size: 28px; }
   .kz-parent-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .kz-scores { display: flex; gap: 10px; margin-top: 4px; }
+  .kz-scores[hidden], .kz-keys [data-key="ok"][hidden] { display: none; }
+  .kz-score-btn { min-width: 128px; min-height: 64px; padding: 8px 14px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #fff; }
+  .kz-score-btn b { font-size: 17px; font-weight: 600; }
+  .kz-score-btn small { font-size: 14px; opacity: .9; font-variant-numeric: tabular-nums; }
+  .kz-score-btn.is-bien { background: #1E7A34; }
+  .kz-score-btn.is-erreurs { background: #A65A00; }
+  .kz-score-btn.is-revoir { background: #B3261E; }
+  .kz-score-btn:active { transform: scale(.97); }
+  .kz-score-tag { font-weight: 500; opacity: .85; }
 
   .kz button:focus-visible, .kid-close:focus-visible { outline: 3px solid var(--kid-ink); outline-offset: 3px; }
   @media (prefers-reduced-motion: reduce) { .kz *, .kz { animation: none !important; transition: none !important; } }
@@ -336,7 +351,7 @@
     }
     function submit(p) {
       if (digits(p).length < 4 || p.dataset.busy) { return; }
-      if (p.dataset.screen === 'pin') { unlock(p); } else { decide(p, p.dataset.decision || 'approve'); }
+      if (p.dataset.screen === 'pin') { unlock(p); } else if (!p.dataset.scored) { decide(p, p.dataset.decision || 'approve'); }
     }
     function unlock(p) {
       p.dataset.busy = '1';
@@ -357,6 +372,17 @@
       p.dataset.url = btn.dataset.parentOpen;
       p.querySelector('[data-parent-title]').textContent = btn.dataset.parentTitle || __('Parent check');
       p.dataset.decision = btn.dataset.parentDecision || 'approve';
+      // A sheet's approval asks how it went (Bien / Quelques erreurs / À revoir) instead of ✓.
+      var scored = !!btn.dataset.parentScores, pts = +(btn.dataset.parentPoints || 0);
+      p.dataset.scored = scored ? '1' : '';
+      p.querySelector('[data-scores]').hidden = !scored;
+      p.querySelector('[data-key="ok"]').hidden = scored;
+      p.querySelector('[data-parent-hint]').textContent = scored ? __('Parent PIN, then how it went') : __('Parent PIN, then ✓');
+      if (scored) {
+        p.querySelector('[data-score-points="bien"]').textContent = '+' + pts;
+        p.querySelector('[data-score-points="erreurs"]').textContent = '+' + pts;
+        p.querySelector('[data-score-points="revoir"]').textContent = '+' + Math.ceil(pts / 2);
+      }
       p.querySelector('[data-error]').hidden = true;
       setPin(p, ''); p.hidden = false;
     }
@@ -423,6 +449,19 @@
       });
     }
 
+    /* Aider à la maison: "I'm done" (a parent checks it later in History) */
+    function choreDone(btn) {
+      if (btn.disabled) { return; }
+      btn.disabled = true;
+      post(btn.dataset.choreDone, {}).then(function (r) {
+        if (r.ok) { return r.text().then(show); }
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401) { return go(); }
+          showError(btn, j.error || __('Something went wrong. Try again.')); btn.disabled = false;
+        });
+      }).catch(function () { showError(btn, __('Couldn’t reach the hub. Try again.')); btn.disabled = false; });
+    }
+
     /* History: status filter and the worksheet preview */
     function filter(screen, key) {
       screen.dataset.filter = key;
@@ -452,6 +491,7 @@
       if ((t = e.target.closest('[data-choice]'))) { pick(t, 1); return; }
       if ((t = e.target.closest('[data-print-all]'))) { printAll(t.closest('[data-screen]')); return; }
       if ((t = e.target.closest('[data-parent-open]'))) { openParent(t); return; }
+      if ((t = e.target.closest('[data-chore-done]'))) { choreDone(t); return; }
       if ((t = e.target.closest('[data-filter-chip]'))) { filter(t.closest('[data-screen]'), t.dataset.filterChip); return; }
       if ((t = e.target.closest('[data-preview]'))) { preview(t); return; }
       if ((t = e.target.closest('[data-viewer-close]'))) { var v = t.closest('[data-viewer]'); v.hidden = true; v.querySelector('iframe').removeAttribute('src'); return; }
@@ -511,7 +551,13 @@
       cheer.style.setProperty('--kid', kid.color);
       cheer.querySelector('[data-cheer-face]').innerHTML = kid.photo ? '<img src="' + kid.photo + '" alt="">' : kid.badge;
       var title, note, spoken;
-      if (e.kind === 'approved') {
+      if (e.kind === 'chore') {
+        title = __('Bravo :name! +:n ⭐').replace(':name', kid.name).replace(':n', e.points);
+        note = __('Thanks for helping: :chore.').replace(':chore', e.name);
+        spoken = __('Thanks for helping, :name! :n points!').replace(':name', kid.name).replace(':n', e.points);
+        countUp(cheer.querySelector('[data-cheer-points]'), e.balance - e.points, e.balance);
+        confetti();
+      } else if (e.kind === 'approved') {
         title = __('Bravo :name! +:n ⭐').replace(':name', kid.name).replace(':n', e.points);
         note = e.sheets === 1 ? __('A parent approved your sheet.') : __('A parent approved :n sheets.').replace(':n', e.sheets);
         spoken = __('Bravo :name! :n points!').replace(':name', kid.name).replace(':n', e.points);

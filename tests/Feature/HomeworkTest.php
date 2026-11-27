@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Actions\Homework\AddHomeworkTasks;
 use App\Actions\Homework\BuildAdditionSheet;
 use App\Dashboard\ModuleRegistry;
+use App\Models\HomeworkTask;
 use App\Models\Kid;
 use App\Models\KidPin;
 use App\Modules\Homework\HomeworkModule;
@@ -260,7 +261,7 @@ class HomeworkTest extends TestCase
         $this->assertSame(0, app(HomeworkStore::class)->balance('arthur'));
 
         $this->post($check, ['pin' => '4821', 'decision' => 'approve'])->assertOk()
-            ->assertSee('Approved <span>1</span>', false)->assertSee('Approved · +10')
+            ->assertSee('Approved <span>1</span>', false)->assertSee('Approved <span class="kz-score-tag">· Good</span> · +10', false)
             ->assertSee('+10 points</b>', false);
         $this->assertSame(10, app(HomeworkStore::class)->balance('arthur'));
 
@@ -411,6 +412,28 @@ class HomeworkTest extends TestCase
             ->assertSeeInOrder(['Weekend outing', '140 more points']);
     }
 
+    public function test_the_parent_scores_each_sheet_and_a_sheet_to_go_over_again_earns_half_the_points(): void
+    {
+        config(['dashboard.homework_print_spool' => $this->spool()]);
+        Http::preventStrayRequests();
+        $this->signIn('theo');
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 2, 'multiplication' => 1]])->assertOk();
+
+        $this->get(self::SHEET.'?screen=history')->assertSee('data-parent-scores="1" data-parent-points="10"', false)
+            ->assertSee('data-decision="bien"', false)->assertSee('data-decision="erreurs"', false)->assertSee('data-decision="revoir"', false);
+
+        $this->post('/modules/homework/kids/theo/check/2026-11-25/t1', ['pin' => '4821', 'decision' => 'erreurs'])->assertOk();
+        $this->post('/modules/homework/kids/theo/check/2026-11-25/t2', ['pin' => '4821', 'decision' => 'revoir'])->assertOk();
+        $this->post('/modules/homework/kids/theo/check/2026-11-25/t3', ['pin' => '4821', 'decision' => 'revoir'])->assertOk()
+            ->assertSee('<span class="kz-score-tag">· A few mistakes</span> · +10', false)
+            ->assertSee('<span class="kz-score-tag">· Go over again</span> · +5', false)
+            ->assertSee('<span class="kz-score-tag">· Go over again</span> · +8', false); // multiplication: 15 → 8, rounded up
+
+        $this->assertSame(23, app(HomeworkStore::class)->balance('theo'));
+        $this->assertSame(['erreurs', 'revoir', 'revoir'], array_column(app(HomeworkStore::class)->tasks('theo', '2026-11-25'), 'score'));
+        $this->assertSame(['erreurs', 'revoir', 'revoir'], HomeworkTask::query()->orderBy('position')->pluck('score')->all());
+    }
+
     public function test_kids_buy_rewards_with_the_parent_pin_and_save_up_for_weekend_prizes(): void
     {
         $store = app(HomeworkStore::class);
@@ -429,7 +452,7 @@ class HomeworkTest extends TestCase
         $this->post('/modules/homework/kids/theo/rewards/weekend-treat', ['pin' => '4821'])->assertStatus(422)->assertJson(['error' => 'Weekend prizes are for Saturday and Sunday.']);
 
         $this->get(self::SHEET.'?screen=history')->assertSee('This week: <b>1</b> sheet, <b>+10</b> points', false)
-            ->assertSeeInOrder(['Today', '+170 points', 'Movie in the evening', '−40'])->assertSeeInOrder(['Addition', 'Approved · +10']);
+            ->assertSeeInOrder(['Today', '+170 points', 'Movie in the evening', '−40'])->assertSeeInOrder(['Addition', 'Approved', 'Good', '+10']);
 
         // Saturday: the weekend treat (150) can be bought, the outing (300) not yet.
         $this->travelTo(CarbonImmutable::parse('2026-11-28 10:00', HomeworkModule::TIMEZONE));

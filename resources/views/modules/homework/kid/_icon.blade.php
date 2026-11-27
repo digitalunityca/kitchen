@@ -4,6 +4,7 @@
   @case('homework')<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>@break
   @case('rewards')<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7M12 8v13M12 8c-1.5-3-5.5-4-5.5-1.5S10 8 12 8zm0 0c1.5-3 5.5-4 5.5-1.5S14 8 12 8z"/>@break
   @case('history')<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>@break
+  @case('chores')<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M12 19.5s-3.5-2.2-3.5-4.6a1.9 1.9 0 0 1 3.5-1 1.9 1.9 0 0 1 3.5 1c0 2.4-3.5 4.6-3.5 4.6z"/>@break
   @case('news')<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>@break
   @case('back')<path d="M15 18l-6-6 6-6"/>@break
   @case('delete')<path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m16 9-4 6m0-6 4 6"/>@break

@@ -50,8 +50,9 @@ The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setA
 - **Database: MySQL 8.4 LTS**, the `mysql` service in `compose.yaml` (image `mysql:8.4.13`, data in the named volume `home-hub-mysql`, no port published outside Docker). Credentials are in `.env` (`DB_*`, see section 5). Migrations run when the home-hub container starts; it waits for MySQL to be healthy. Sessions and the cache stay in files.
   - **Tables:**
     - `kids`: slug, name, letter, colour, grade, menu order. Seeded once from `config/dashboard.php`; after that the database is the source.
-    - `homework_tasks`: each day's sheets per kid.
-    - `homework_ledger`: points + and −; `at` is a UTC date-time.
+    - `tasks`: each day's tasks per kid. The type (`task_types`: homework or home_help) says whether a row is a worksheet (linked to `exercise_types`, seeded from the templates) or a chore (linked to `chores`). Each row also has its points, the parent's score and when it was done and approved.
+    - `chores` and `chore_kid`: the Aider à la maison list and which kid sees each chore.
+    - `homework_ledger`: points + and −; `at` is a UTC date-time. A chore's line points at its task (`task_ref`).
     - `homework_words`: writing words.
     - `kid_pins`: hashes only.
     - `calendars`: including their secret links.
@@ -64,7 +65,7 @@ The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setA
     Restore with `docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < backup.sql`.
   - **History:**
     - Nov 27, 2026, morning to afternoon: the data was in SQLite (`storage/app/database.sqlite` on the `home-hub-data` volume). The file is kept there untouched as the fallback. A dated copy, `backup-pre-mysql-20261127-1217.sqlite`, sits next to it and outside git in `../backups/`.
-    - `php artisan hub:copy-sqlite-to-mysql [--from=file]` copies a SQLite file (old or new table shape) into the current database. It replaces what is there, then compares counts, totals and a digest of every row on both sides.
+    - The move used a one-off command, `hub:copy-sqlite-to-mysql` (commit 5cfef8c). It copied every row and compared counts, totals and row digests on both sides. It was removed once the tables changed again; it is still in the git history.
     - Before that, the data was JSON files in `storage/app/private/`, kept there as a backup. `php artisan hub:import-json` reads them.
   - `unload.log` (in `storage/app/private/`): why the dashboard page unloaded (see below).
 - **Unload log:** whenever the page unloads, the tablet sends a short report (how long it ran, whether music was playing, the last taps and setting writes) to `/diagnostics/unload`. That's how the 30-minute reload was traced and confirmed gone.
@@ -174,7 +175,14 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
 - **Kid home:** points, today's progress ("1 of 2 checked today"), sheets waiting for a check, and four tiles: Homework, Rewards, History, News. The kid is signed out on ✕, on Home, or after 5 minutes without a tap.
 - **Homework** (Monday to Friday): tap the tasks to do today (tap again for a second sheet, up to each task's daily limit), then **Print all**. Only then are the worksheets generated (OpenAI, `OPENAI_HOMEWORK_MODEL`), turned into one PDF and dropped in the Mac Studio's print folder (`HOMEWORK_PRINT_SPOOL`; `deploy/worksheet-print/`). The kid sees "Done! Your sheets are printing", and the tasks wait for a parent check. If any step fails, the picked tasks are taken back and the kid sees the error.
 - **Rewards:** evening rewards (school days, once all of today's homework is checked) and weekend prizes. Each shows "You can get it now", "Yours once your homework is checked", or how many points are missing. A parent confirms each purchase with the parent PIN.
-- **History:** "To check" (a parent approves each printed sheet with the parent PIN, or marks it "Not done"), and the points day by day. Each printed sheet also has a QR code a parent can scan to approve it.
+- **History:** "To check" lists printed sheets and chores, and the points day by day.
+  - A parent approves each item with the parent PIN, or marks it "Not done".
+  - A sheet's approval asks how it went: **Bien** or **Quelques erreurs** give the full points; **À revoir** gives half, rounded up. The score is saved with the sheet, to steer future levels (docs/LEARNING_PLAN.md).
+  - Each printed sheet also has a QR code a parent can scan to approve it, with the same three choices.
+- **Aider à la maison:** today's chores (seeded: mettre la table, desservir, faire son lit, préparer son sac at 5 points; ranger sa chambre, vider le lave-vaisselle, sortir le recyclage at 10).
+  - The kid taps "J'ai fini"; a parent approves it in History; the points count toward rewards like any points, with a celebration on the dashboard.
+  - Each chore counts a set number of times a day, on every day, school days or the weekend.
+  - Settings › Aider à la maison edits the list, the points, the days and which kid sees each chore. A chore is turned off, never deleted.
 - **News:** placeholder for messages from the kids' teachers (emails, to be connected later).
 - Data: the MySQL tables `kids`, `homework_*` and `kid_pins`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
 
@@ -258,6 +266,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 - Canadiens sheet opens at full size with a centred spinner; homework sheet made near full screen, over the side menu.
 
 **27 November 2026**
+- Parent's score on each approved sheet (Bien / Quelques erreurs / À revoir) and Aider à la maison (chores for points). Homework sheets became one type of task.
 - French version (Quebec French), now the default language; English kept as fallback.
 - Data moved from SQLite to MySQL 8.4, with a `kids` table and foreign keys.
 

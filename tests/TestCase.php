@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\TaskType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Http\Client\Request;
@@ -17,6 +18,7 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        TaskType::flushIds();
 
         // No PIN unless a test sets one (a developer's .env may have HOME_HUB_PIN).
         config(['dashboard.pin' => '']);

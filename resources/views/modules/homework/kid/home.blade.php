@@ -1,4 +1,4 @@
-{{-- The kid's home: points, today's progress, and the four places to go. --}}
+{{-- The kid's home: points, today's progress, and the five places to go. --}}
 <div class="kz kz-home" data-screen="home">
   @include('modules.homework.kid._head')
   <div class="kz-home-grid">
@@ -17,7 +17,7 @@
           </div>
         @endif
         @if ($toCheck > 0)
-          <p class="kz-sub">{{ trans_choice('{1} :n sheet is waiting for a parent check|[2,*] :n sheets are waiting for a parent check', $toCheck, ['n' => $toCheck]) }}</p>
+          <p class="kz-sub">{{ trans_choice('{1} :n task is waiting for a parent check|[2,*] :n tasks are waiting for a parent check', $toCheck, ['n' => $toCheck]) }}</p>
         @endif
       </div>
     </section>
@@ -25,6 +25,10 @@
       <button type="button" class="kz-tile" data-go="homework">
         <span class="kz-tile-icon">@include('modules.homework.kid._icon', ['name' => 'homework', 'size' => 34])</span>
         <b>{{ __('Homework') }}</b><small>{{ $schoolDay ? __('Pick and print today’s sheets') : __('Monday to Friday') }}</small>
+      </button>
+      <button type="button" class="kz-tile" data-go="chores">
+        <span class="kz-tile-icon">@include('modules.homework.kid._icon', ['name' => 'chores', 'size' => 34])</span>
+        <b>{{ __('Help at home') }}</b><small>{{ __('Earn points by helping') }}</small>
       </button>
       <button type="button" class="kz-tile" data-go="rewards">
         <span class="kz-tile-icon">@include('modules.homework.kid._icon', ['name' => 'rewards', 'size' => 34])</span>

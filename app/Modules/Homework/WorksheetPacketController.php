@@ -84,7 +84,7 @@ class WorksheetPacketController
             $result = $unlock->handle(AccessGate::clientIp($request), is_string($pin) && strlen($pin) <= 64 ? $pin : '');
 
             if ($result['ok']) {
-                $review->handle($kid, $date, $task, approve: true, printedSeed: (int) $found['seed']);
+                $review->handle($kid, $date, $task, approve: true, printedSeed: (int) $found['seed'], score: (string) $request->input('score', 'bien'));
                 $found = $this->printedTask($kid, $date, $task);
             } else {
                 $error = $result['lockedFor'] ? __('Too many tries. Wait :n seconds.', ['n' => $result['lockedFor']]) : __('Incorrect parent PIN.');

@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
  * (homework_tasks), the points ledger (homework_ledger, every + and − with its
  * reason), each kid's word list for the writing sheets (homework_words), and two
  * counters in hub_settings (the sheet numbers, each kid's "seen" position).
+ * Only homework rows of the tasks table (HomeworkTask); chores have their own code.
  * load()/save() give the whole state as one array, the shape the homework code
  * has always used, with kids named by their slug ("theo"); the tables point at the
  * kids table by kid_id. Days older than KEEP_DAYS are dropped on save.
@@ -122,13 +123,13 @@ class HomeworkStore
      *
      * @param  LedgerEntry|array<string, mixed>  $e
      * @param  array<int, string>  $slugs  kid id → slug, for a database row
-     * @return array{kid: string, points: int, reason: string, at: string, taskId: string|null, rewardId: string|null}
+     * @return array{kid: string, points: int, reason: string, at: string, taskId: string|null, rewardId: string|null, taskRef: int|null}
      */
     private static function entry(LedgerEntry|array $e, array $slugs = []): array
     {
         if ($e instanceof LedgerEntry) {
             return ['kid' => $slugs[$e->kid_id], 'points' => (int) $e->points, 'reason' => $e->reason,
-                'at' => $e->at->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(), 'taskId' => $e->task_id, 'rewardId' => $e->reward_id];
+                'at' => $e->at->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(), 'taskId' => $e->task_id, 'rewardId' => $e->reward_id, 'taskRef' => $e->task_ref];
         }
 
         return [
@@ -136,14 +137,15 @@ class HomeworkStore
             'at' => CarbonImmutable::parse((string) $e['at'], HomeworkModule::TIMEZONE)->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(),
             'taskId' => isset($e['taskId']) && $e['taskId'] !== '' ? (string) $e['taskId'] : null,
             'rewardId' => isset($e['rewardId']) && $e['rewardId'] !== '' ? (string) $e['rewardId'] : null,
+            'taskRef' => isset($e['taskRef']) ? (int) $e['taskRef'] : null,
         ];
     }
 
-    /** @param  array{kid: string, points: int, reason: string, at: string, taskId: string|null, rewardId: string|null}  $entry */
+    /** @param  array{kid: string, points: int, reason: string, at: string, taskId: string|null, rewardId: string|null, taskRef: int|null}  $entry */
     private static function row(array $entry): array
     {
         return ['kid_id' => Kid::idFor($entry['kid']), 'points' => $entry['points'], 'reason' => mb_substr($entry['reason'], 0, 200),
-            'at' => CarbonImmutable::parse($entry['at'], HomeworkModule::TIMEZONE)->utc(), 'task_id' => $entry['taskId'], 'reward_id' => $entry['rewardId']];
+            'at' => CarbonImmutable::parse($entry['at'], HomeworkModule::TIMEZONE)->utc(), 'task_id' => $entry['taskId'], 'reward_id' => $entry['rewardId'], 'task_ref' => $entry['taskRef']];
     }
 
     public function synchronized(Closure $operation): mixed
@@ -191,12 +193,12 @@ class HomeworkStore
             ->map(fn (LedgerEntry $e): array => self::entry($e, $slugs))->all();
     }
 
-    /** A ledger line: + for an approved task (taskId), − for a reward bought (rewardId). */
-    public function addPoints(string $kid, int $points, string $reason, ?string $taskId = null, ?string $rewardId = null): void
+    /** A ledger line: + for an approved sheet (taskId) or chore (taskRef, the task row), − for a reward bought (rewardId). */
+    public function addPoints(string $kid, int $points, string $reason, ?string $taskId = null, ?string $rewardId = null, ?int $taskRef = null): void
     {
         LedgerEntry::query()->create(self::row(self::entry([
             'kid' => $kid, 'points' => $points, 'reason' => $reason,
-            'at' => now(HomeworkModule::TIMEZONE)->toIso8601String(), 'taskId' => $taskId, 'rewardId' => $rewardId,
+            'at' => now(HomeworkModule::TIMEZONE)->toIso8601String(), 'taskId' => $taskId, 'rewardId' => $rewardId, 'taskRef' => $taskRef,
         ])));
     }
 
@@ -249,7 +251,7 @@ class HomeworkStore
         HubSetting::put(self::SEEN_KEY.$kid, (string) LedgerEntry::query()->count());
     }
 
-    /** Points from sheets approved since the kid last opened their area (the "+15" on their button). */
+    /** Points from sheets and chores approved since the kid last opened their area (the "+15" on their button). */
     public function unseenPoints(string $kid): int
     {
         $seen = HubSetting::get(self::SEEN_KEY.$kid);
@@ -264,7 +266,7 @@ class HomeworkStore
 
         $kidId = (int) array_search($kid, Kid::slugs(), true);
 
-        return (int) $after->filter(fn (LedgerEntry $e): bool => $e->kid_id === $kidId && $e->task_id !== null)->sum('points');
+        return (int) $after->filter(fn (LedgerEntry $e): bool => $e->kid_id === $kidId && ($e->task_id !== null || $e->task_ref !== null))->sum('points');
     }
 
     /** "#0042" */

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Homework;
 
 use App\Actions\Access\AttemptSettingsUnlock;
+use App\Actions\HomeHelp\ListKidChores;
+use App\Actions\HomeHelp\MarkChoreDone;
+use App\Actions\HomeHelp\ReviewChore;
 use App\Actions\Homework\AttemptKidUnlock;
 use App\Actions\Homework\LoadHomeworkEvents;
 use App\Actions\Homework\MarkTaskMissed;
@@ -16,10 +19,14 @@ use App\Http\Access\AccessGate;
 use App\Http\Access\AccessSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireSettingsPin;
+use App\Models\Kid;
+use App\Models\Task;
+use App\Models\TaskType;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -32,7 +39,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class KidController extends Controller
 {
-    public const SCREENS = ['home', 'homework', 'rewards', 'history', 'news'];
+    public const SCREENS = ['home', 'homework', 'chores', 'rewards', 'history', 'news'];
 
     /** How far back "To check" and History look. */
     private const HISTORY_DAYS = 14;
@@ -117,7 +124,7 @@ class KidController extends Controller
         return response()->json(['ok' => true, 'sheets' => $sheets]);
     }
 
-    /** POST …/kids/{kid}/check/{date}/{task} (decision=approve|missed, pin): a parent checks a printed sheet. */
+    /** POST …/kids/{kid}/check/{date}/{task} (decision=bien|erreurs|revoir|missed, pin; approve = bien): a parent checks a printed sheet. */
     public function check(Request $request, string $kid, string $date, string $task, ReviewTask $reviewTask, MarkTaskMissed $markTaskMissed): Response|JsonResponse
     {
         $profile = $this->kidOrFail($kid);
@@ -125,10 +132,11 @@ class KidController extends Controller
             return $denied;
         }
 
-        if ($request->input('decision') === 'missed') {
+        $decision = (string) $request->input('decision', 'bien');
+        if ($decision === 'missed') {
             $markTaskMissed->handle($profile['id'], $date, $task);
         } else {
-            $reviewTask->handle($profile['id'], $date, $task, approve: true);
+            $reviewTask->handle($profile['id'], $date, $task, approve: true, score: $decision === 'approve' ? 'bien' : $decision);
         }
 
         return $this->render('history', $profile, $this->screenData('history', $profile));
@@ -164,6 +172,33 @@ class KidController extends Controller
             'answers' => false,
             'preview' => true,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /** POST …/kids/{kid}/chores/{chore}/done: the kid says "J'ai fini" (no parent PIN; a parent checks it later). */
+    public function choreDone(Request $request, string $kid, int $chore, MarkChoreDone $markChoreDone): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if (! $this->session->active($request, $profile['id'])) {
+            return response()->json(['locked' => true], 401);
+        }
+        if (! $markChoreDone->handle(Kid::idFor($profile['id']), $chore, $this->today())) {
+            return response()->json(['error' => __('This one is already done for today.')], 422);
+        }
+
+        return $this->render('chores', $profile, $this->screenData('chores', $profile) + ['thanks' => true]);
+    }
+
+    /** POST …/kids/{kid}/chores/check/{task} (decision=approve|missed, pin): a parent checks a chore. */
+    public function choreCheck(Request $request, string $kid, int $task, ReviewChore $reviewChore): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if ($denied = $this->guard($request, $profile['id'])) {
+            return $denied;
+        }
+
+        $reviewChore->handle(Kid::idFor($profile['id']), $task, $request->input('decision') !== 'missed');
+
+        return $this->render('history', $profile, $this->screenData('history', $profile));
     }
 
     /** POST …/kids/{kid}/rewards/{reward} (pin): a parent confirms buying a reward. */
@@ -239,6 +274,7 @@ class KidController extends Controller
                 'toCheck' => count($this->toCheck($kid['id'])),
             ],
             'homework' => $this->homeworkData($kid, $today, $tasks),
+            'chores' => ['chores' => app(ListKidChores::class)->handle(Kid::idFor($kid['id']), $today)],
             'rewards' => $this->rewardsData($kid['id'], $tasks, $today, $data['balance']) + [
                 'homeworkFirst' => ! $today->isWeekend() && RedeemReward::homeworkOpen($tasks),
                 'waiting' => (int) collect($this->toCheck($kid['id']))->sum('points'),
@@ -292,6 +328,10 @@ class KidController extends Controller
             }
         }
 
+        foreach ($this->chores($kid, $cutoff)->where('status', 'done') as $chore) {
+            $list[] = ['id' => $chore->id, 'kind' => 'chore', 'points' => $chore->points, 'date' => $chore->date->format('Y-m-d'), 'name' => (string) ($chore->data['name'] ?? '')];
+        }
+
         return $list;
     }
 
@@ -330,8 +370,24 @@ class KidController extends Controller
                     'printed' => $task['printedAt'] ?? null,
                     'time' => $task['approvedAt'] ?? $task['checkedAt'] ?? $task['printedAt'] ?? $task['doneAt'] ?? null,
                     'preview' => isset($task['worksheet']),
+                    'score' => $task['score'] ?? null,
+                    'earned' => isset($task['score']) ? ReviewTask::pointsFor((int) $task['points'], (string) $task['score']) : (int) $task['points'],
                 ];
             }
+        }
+
+        foreach ($this->chores($kid['id'], $cutoff) as $chore) {
+            $days[$chore->date->format('Y-m-d')][] = [
+                'kind' => 'chore',
+                'id' => $chore->id,
+                'name' => (string) ($chore->data['name'] ?? ''),
+                'emoji' => (string) ($chore->data['emoji'] ?? ''),
+                'points' => $chore->points,
+                'status' => match ($chore->status) {
+                    'approved' => 'done', 'missed' => 'missed', default => 'check'
+                },
+                'time' => ($chore->approved_at ?? $chore->done_at)?->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(),
+            ];
         }
 
         $totals = [];
@@ -426,6 +482,13 @@ class KidController extends Controller
             'kid' => $kid,
             'screen' => $screen,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /** @return Collection<int, Task> the kid's chores since that day */
+    private function chores(string $kid, string $since): Collection
+    {
+        return Task::query()->where('task_type_id', TaskType::idFor(TaskType::HOME_HELP))->where('kid_id', Kid::idFor($kid))
+            ->whereDate('date', '>=', $since)->orderBy('id')->get();
     }
 
     /** @return array{id: string, name: string, badge: string, color: string, grade: int} */

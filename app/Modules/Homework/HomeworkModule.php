@@ -181,6 +181,8 @@ class HomeworkModule extends Module
         $router->get('kids/{kid}/photo', [KidController::class, 'photo'])->where('kid', $kid)->middleware('throttle:120,1')->name('photo');
         $router->get('kids/{kid}/preview/{date}/{task}', [KidController::class, 'preview'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:60,1')->name('preview');
+        $router->post('kids/{kid}/chores/{chore}/done', [KidController::class, 'choreDone'])->where(['kid' => $kid, 'chore' => '[0-9]+'])->middleware('throttle:60,1')->name('chore.done');
+        $router->post('kids/{kid}/chores/check/{task}', [KidController::class, 'choreCheck'])->where(['kid' => $kid, 'task' => '[0-9]+'])->middleware('throttle:30,1')->name('chore.check');
         $router->post('kids/{kid}/rewards/{reward}', [KidController::class, 'redeem'])->where(['kid' => $kid, 'reward' => '[a-z0-9-]+'])->middleware('throttle:30,1')->name('redeem');
         $router->get('kids/{kid}/{date}/{task}/worksheet', [HomeworkController::class, 'worksheet'])
             ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->middleware('throttle:30,1')->name('worksheet');
@@ -201,6 +203,9 @@ class HomeworkModule extends Module
         $router->middleware(RequireSettingsPin::class)->group(function (Router $router) use ($kid, $task): void {
             $router->get('settings', [HomeworkController::class, 'settings'])->name('settings');
             $router->get('kid-pins', [HomeworkController::class, 'pins'])->name('pins');
+            $router->get('chores', [ChoreController::class, 'index'])->name('chores');
+            $router->post('chores', [ChoreController::class, 'store'])->name('chores.store');
+            $router->post('chores/{chore}', [ChoreController::class, 'update'])->whereNumber('chore')->name('chores.update');
             $router->post('kids/{kid}/pin', [HomeworkController::class, 'savePin'])->where('kid', $kid)->name('pin');
             $router->post('kids/{kid}/words', [HomeworkController::class, 'saveWords'])->where('kid', $kid)->name('words');
             $router->get('kids/{kid}/{date}/{task}/answers', [HomeworkController::class, 'answers'])

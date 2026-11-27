@@ -22,7 +22,8 @@ class SettingsController extends Controller
             'calendar' => ['Calendars', 'Add calendars, icons, colours and reminders', 'modules.calendar.settings'],
             'homework' => ['Homework', 'Today’s worksheets, answer keys, points and word lists', 'modules.homework.settings'],
             'kids' => ['Kids', 'Each kid’s PIN for their homework', 'modules.homework.pins'],
-        ])->filter(fn ($section, string $key): bool => $modules->get($key === 'kids' ? 'homework' : $key) !== null);
+            'chores' => ['Help at home', 'Chores, their points and which kid sees them', 'modules.homework.chores'],
+        ])->filter(fn ($section, string $key): bool => $modules->get(in_array($key, ['kids', 'chores'], true) ? 'homework' : $key) !== null);
 
         return view('settings.index', ['sections' => $sections]);
     }
