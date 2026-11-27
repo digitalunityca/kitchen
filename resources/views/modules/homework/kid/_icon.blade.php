@@ -16,6 +16,7 @@
   @case('multiplication')<path d="m6 6 12 12M18 6 6 18"/>@break
   @case('division')<path d="M5 12h14"/><circle cx="12" cy="6.5" r="1.3" fill="currentColor"/><circle cx="12" cy="17.5" r="1.3" fill="currentColor"/>@break
   @case('writing')<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>@break
+  @case('grammar')<path d="M4 19 9 5l5 14M5.8 14h6.4"/><path d="M15 19v-6.5a2.5 2.5 0 0 1 5 0V19M15 15.5h5"/>@break
   @case('reading')<path d="M2 5h6a4 4 0 0 1 4 4v11a3 3 0 0 0-3-3H2zM22 5h-6a4 4 0 0 0-4 4v11a3 3 0 0 1 3-3h7z"/>@break
 @endswitch
 </svg>

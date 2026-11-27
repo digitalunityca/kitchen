@@ -19,6 +19,9 @@
     @endforeach
     <p class="kz-quiet kz-week">{{ __('This week:') }} <b>{{ $stats['weekTasks'] }}</b> {{ $stats['weekTasks'] === 1 ? __('sheet') : __('sheets') }}, <b>+{{ $stats['weekPoints'] }}</b> {{ __('points') }}</p>
   </div>
+  @if ($stuck !== [])
+    <p class="kz-hint kz-stuck" role="note">{{ __('For a parent: :name had to go over this twice in a row. Do one together:', ['name' => $kid['name']]) }} <b>{{ implode(', ', $stuck) }}</b></p>
+  @endif
   <div class="kz-scroll kz-history-list">
     @forelse ($days as $day)
       <section class="kz-day-group" data-day>

@@ -1,6 +1,6 @@
 # Learning plan: curriculum-driven exercises and household tasks
 
-Status: **draft for Oleg's review** (27 Nov 2026). No code yet.
+Status: steps 1–5 built and live on 27 Nov 2026, with Oleg's answers: full points for Bien and Quelques erreurs, half for À revoir; the chore list as proposed; month windows from our estimates. See docs/PROJECT.md › Curriculum and levels. Step 6 is still to come.
 
 Goal: the worksheets follow what each kid learns at school this year (Theo, 5e; Arthur, 2e), adapt to how the last sheets went, and don't repeat themselves. Household help ("Aider à la maison") earns points the same way homework does.
 

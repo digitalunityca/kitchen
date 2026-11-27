@@ -38,6 +38,7 @@ class HomeworkModule extends Module
         'division' => ['name' => 'Division', 'sheet' => 'Divisions', 'emoji' => '➗', 'points' => 15, 'printable' => true, 'grades' => [1, 6]],
         'writing' => ['name' => 'Writing', 'sheet' => 'Écriture', 'emoji' => '✏️', 'points' => 10, 'printable' => true, 'grades' => [1, 3]],
         'reading' => ['name' => 'Reading', 'sheet' => 'Lecture', 'emoji' => '📖', 'points' => 10, 'printable' => false, 'grades' => [1, 6]],
+        'grammar' => ['name' => 'Grammar', 'sheet' => 'Grammaire et conjugaison', 'emoji' => '🔤', 'points' => 10, 'printable' => true, 'grades' => [2, 6]],
     ];
 
     /**
@@ -204,6 +205,7 @@ class HomeworkModule extends Module
             $router->get('settings', [HomeworkController::class, 'settings'])->name('settings');
             $router->get('kid-pins', [HomeworkController::class, 'pins'])->name('pins');
             $router->get('chores', [ChoreController::class, 'index'])->name('chores');
+            $router->get('progress', [ProgressController::class, 'index'])->name('progress');
             $router->post('chores', [ChoreController::class, 'store'])->name('chores.store');
             $router->post('chores/{chore}', [ChoreController::class, 'update'])->whereNumber('chore')->name('chores.update');
             $router->post('kids/{kid}/pin', [HomeworkController::class, 'savePin'])->where('kid', $kid)->name('pin');

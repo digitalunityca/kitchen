@@ -260,6 +260,9 @@
   .kz-parent-card .kz-keys button { height: 72px; font-size: 28px; }
   .kz-parent-actions { display: flex; gap: 10px; margin-top: 4px; }
   .kz-scores { display: flex; gap: 10px; margin-top: 4px; }
+  .kz-choice-level { font-size: 14px; color: var(--sub); line-height: 1.3; text-align: center; padding: 0 6px; }
+  .kz-stuck { background: rgba(255,149,0,.14); color: #8A4B00; border-radius: 14px; padding: 10px 14px; margin: 0; }
+  body.night .kz-stuck { color: #FFB340; }
   .kz-scores[hidden], .kz-keys [data-key="ok"][hidden] { display: none; }
   .kz-score-btn { min-width: 128px; min-height: 64px; padding: 8px 14px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #fff; }
   .kz-score-btn b { font-size: 17px; font-weight: 600; }

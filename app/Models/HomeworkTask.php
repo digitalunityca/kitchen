@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * The homework sheets among the tasks (task type "homework"). Queries only see
  * homework, and a new row gets its type, exercise type, points, score and times
- * from the task data, so the homework code keeps working with plain arrays.
+ * (and the skill and level it practises) from the task data, so the homework code
+ * keeps working with plain arrays.
  */
 class HomeworkTask extends Task
 {
@@ -26,6 +27,9 @@ class HomeworkTask extends Task
             $task->score = $data['score'] ?? null;
             $task->done_at = self::utc($data['doneAt'] ?? null);
             $task->approved_at = self::utc($data['approvedAt'] ?? null);
+            $task->skill_id = isset($data['skillId']) ? (int) $data['skillId'] : null;
+            $task->exercise_variant_id = isset($data['variantId']) ? (int) $data['variantId'] : null;
+            $task->level = isset($data['level']) ? (int) $data['level'] : null;
         });
     }
 

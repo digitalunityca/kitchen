@@ -52,6 +52,9 @@ The dashboard also uses Fully's JavaScript interface for **volume** (`fully.setA
     - `kids`: slug, name, letter, colour, grade, menu order. Seeded once from `config/dashboard.php`; after that the database is the source.
     - `tasks`: each day's tasks per kid. The type (`task_types`: homework or home_help) says whether a row is a worksheet (linked to `exercise_types`, seeded from the templates) or a chore (linked to `chores`). Each row also has its points, the parent's score and when it was done and approved.
     - `chores` and `chore_kid`: the Aider à la maison list and which kid sees each chore.
+    - `skills`, `skill_prerequisites`, `skill_grades`: the curriculum, loaded from `database/data/skills.json`.
+    - `exercise_variants`: worksheet levels, loaded from `database/data/exercise_variants.json`.
+    - `kid_skill_progress`: each kid's level and status per skill. Tasks keep the skill and level they were made for.
     - `homework_ledger`: points + and −; `at` is a UTC date-time. A chore's line points at its task (`task_ref`).
     - `homework_words`: writing words.
     - `kid_pins`: hashes only.
@@ -184,6 +187,31 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
   - Each chore counts a set number of times a day, on every day, school days or the weekend.
   - Settings › Aider à la maison edits the list, the points, the days and which kid sees each chore. A chore is turned off, never deleted.
 - **News:** placeholder for messages from the kids' teachers (emails, to be connected later).
+- **Curriculum and levels** (docs/LEARNING_PLAN.md):
+  - **Catalogue:** `database/data/skills.json` holds 70 skills (47 math, 23 French), hand-encoded from Quebec's *Progression des apprentissages* (2009).
+    - For each grade from 1re to 6e: → learns it with the teacher, ★ does it alone by June, or reuses it.
+    - Month windows per grade (my estimate, editable in the file) and prerequisites.
+    - Codes are ours: section letter + item number. The Marble taxonomy was only used as a reference.
+  - **Levels:** `database/data/exercise_variants.json` holds 48 levels across addition, multiplication, division and the new *Grammaire et conjugaison* sheet (grades 2–6).
+    - Additions and multiplications read the level's number ranges (and carrying). The lowest levels match the sheets made before levels existed.
+    - Division and grammar send the level's focus to the AI. Reading and writing have no levels yet.
+  - After editing either file, run `php artisan hub:sync-curriculum`. It loads both files; skills or levels removed from a file are turned off, and a prerequisite cycle is refused.
+  - **Choosing a sheet** (`PickExerciseVariant`): the kid still taps a tile, and the tile shows the next level. The hub picks the skill and level in this order:
+    1. the prerequisite, when the kid is stuck at level 1;
+    2. a due review, or a skill marked "À revoir";
+    3. this month's skills for the grade (★ before →, lowest level first);
+    4. upkeep of mastered skills.
+    - July and August: reviews and upkeep only.
+    - Variety: a skill already on today's sheets goes last, and the same skill and level is skipped for 3 school days.
+  - **After a scored check** (`UpdateSkillProgress`):
+    - Bien twice in a row → next level. At the grade's top level → mastered, with reviews at +7 then +21 days.
+    - Quelques erreurs → same level.
+    - À revoir → one level down. Twice in a row → a note for the parent at the top of History.
+  - **Starting levels** (`SeedKidProgress`, run by the migration):
+    - Skills the grade only reuses start mastered.
+    - Skills of this year start at level 1, or a little further into the year when they continue last year's →.
+    - Sheets already approved count too: each old sheet matched the level with the same numbers.
+  - **Settings › Progrès:** per kid, this month's skills, and each skill's level, status, last score and next review.
 - Data: the MySQL tables `kids`, `homework_*` and `kid_pins`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
 
 ---
@@ -266,6 +294,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 - Canadiens sheet opens at full size with a centred spinner; homework sheet made near full screen, over the side menu.
 
 **27 November 2026**
+- Curriculum-driven sheets: the skills catalogue from the Progression des apprentissages, levels in the sheet builders, the choice of skill and level, progress from the parent's score, the Progrès page, and the new Grammaire et conjugaison sheet.
 - Parent's score on each approved sheet (Bien / Quelques erreurs / À revoir) and Aider à la maison (chores for points). Homework sheets became one type of task.
 - French version (Quebec French), now the default language; English kept as fallback.
 - Data moved from SQLite to MySQL 8.4, with a `kids` table and foreign keys.

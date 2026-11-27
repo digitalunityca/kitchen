@@ -14,12 +14,14 @@ use App\Actions\Homework\MarkTaskMissed;
 use App\Actions\Homework\PrintHomework;
 use App\Actions\Homework\RedeemReward;
 use App\Actions\Homework\ReviewTask;
+use App\Actions\Learning\PickExerciseVariant;
 use App\Dashboard\ModuleRegistry;
 use App\Http\Access\AccessGate;
 use App\Http\Access\AccessSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireSettingsPin;
 use App\Models\Kid;
+use App\Models\KidSkillProgress;
 use App\Models\Task;
 use App\Models\TaskType;
 use Carbon\CarbonImmutable;
@@ -279,7 +281,7 @@ class KidController extends Controller
                 'homeworkFirst' => ! $today->isWeekend() && RedeemReward::homeworkOpen($tasks),
                 'waiting' => (int) collect($this->toCheck($kid['id']))->sum('points'),
             ],
-            'history' => $this->historyData($kid) + ['stats' => $this->store->stats($kid['id'])],
+            'history' => $this->historyData($kid) + ['stats' => $this->store->stats($kid['id']), 'stuck' => $this->stuck($kid['id'])],
             default => [],
         };
     }
@@ -293,6 +295,14 @@ class KidController extends Controller
     {
         $picked = collect($tasks)->where('status', '!=', 'missed')->countBy('template')->all();
         $templates = HomeworkModule::templatesFor($kid['grade']);
+        $kidId = Kid::idFor($kid['id']);
+        $taken = array_values(array_filter(array_column($tasks, 'skillId')));
+        // What the next sheet of each kind will practise (the hub picks the skill and level).
+        $next = [];
+        foreach (array_keys($templates) as $key) {
+            $pick = app(PickExerciseVariant::class)->handle($kidId, (int) $kid['grade'], $key, $today, $taken);
+            $next[$key] = $pick === null ? null : ['level' => $pick['level'], 'label' => $pick['variant']->label_fr, 'review' => in_array($pick['reason'], ['review', 'prerequisite'], true)];
+        }
 
         return [
             'schoolDay' => ! $today->isWeekend(),
@@ -300,6 +310,7 @@ class KidController extends Controller
             'choices' => array_values(array_map(fn (array $t, string $key): array => $t + [
                 'key' => $key,
                 'already' => $picked[$key] ?? 0,
+                'next' => $next[$key],
             ], $templates, array_keys($templates))),
         ];
     }
@@ -482,6 +493,17 @@ class KidController extends Controller
             'kid' => $kid,
             'screen' => $screen,
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * Skills the kid had to go over again twice in a row: a note for the parent in History.
+     *
+     * @return list<string>
+     */
+    private function stuck(string $kid): array
+    {
+        return KidSkillProgress::query()->with('skill')->where('kid_id', Kid::idFor($kid))->whereNotNull('stuck_since')
+            ->get()->map(fn (KidSkillProgress $p): string => $p->skill->name_fr)->all();
     }
 
     /** @return Collection<int, Task> the kid's chores since that day */

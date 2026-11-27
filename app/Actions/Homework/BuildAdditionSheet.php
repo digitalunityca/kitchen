@@ -27,21 +27,47 @@ class BuildAdditionSheet
         6 => [[1000, 9999], [1000, 9999]],
     ];
 
-    /** @return list<array{question: string, answer: string, top: int, bottom: int}> */
-    public function handle(int $grade, int $seed): array
+    /**
+     * The sheet's problems. A level (exercise variant) gives the number ranges and,
+     * optionally, carry (true: at least one carry, false: none) and sum_max; without
+     * one, the grade's ranges are used as before.
+     *
+     * @param  array{top?: array{int, int}, bottom?: array{int, int}, carry?: bool, sum_max?: int}|null  $params
+     * @return list<array{question: string, answer: string, top: int, bottom: int}>
+     */
+    public function handle(int $grade, int $seed, ?array $params = null): array
     {
-        [$top, $bottom] = self::RANGES[max(1, min(6, $grade))];
+        [$top, $bottom] = isset($params['top'], $params['bottom']) ? [$params['top'], $params['bottom']] : self::RANGES[max(1, min(6, $grade))];
+        $carry = $params['carry'] ?? null;
+        $max = $params['sum_max'] ?? PHP_INT_MAX;
         $random = new Randomizer(new Mt19937($seed));
-        $rows = self::ROWS;
         $problems = [];
 
-        for ($i = 0; $i < self::COLUMNS * $rows; $i++) {
-            $a = $random->getInt(...$top);
-            $b = $random->getInt(...$bottom);
+        for ($i = 0; $i < self::COLUMNS * self::ROWS; $i++) {
+            // Draw until the pair fits the level (a few tries at most for these ranges).
+            for ($try = 0; $try < 200; $try++) {
+                $a = $random->getInt(...$top);
+                $b = $random->getInt(...$bottom);
+                if ($a + $b <= $max && ($carry === null || self::carries($a, $b) === $carry)) {
+                    break;
+                }
+            }
             $problems[] = ['question' => "{$a} + {$b}", 'answer' => (string) ($a + $b), 'top' => $a, 'bottom' => $b];
         }
 
         return $problems;
+    }
+
+    /** Does adding these two numbers carry in any column? */
+    public static function carries(int $a, int $b): bool
+    {
+        for (; $a > 0 || $b > 0; $a = intdiv($a, 10), $b = intdiv($b, 10)) {
+            if ($a % 10 + $b % 10 >= 10) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

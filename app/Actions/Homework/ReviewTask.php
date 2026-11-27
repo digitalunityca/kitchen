@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Homework;
 
+use App\Actions\Learning\UpdateSkillProgress;
+use App\Models\Kid;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
 
@@ -17,7 +19,7 @@ class ReviewTask
 {
     public const SCORES = ['bien', 'erreurs', 'revoir'];
 
-    public function __construct(private readonly HomeworkStore $store) {}
+    public function __construct(private readonly HomeworkStore $store, private readonly UpdateSkillProgress $progress) {}
 
     /** Points a sheet earns with that score. */
     public static function pointsFor(int $points, string $score): int
@@ -64,6 +66,12 @@ class ReviewTask
 
                 $data['days'][$date][$kid] = $tasks;
                 $this->store->save($data);
+
+                // The score moves the kid on the sheet's skill (next level, review, step back).
+                if ($approve && isset($task['skillId'])) {
+                    $profile = Kid::query()->where('slug', $kid)->firstOrFail();
+                    $this->progress->handle($profile->id, (int) $task['skillId'], $profile->grade, $score, now(HomeworkModule::TIMEZONE)->startOfDay());
+                }
 
                 return true;
             }

@@ -18,6 +18,7 @@
               <span class="kz-choice-count" data-count hidden></span>
               <b>{{ __($choice['name']) }}</b>
               <small>+{{ $choice['points'] }} {{ __('points') }}{{ $choice['key'] === 'reading' ? ' · '.$readingMinutes.' min' : '' }}</small>
+              @if ($choice['next'])<small class="kz-choice-level">{{ $choice['next']['review'] ? '🔁 ' : '' }}{{ __('Level :n', ['n' => $choice['next']['level']]) }} · {{ $choice['next']['label'] }}</small>@endif
               @if ($choice['already'] > 0)<small class="kz-choice-left">{{ __(':n printed today', ['n' => $choice['already']]) }}</small>@endif
             </button>
             <button type="button" class="kz-minus" data-minus="{{ $choice['key'] }}" aria-label="{{ __('One less :name', ['name' => __($choice['name'])]) }}" hidden>−</button>

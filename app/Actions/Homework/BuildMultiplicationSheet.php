@@ -28,10 +28,16 @@ class BuildMultiplicationSheet
         6 => [[100, 999], [100, 999]],
     ];
 
-    /** @return list<array{question: string, answer: string, top: int, bottom: int}> */
-    public function handle(int $grade, int $seed): array
+    /**
+     * The sheet's problems: a level (exercise variant) gives the number ranges;
+     * without one, the grade's ranges are used as before.
+     *
+     * @param  array{top?: array{int, int}, bottom?: array{int, int}}|null  $params
+     * @return list<array{question: string, answer: string, top: int, bottom: int}>
+     */
+    public function handle(int $grade, int $seed, ?array $params = null): array
     {
-        [$top, $bottom] = self::RANGES[max(1, min(6, $grade))];
+        [$top, $bottom] = isset($params['top'], $params['bottom']) ? [$params['top'], $params['bottom']] : self::RANGES[max(1, min(6, $grade))];
         $random = new Randomizer(new Mt19937($seed));
         $problems = [];
 

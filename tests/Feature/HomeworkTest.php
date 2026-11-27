@@ -534,7 +534,8 @@ class HomeworkTest extends TestCase
         Http::assertSentCount(2);
         Http::assertSent(fn (Request $request): bool => $request->url() === $url
             && ! $request['store']
-            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'copy_words' => []]);
+            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'focus' => ['divisions correspondant aux tables de 2, 5 et 10, sans reste', ''], 'copy_words' => []]
+            && str_contains($request['instructions'], 'non-empty focus'));
 
         $html = $this->get($packet)->assertOk()
             ->assertSee('Print all worksheets')->assertSee('Combine 12 et 15.')->assertSee('Que lit le personnage?')
