@@ -22,6 +22,8 @@
   .hint { color: var(--sub); margin: 0; line-height: 1.5; }
   .stuck { color: #B3261E; font-weight: 600; }
   .scroll { overflow-x: auto; }
+  .page { max-width: 1040px; }
+  td:first-child { min-width: 260px; }
 </style>
 @endpush
 @php($statuses = ['nouveau' => __('Not started'), 'en_cours' => __('In progress'), 'maitrise' => __('Mastered'), 'a_revoir' => __('To go over again')])
