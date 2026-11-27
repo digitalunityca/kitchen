@@ -80,7 +80,7 @@
         <header class="sheet-head">
           <div class="sheet-title">
             <h2>{{ $layout ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
-            <p>{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : 'Réponds à chaque question.') }}</p>
+            <p>{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : (isset($task['worksheet'][0]['word']) ? 'Recopie chaque mot trois fois.' : 'Réponds à chaque question.')) }}</p>
           </div>
           <div class="sheet-meta">
             <p>{{ $kid['name'] }}</p>

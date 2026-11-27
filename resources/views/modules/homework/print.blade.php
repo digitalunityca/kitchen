@@ -38,7 +38,7 @@
         <tr>
           <td>
             <p class="title">{{ $layout ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}</p>
-            <p class="inst">{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : 'Réponds à chaque question.') }}</p>
+            <p class="inst">{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : (isset($task['worksheet'][0]['word']) ? 'Recopie chaque mot trois fois.' : 'Réponds à chaque question.')) }}</p>
           </td>
           <td class="meta">
             <table role="presentation" style="width: 100%; border-collapse: collapse">
