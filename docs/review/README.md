@@ -86,3 +86,14 @@ Screenshots (test names "Élève 5e" / "Élève 3e", no photos):
 - 12-kid-pin-soccer.jpg
 - 13-kid-home-gaming.jpg
 - 14-kid-pin-gaming.jpg
+
+## Update: more realistic backgrounds, 27 Nov 2026
+
+Both themes were redrawn as original, realistic illustrations (nothing downloaded, no logos or real people):
+- **Soccer:** an evening stadium out of focus with floodlights, a mown pitch in perspective, a goal with its net, and a shaded ball.
+- **Gaming:** a desk in front of a glowing screen, a shaded controller, and 3D studded bricks.
+
+Screenshots (test names, no photos):
+- 15-kid-pin-soccer-realistic.jpg
+- 16-kid-home-soccer-realistic.jpg
+- 17-kid-home-gaming-realistic.jpg
