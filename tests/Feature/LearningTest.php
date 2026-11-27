@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Actions\Homework\BuildAdditionSheet;
+use App\Actions\Homework\BuildDivisionSheet;
 use App\Actions\Homework\BuildMultiplicationSheet;
 use App\Actions\Homework\CheckDivisionItems;
 use App\Actions\Homework\GenerateWritingWords;
@@ -244,8 +245,8 @@ class LearningTest extends TestCase
     {
         config(['services.openai.key' => 'test-key']);
         Kid::query()->where('slug', 'arthur')->update(['working_grade' => 3]);
-        $rows = GenerateWritingWords::layout()['rows'];
-        $this->assertSame(15, $rows); // 12 mm handwriting rows fill the page
+        $rows = GenerateWritingWords::layout()['count'];
+        $this->assertSame(30, $rows); // 15 rows of 12 mm fill the page, 2 words per row
         $words = ['école', 'Fenêtre', 'bébé', 'école', 'Lucie', 'deux mots', 'château', 'forêt'];
         Http::fake(['https://api.openai.com/v1/responses' => Http::response(['output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['words' => $words])]]]]])]);
 
@@ -266,7 +267,9 @@ class LearningTest extends TestCase
 
         $html = view('modules.homework.print', ['kid' => ['id' => 'arthur', 'name' => 'A', 'grade' => 2], 'date' => '2026-11-25', 'tasks' => [app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[0]]])->render();
         $this->assertStringContainsString('<table class="copy"', $html);
-        $this->assertSame($rows, substr_count($html, 'border-bottom: .5pt dashed #aaa') / 3);
+        $this->assertSame($rows, substr_count($html, 'border-bottom: .5pt dashed #aaa')); // one writing space per word
+        $this->assertSame(2, substr_count($html, '>Écris</td>'));
+        $this->assertStringContainsString('Recopie chaque mot dans la case à côté.', $html);
     }
 
     public function test_a_parent_raises_the_working_grade_without_stepping_back(): void
@@ -357,7 +360,7 @@ class LearningTest extends TestCase
             'tables' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(3, 4, ['top' => [2, 10], 'bottom' => [2, 10]])],
             '3 × 2 digits' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(5, 5, ['top' => [100, 999], 'bottom' => [10, 99]])],
             '3 × 3 digits' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(6, 6, ['top' => [100, 999], 'bottom' => [100, 999]])],
-            'writing' => ['writing', array_map(fn (string $w): array => ['question' => $w, 'answer' => $w, 'word' => true], array_slice(GenerateWritingWords::FALLBACK, 0, GenerateWritingWords::layout()['rows']))],
+            'writing' => ['writing', array_map(fn (string $w): array => ['question' => $w, 'answer' => $w, 'word' => true], array_slice(GenerateWritingWords::FALLBACK, 0, GenerateWritingWords::layout()['count']))],
         ];
 
         foreach ($sheets as $name => [$template, $worksheet]) {
@@ -368,6 +371,51 @@ class LearningTest extends TestCase
             $pdf->render();
             $this->assertSame(1, $pdf->getCanvas()->get_page_count(), "{$name} ran onto a second page");
         }
+    }
+
+    public function test_division_sheets_are_made_on_the_hub_and_fill_the_page(): void
+    {
+        // Table facts: "56 ÷ 8 = ▢" lines, exact answers within ÷ 2, ÷ 5, ÷ 10.
+        $facts = app(BuildDivisionSheet::class)->handle(4, ['build' => 'facts', 'check' => ['divisors' => [2, 5, 10], 'quotient' => [1, 10], 'remainder' => false]]);
+        $grid = BuildDivisionSheet::layout($facts);
+        $this->assertSame(['fact', 2, 9, 'Divisions des tables'], [$grid['kind'], $grid['across'], $grid['columns'], $grid['title']]);
+        $this->assertCount($grid['across'] * $grid['down'], $facts);
+        foreach ($facts as $f) {
+            $this->assertContains($f['bottom'], [2, 5, 10]);
+            $this->assertSame((string) ($f['top'] / $f['bottom']), $f['answer']);
+        }
+
+        // 3 digits ÷ 1 digit in the crochet layout: dividend + a "−" column on the left, divisor and quotient behind the bracket,
+        // 1 + 2 rows per quotient digit.
+        $long = BuildDivisionSheet::longGrid(3, 1, 3);
+        $this->assertSame([4, 4, 7, 2, 3], [$long['left'], $long['right'], $long['height'], $long['across'], $long['down']]);
+        $sheet = app(BuildDivisionSheet::class)->handle(5, ['build' => 'long', 'check' => ['divisor' => [2, 9], 'dividend' => [100, 999], 'remainder' => true]]);
+        $this->assertCount(6, $sheet);
+        $this->assertSame('Divisions : 3 chiffres ÷ 1 chiffre', BuildDivisionSheet::layout($sheet)['title']);
+        foreach ($sheet as $p) {
+            $expected = $p['top'] % $p['bottom'] === 0 ? (string) intdiv($p['top'], $p['bottom']) : intdiv($p['top'], $p['bottom']).' reste '.$p['top'] % $p['bottom'];
+            $this->assertSame($expected, $p['answer']);
+        }
+
+        // A decimal quotient adds "," and two columns, and two steps per decimal.
+        $decimal = BuildDivisionSheet::longGrid(4, 2, 3, 2);
+        $this->assertSame([8, 7, 11], [$decimal['left'], $decimal['right'], $decimal['height']]);
+        $dec = app(BuildDivisionSheet::class)->handle(6, ['build' => 'long', 'check' => ['divisor' => [10, 99], 'dividend' => [1000, 9999], 'remainder' => true, 'decimals' => 2]]);
+        $this->assertMatchesRegularExpression('/^\d+,\d{2}$/', $dec[0]['answer']);
+
+        foreach (['facts' => $facts, '3 ÷ 1' => $sheet, 'decimal' => $dec] as $name => $worksheet) {
+            $pdf = new Dompdf;
+            $pdf->setPaper('letter');
+            $pdf->loadHtml(view('modules.homework.print', ['kid' => ['id' => 'theo', 'name' => 'T', 'grade' => 5], 'date' => '2026-11-25', 'tasks' => [['id' => 't1', 'seed' => 1, 'template' => 'division', 'worksheet' => $worksheet]]])->render(), 'UTF-8');
+            $pdf->render();
+            $this->assertSame(1, $pdf->getCanvas()->get_page_count(), "{$name} ran onto a second page");
+        }
+
+        // Theo's division (table facts) is made without the AI.
+        Http::preventStrayRequests();
+        $this->signIn('theo');
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 1]])->assertOk();
+        $this->assertSame('fact', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]['worksheet'][0]['kind']);
     }
 
     /** @return array{string, int} */

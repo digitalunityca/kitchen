@@ -75,12 +75,13 @@
     @foreach ($tasks as $task)
       @php($isSums = $task['template'] === 'addition' && isset($task['worksheet'][0]['top']))
       @php($isGrid = $task['template'] === 'multiplication' && isset($task['worksheet'][0]['top']))
-      @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : ($isGrid ? \App\Actions\Homework\BuildMultiplicationSheet::layout($task['worksheet']) : null))
+    @php($isDiv = $task['template'] === 'division' && isset($task['worksheet'][0]['kind']))
+      @php($layout = $isSums ? \App\Actions\Homework\BuildAdditionSheet::layout($task['worksheet']) : ($isGrid ? \App\Actions\Homework\BuildMultiplicationSheet::layout($task['worksheet']) : ($isDiv ? \App\Actions\Homework\BuildDivisionSheet::layout($task['worksheet']) : null)))
       <article class="paper" lang="fr-CA">
         <header class="sheet-head">
           <div class="sheet-title">
             <h2>{{ $layout ? $layout['title'] : \App\Modules\Homework\HomeworkModule::TEMPLATES[$task['template']]['sheet'] }}{{ $answers ? ' · CORRIGÉ' : '' }}</h2>
-            <p>{{ $isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : (isset($task['worksheet'][0]['word']) ? 'Recopie chaque mot trois fois.' : 'Réponds à chaque question.')) }}</p>
+            <p>{{ $isDiv ? $layout['instruction'] : ($isSums ? 'Calcule chaque somme.' : ($isGrid ? 'Calcule chaque produit. Un chiffre par case.' : (isset($task['worksheet'][0]['word']) ? 'Recopie chaque mot dans la case à côté.' : 'Réponds à chaque question.'))) }}</p>
           </div>
           <div class="sheet-meta">
             <p>{{ $kid['name'] }}</p>
@@ -93,6 +94,12 @@
           <div class="sums" style="grid-template-columns: repeat({{ $layout['columns'] }}, 1fr)">
             @foreach ($task['worksheet'] as $p)
               <div>@include('modules.homework.sheets.addition-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers])</div>
+            @endforeach
+          </div>
+        @elseif ($isDiv)
+          <div class="grids" style="grid-template-columns: repeat({{ $layout['across'] }}, 1fr)">
+            @foreach ($task['worksheet'] as $p)
+              <div>@include('modules.homework.sheets.division-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers])</div>
             @endforeach
           </div>
         @elseif ($isGrid)

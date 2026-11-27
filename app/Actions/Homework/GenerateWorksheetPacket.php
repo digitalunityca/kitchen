@@ -45,15 +45,18 @@ class GenerateWorksheetPacket
 
             // Additions and multiplications are made on the hub (column and grid layouts); the rest by the AI in one call.
             $worksheets = [];
-            $others = array_values(array_filter($pending, fn (array $t): bool => ! in_array($t['template'], ['addition', 'multiplication', 'writing'], true)));
+            // Divisions with a 'build' level are made on the hub too (facts grid or crochet layout).
+            $local = fn (array $t): bool => in_array($t['template'], ['addition', 'multiplication', 'writing'], true) || ($t['template'] === 'division' && isset($t['params']['build']));
+            $others = array_values(array_filter($pending, fn (array $t): bool => ! $local($t)));
             $grade = (int) ($kid['workGrade'] ?? $kid['grade']);
             $written = $others === [] ? [] : $this->generate($others, $grade);
             foreach ($pending as $i => $task) {
                 $worksheets[$i] = match ($task['template']) {
                     'addition' => $this->buildAdditionSheet->handle($grade, (int) $task['seed'], $task['params'] ?? null),
                     'multiplication' => $this->buildMultiplicationSheet->handle($grade, (int) $task['seed'], $task['params'] ?? null),
+                    'division' => isset($task['params']['build']) ? app(BuildDivisionSheet::class)->handle((int) $task['seed'], $task['params']) : $this->clean(array_shift($written), $task),
                     // Écriture: words written by the AI for the grade, as many as the copy table holds.
-                    'writing' => app(GenerateWritingWords::class)->handle(Kid::idFor($kid['id']), $grade, GenerateWritingWords::layout()['rows']),
+                    'writing' => app(GenerateWritingWords::class)->handle(Kid::idFor($kid['id']), $grade, GenerateWritingWords::layout()['count']),
                     default => $this->clean(array_shift($written), $task),
                 };
             }

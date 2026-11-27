@@ -220,8 +220,9 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
     - **Additions:** 7 mm per digit, 9.5 mm per written row, a carry row, room for the answer. Small sums give many problems; 4 digits or 3 numbers to add give fewer, bigger ones. 3 numbers are possible with `addends: 3` in a level.
     - **Multiplications:** square 8 mm cells. The rows are carries, the number, × the multiplier, then the result (1-digit multiplier) or one partial product per multiplier digit, a carry row for the sum and the total.
     - Old sheets with more problems than fit are drawn a little smaller, never on two pages.
+  - **Divisions:** table-fact levels print as "56 ÷ 8 = ▢" lines (30 per page). Written-division levels (3 digits ÷ 1, 4 digits ÷ 2, decimal quotient) print in the Québec crochet layout, in 8 mm squares: dividend on the left, divisor behind the bracket, quotient under it, 2 rows per quotient digit. Both are made on the hub, with exact answers from the level's numbers. Only the story-based sharing levels (2e) still come from the AI.
   - **Écriture:** for each sheet the AI writes words for the kid's working grade (Québec French, accented, family-safe), none from the last 5 writing sheets. They are saved on the task, so reprints match. If the AI fails, a built-in list of 50 words is used.
-    - Printed as a copy table: Mot, then 3 copies with a baseline and a dashed midline, 16 words per page.
+    - Printed as a 4-column table, Mot | Écris | Mot | Écris: 15 rows of 12 mm, 30 words per page; each writing space has a baseline and a dashed midline.
     - The old per-kid word list in Settings was removed; its table stays, unused.
   - **AI sheets:** their own numbering ("1)") is removed. Division calculations are checked against the level (divisor, dividend or quotient, remainder): wrong answers are corrected, items outside the level are replaced by calculations made on the hub.
   - **PDF font:** the body prints in Helvetica; characters it lacks (→, ≠…) are drawn in DejaVu Sans (`PdfText`).

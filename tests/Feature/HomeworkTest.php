@@ -230,7 +230,7 @@ class HomeworkTest extends TestCase
         Http::fake(['https://api.openai.com/v1/responses' => Http::response('down', 503)]);
         $this->signIn('theo');
 
-        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['grammar' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
         $this->assertEmpty(app(HomeworkStore::class)->tasks('theo', '2026-11-25') ?? []);
 
         config(['dashboard.homework_print_spool' => null]);
@@ -331,21 +331,21 @@ class HomeworkTest extends TestCase
         });
 
         config(['services.openai.key' => 'test-key', 'dashboard.homework_print_spool' => $this->spool()]);
-        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->packet(['Divisions']))]);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response($this->packet(['Grammaire et conjugaison']))]);
         $this->signIn('theo');
-        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 1]])->assertOk();
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['grammar' => 1]])->assertOk();
 
         $this->assertSame(1, $store->tasks('theo', '2026-11-24')[0]['number']);
         $this->assertSame(2, $store->tasks('arthur', '2026-11-25')[0]['number']);
         $this->assertSame(3, $store->tasks('theo', '2026-11-25')[0]['number']);
 
         $this->get(self::SHEET.'?screen=history')
-            ->assertSeeInOrder(['Today', '#0003', 'Division', 'Waiting for a parent', 'Yesterday', '#0001', 'Addition', 'Approved · +10'])
+            ->assertSeeInOrder(['Today', '#0003', 'Grammar', 'Waiting for a parent', 'Yesterday', '#0001', 'Addition', 'Approved · +10'])
             ->assertSee('/modules/homework/kids/theo/preview/2026-11-25/t1', false);
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
             ->assertSee('<p class="sheet-no">#0003</p>', false)
-            ->assertSee('Combien font 20 ÷ 5?')
+            ->assertSee('Combien font 6 × 7?')
             ->assertDontSee('class="toolbar"', false);
     }
 
@@ -503,9 +503,9 @@ class HomeworkTest extends TestCase
     {
         config(['services.openai.key' => 'test-key', 'dashboard.allowed_ips' => ['192.0.2.1']]);
         $url = 'https://api.openai.com/v1/responses';
-        $exercise = ['question' => '1) Combien font 50 ÷ 5 ?', 'answer' => '9']; // numbered by the AI, wrong answer
+        $exercise = ['question' => '1) Nous (chanter) ___ ensemble.', 'answer' => 'chantons']; // numbered by the AI
         $worksheets = [
-            ['topic' => 'Divisions', 'exercises' => array_fill(0, 4, $exercise)],
+            ['topic' => 'Grammaire et conjugaison', 'exercises' => array_fill(0, 4, $exercise)],
             ['topic' => 'Lecture', 'exercises' => array_fill(0, 4, ['question' => 'Que lit le personnage?', 'answer' => 'Un livre.'])],
         ];
         Http::preventStrayRequests();
@@ -516,7 +516,7 @@ class HomeworkTest extends TestCase
             ]])]);
 
         $packet = '/modules/homework/kids/theo/2026-11-25/packet';
-        $this->pick('theo', ['division' => 1, 'reading' => 1]);
+        $this->pick('theo', ['grammar' => 1, 'reading' => 1]);
         $this->get($packet)->assertOk()->assertSee('Generating 2 worksheets');
         $this->postJson($packet)->assertUnprocessable();
         $this->assertArrayNotHasKey('worksheet', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]);
@@ -526,12 +526,12 @@ class HomeworkTest extends TestCase
         Http::assertSentCount(2);
         Http::assertSent(fn (Request $request): bool => $request->url() === $url
             && ! $request['store']
-            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'focus' => ['divisions correspondant aux tables de 2, 5 et 10, sans reste', '']]
+            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Grammaire et conjugaison', 'Lecture'], 'focus' => ['accorder le verbe avec un sujet pronom (je, tu, il, nous, vous, ils)', '']]
             && str_contains($request['instructions'], 'non-empty focus'));
 
         $html = $this->get($packet)->assertOk()
-            ->assertSee('Print all worksheets')->assertSee('Combien font 50 ÷ 5 ?')->assertDontSee('1) Combien')->assertSee('Que lit le personnage?')
-            ->assertDontSee('<strong>10</strong>', false)
+            ->assertSee('Print all worksheets')->assertSee('Nous (chanter) ___ ensemble.')->assertDontSee('1) Nous')->assertSee('Que lit le personnage?')
+            ->assertDontSee('<strong>chantons</strong>', false)
             ->getContent();
         $this->assertSame(2, substr_count($html, 'aria-label="Code QR de confirmation"'));
         preg_match_all('~href="([^"]+/confirm/[^"]+)"~', $html, $matches);
@@ -557,13 +557,13 @@ class HomeworkTest extends TestCase
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
 
         $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('Homework confirmed');
-        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('15 points awarded.');
-        $this->assertSame(15, app(HomeworkStore::class)->balance('theo'));
+        $this->post($link, ['pin' => '4821'], $headers)->assertOk()->assertSee('10 points awarded.');
+        $this->assertSame(10, app(HomeworkStore::class)->balance('theo'));
         $this->assertSame('todo', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[1]['status']);
 
         $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertRedirect();
         $this->post('/settings/unlock', ['pin' => '4821']);
-        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('<strong>10</strong>', false); // answer corrected by the check
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('<strong>chantons</strong>', false);
     }
 
     public function test_unknown_kids_are_not_found(): void

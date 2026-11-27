@@ -1,5 +1,5 @@
 {
-  "about": "One worksheet type practising one skill at one level. Locally built sheets (addition, multiplication) read the number ranges; AI sheets get the focus text. grades = the school grades that can get this level. The lowest addition and multiplication levels match the sheets the hub made before levels existed. Division levels also carry a 'check' (divisor, dividend or quotient range, remainder) used to verify and fix the AI's calculations.",
+  "about": "One worksheet type practising one skill at one level. Locally built sheets (addition, multiplication) read the number ranges; AI sheets get the focus text. grades = the school grades that can get this level. The lowest addition and multiplication levels match the sheets the hub made before levels existed. Division levels also carry a 'check' (divisor, dividend or quotient range, remainder) used to verify and fix the AI's calculations, or (with 'build': facts | long) to make the sheet on the hub: a facts grid or long divisions in the crochet format.",
   "variants": [
     {
       "type": "addition",
@@ -498,7 +498,8 @@
             10
           ],
           "remainder": false
-        }
+        },
+        "build": "facts"
       }
     },
     {
@@ -522,7 +523,8 @@
             10
           ],
           "remainder": false
-        }
+        },
+        "build": "facts"
       }
     },
     {
@@ -546,7 +548,8 @@
             99
           ],
           "remainder": false
-        }
+        },
+        "build": "long"
       }
     },
     {
@@ -570,7 +573,8 @@
             999
           ],
           "remainder": true
-        }
+        },
+        "build": "long"
       }
     },
     {
@@ -594,7 +598,8 @@
             999
           ],
           "remainder": false
-        }
+        },
+        "build": "long"
       }
     },
     {
@@ -617,8 +622,10 @@
             1000,
             9999
           ],
-          "remainder": true
-        }
+          "remainder": true,
+          "decimals": 2
+        },
+        "build": "long"
       }
     },
     {

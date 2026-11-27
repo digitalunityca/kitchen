@@ -20,25 +20,33 @@ class GenerateWritingWords
     /** How many recent writing sheets' words are not repeated. */
     public const RECENT_SHEETS = 5;
 
+    /** Built-in everyday words (about 100), used when the AI can't answer. */
     public const FALLBACK = [
         'maison', 'école', 'soleil', 'jardin', 'ami', 'chat', 'chien', 'lune', 'pomme', 'livre',
         'arbre', 'fleur', 'neige', 'hiver', 'été', 'printemps', 'automne', 'ballon', 'table', 'classe',
         'crayon', 'cahier', 'fenêtre', 'porte', 'cuisine', 'gâteau', 'fromage', 'lait', 'pain', 'tomate',
         'oiseau', 'poisson', 'cheval', 'lapin', 'forêt', 'rivière', 'montagne', 'vélo', 'bateau', 'avion',
         'chanter', 'danser', 'manger', 'jouer', 'courir', 'dormir', 'grand', 'petit', 'rouge', 'joli',
+        'famille', 'parent', 'enfant', 'bébé', 'matin', 'soir', 'journée', 'semaine', 'nuage', 'pluie',
+        'vent', 'étoile', 'plage', 'sable', 'glace', 'chapeau', 'mitaine', 'manteau', 'botte', 'chandail',
+        'pantalon', 'robe', 'soupe', 'carotte', 'banane', 'orange', 'fraise', 'sucre', 'beurre', 'chocolat',
+        'cadeau', 'fête', 'musique', 'dessin', 'papier', 'ciseaux', 'colle', 'règle', 'gomme', 'bureau',
+        'chaise', 'lit', 'lampe', 'tapis', 'escalier', 'camion', 'autobus', 'train', 'route', 'ville',
+        'village',
     ];
 
-    /** Handwriting rows: 12 mm high (a midline guide halfway), 3 copies per word. */
+    /** Handwriting rows: 12 mm high (a midline guide halfway); two word / write-space pairs per row. */
     public const ROW_MM = 12.0;
 
-    public const COPIES = 3;
+    public const PAIRS = 2;
 
     public function __construct(private readonly Http $http, private readonly LoggerInterface $log) {}
 
     /**
-     * The printed table: a header row, then one row per word filling the page.
+     * The printed table: Mot | Écris | Mot | Écris, a header row, then rows filling
+     * the page; as many words as word cells (two per row).
      *
-     * @return array{rows: int, row: float, header: float, word: float, copies: int}
+     * @return array{rows: int, row: float, header: float, word: float, pairs: int, count: int}
      */
     public static function layout(): array
     {
@@ -46,7 +54,9 @@ class GenerateWritingWords
         $header = 18.0;
 
         // Dompdf draws these rows about 10–15 % taller (the word's line height, the borders), so keep that headroom.
-        return ['rows' => (int) floor((SheetPage::HEIGHT - $header) / ($row * 1.15)), 'row' => round($row, 2), 'header' => $header, 'word' => 120.0, 'copies' => self::COPIES];
+        $rows = (int) floor((SheetPage::HEIGHT - $header) / ($row * 1.15));
+
+        return ['rows' => $rows, 'row' => round($row, 2), 'header' => $header, 'word' => 96.0, 'pairs' => self::PAIRS, 'count' => $rows * self::PAIRS];
     }
 
     /** @return list<array{question: string, answer: string, word: true}> one item per word, in the shape the sheets use */

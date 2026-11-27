@@ -56,7 +56,7 @@ class CheckDivisionItems
     }
 
     /** @return array{question: string, answer: string} */
-    private function make(array $check, Randomizer $random): array
+    public function make(array $check, Randomizer $random): array
     {
         for ($try = 0; $try < 200; $try++) {
             $b = isset($check['divisors']) ? $check['divisors'][$random->getInt(0, count($check['divisors']) - 1)] : $random->getInt(...($check['divisor'] ?? [2, 9]));
