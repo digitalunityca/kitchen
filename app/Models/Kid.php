@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
  * @property string $badge
  * @property string $color
  * @property int $grade
+ * @property int|null $working_grade
  * @property int $position
  */
 class Kid extends Model
@@ -29,7 +30,13 @@ class Kid extends Model
 
     protected function casts(): array
     {
-        return ['grade' => 'integer', 'position' => 'integer'];
+        return ['grade' => 'integer', 'working_grade' => 'integer', 'position' => 'integer'];
+    }
+
+    /** The grade the sheets follow: the working grade a parent set, else the school grade. */
+    public function workGrade(): int
+    {
+        return $this->working_grade ?? $this->grade;
     }
 
     /** Add the kids listed in the config that have no row yet. */

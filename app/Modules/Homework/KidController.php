@@ -30,6 +30,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -294,14 +295,20 @@ class KidController extends Controller
     private function homeworkData(array $kid, CarbonImmutable $today, array $tasks): array
     {
         $picked = collect($tasks)->where('status', '!=', 'missed')->countBy('template')->all();
-        $templates = HomeworkModule::templatesFor($kid['grade']);
+        $grade = (int) ($kid['workGrade'] ?? $kid['grade']);
+        $templates = HomeworkModule::templatesFor($grade);
         $kidId = Kid::idFor($kid['id']);
         $taken = array_values(array_filter(array_column($tasks, 'skillId')));
         // What the next sheet of each kind will practise (the hub picks the skill and level).
         $next = [];
         foreach (array_keys($templates) as $key) {
-            $pick = app(PickExerciseVariant::class)->handle($kidId, (int) $kid['grade'], $key, $today, $taken);
-            $next[$key] = $pick === null ? null : ['level' => $pick['level'], 'label' => $pick['variant']->label_fr, 'review' => in_array($pick['reason'], ['review', 'prerequisite'], true)];
+            $pick = app(PickExerciseVariant::class)->handle($kidId, $grade, $key, $today, $taken);
+            // A short label for the kid: no "En colonnes :" / "Défi :" prefix.
+            $next[$key] = $pick === null ? null : [
+                'level' => $pick['level'],
+                'label' => Str::ucfirst((string) preg_replace('/^(En colonnes|Défi) : /u', '', $pick['variant']->label_fr)),
+                'review' => in_array($pick['reason'], ['review', 'prerequisite'], true),
+            ];
         }
 
         return [

@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <style>
     @page { margin: 38pt 40pt; }
-    body { font: 11pt/1.3 DejaVu Sans, sans-serif; color: black; }
+    /* Helvetica (as printed so far); PdfText wraps characters it lacks (→, ≠…) in DejaVu Sans. */
+    body { font-family: Helvetica, sans-serif; font-size: 11pt; line-height: 1.3; color: black; }
     article + article { page-break-before: always; }
     table.head { width: 100%; border-collapse: collapse; }
     table.head td { vertical-align: top; padding: 0; }
@@ -56,28 +57,44 @@
       <div class="rule"></div>
 
       @if ($isSums)
+        {{-- As many sums as fit at handwriting size (BuildAdditionSheet::layout). --}}
         <table class="sums" role="presentation">
-          @foreach (array_chunk($task['worksheet'], \App\Actions\Homework\BuildAdditionSheet::COLUMNS) as $row)
+          @foreach (array_chunk($task['worksheet'], $layout['columns']) as $row)
             <tr>
               @foreach ($row as $p)
-                <td style="padding-bottom: {{ $layout['rows'] >= 4 ? 30 : 46 }}pt">
-                  <div class="prob" style="font-size: {{ $layout['font'] }}pt; width: {{ round($layout['chars'] * 0.62, 2) }}em">
-                    <div>{{ $p['top'] }}</div>
-                    <div><span style="float: left">+</span>{{ $p['bottom'] }}</div>
-                    <div class="line">&nbsp;</div>
-                  </div>
-                </td>
+                <td style="width: {{ round(100 / $layout['columns'], 3) }}%; padding-bottom: {{ $layout['gapY'] }}pt">@include('modules.homework.sheets.addition-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
               @endforeach
+              @for ($i = count($row); $i < $layout['columns']; $i++)<td style="width: {{ round(100 / $layout['columns'], 3) }}%"></td>@endfor
             </tr>
           @endforeach
         </table>
       @elseif ($isGrid)
         <table class="sums" role="presentation">
-          @foreach (array_chunk($task['worksheet'], \App\Actions\Homework\BuildMultiplicationSheet::ACROSS) as $row)
+          @foreach (array_chunk($task['worksheet'], $layout['across']) as $row)
             <tr>
               @foreach ($row as $p)
-                <td style="padding-bottom: 26pt">@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => false, 'cell' => 17])</td>
+                <td style="width: {{ round(100 / $layout['across'], 3) }}%; padding-bottom: {{ $layout['gap'] }}pt">@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
               @endforeach
+              @for ($i = count($row); $i < $layout['across']; $i++)<td style="width: {{ round(100 / $layout['across'], 3) }}%"></td>@endfor
+            </tr>
+          @endforeach
+        </table>
+      @elseif ($task['template'] === 'writing' && isset($task['worksheet'][0]['word']))
+        {{-- Écriture: the model word, then copy cells with a baseline and a dashed midline (GenerateWritingWords::layout). --}}
+        @php($w = \App\Actions\Homework\GenerateWritingWords::layout())
+        <table class="copy" role="presentation" style="width: 100%; border-collapse: collapse; table-layout: fixed">
+          <tr>
+            <td style="width: {{ $w['word'] }}pt; height: {{ $w['header'] }}pt; font-size: 9pt; color: #555; vertical-align: bottom">Mot</td>
+            @for ($i = 0; $i < $w['copies']; $i++)<td style="height: {{ $w['header'] }}pt; font-size: 9pt; color: #555; vertical-align: bottom; padding-left: 6pt">Copie {{ $i + 1 }}</td>@endfor
+          </tr>
+          @foreach ($task['worksheet'] as $item)
+            <tr>
+              <td style="height: {{ $w['row'] }}pt; vertical-align: bottom; padding-bottom: 3pt; font-size: 17pt; border-bottom: .8pt solid #555">{!! \App\Support\PdfText::html($item['question']) !!}</td>
+              @for ($i = 0; $i < $w['copies']; $i++)
+                <td style="height: {{ $w['row'] }}pt; padding: 0 0 0 6pt; vertical-align: bottom; border-bottom: .8pt solid #555; border-left: .4pt solid #ccc">
+                  <div style="height: {{ round($w['row'] / 2, 2) }}pt; border-bottom: .5pt dashed #aaa; margin-bottom: {{ round($w['row'] / 2 - 4, 2) }}pt"></div>
+                </td>
+              @endfor
             </tr>
           @endforeach
         </table>
@@ -85,7 +102,7 @@
         <ol>
           @foreach ($task['worksheet'] as $exercise)
             <li>
-              {{ $exercise['question'] }}
+              {!! \App\Support\PdfText::html($exercise['question']) !!}
               <div class="write"></div>
               <div class="write"></div>
             </li>

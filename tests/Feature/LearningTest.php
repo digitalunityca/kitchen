@@ -6,6 +6,9 @@ namespace Tests\Feature;
 
 use App\Actions\Homework\BuildAdditionSheet;
 use App\Actions\Homework\BuildMultiplicationSheet;
+use App\Actions\Homework\CheckDivisionItems;
+use App\Actions\Homework\GenerateWritingWords;
+use App\Actions\Homework\SheetPage;
 use App\Actions\Learning\PickExerciseVariant;
 use App\Actions\Learning\SeedKidProgress;
 use App\Actions\Learning\SyncCurriculum;
@@ -17,6 +20,7 @@ use App\Models\KidSkillProgress;
 use App\Models\Skill;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
+use App\Support\PdfText;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -86,7 +90,7 @@ class LearningTest extends TestCase
     {
         $this->signIn('arthur');
         $this->get('/modules/homework/kids/arthur/sheet?screen=homework')->assertOk()
-            ->assertSee('Level 2 · 2 chiffres + 2 chiffres, sans retenue')->assertSee('Grammar');
+            ->assertSee('+10 points · Level 2')->assertSee('<small class="kz-choice-level">2 chiffres + 2 chiffres, sans retenue</small>', false)->assertSee('Grammar');
 
         $this->postJson('/modules/homework/kids/arthur/print', ['counts' => ['addition' => 2, 'multiplication' => 1]])->assertOk();
         $tasks = app(HomeworkStore::class)->tasks('arthur', '2026-11-25');
@@ -173,7 +177,7 @@ class LearningTest extends TestCase
     public function test_builders_follow_level_ranges_and_carrying(): void
     {
         $sums = app(BuildAdditionSheet::class)->handle(2, 7, ['top' => [10, 99], 'bottom' => [10, 99], 'carry' => true]);
-        $this->assertCount(20, $sums);
+        $this->assertCount(25, $sums); // 2 + 2 digits: 5 × 5 sums fill the page
         $this->assertTrue(collect($sums)->every(fn (array $p): bool => BuildAdditionSheet::carries($p['top'], $p['bottom'])));
         $small = app(BuildAdditionSheet::class)->handle(2, 7, ['top' => [100, 499], 'bottom' => [100, 499], 'sum_max' => 999]);
         $this->assertTrue(collect($small)->every(fn (array $p): bool => $p['top'] + $p['bottom'] <= 999));
@@ -181,6 +185,166 @@ class LearningTest extends TestCase
         $this->assertTrue(collect($grid)->every(fn (array $p): bool => $p['top'] <= 10 && $p['bottom'] <= 5));
         // Without a level, the grade's ranges as before (same numbers for the same seed).
         $this->assertSame(app(BuildAdditionSheet::class)->handle(5, 42), app(BuildAdditionSheet::class)->handle(5, 42, null));
+    }
+
+    public function test_addition_sheets_fill_the_page_with_room_to_write(): void
+    {
+        // Small sums → many problems; 4 digits or 3 numbers → fewer, bigger cells.
+        $facts = BuildAdditionSheet::grid(3, 2);
+        $twoDigits = BuildAdditionSheet::grid(4, 2);
+        $fourDigits = BuildAdditionSheet::grid(6, 2);
+        $threeNumbers = BuildAdditionSheet::grid(4, 3);
+        $this->assertSame([[6, 5], [5, 5], [3, 5], [5, 4]], array_map(fn (array $g): array => [$g['columns'], $g['rows']], [$facts, $twoDigits, $fourDigits, $threeNumbers]));
+
+        // Each digit gets 7 mm across and 9.5 mm down, and the sheet never runs past one page.
+        foreach ([$facts, $twoDigits, $fourDigits, $threeNumbers] as $i => $g) {
+            $this->assertEqualsWithDelta(7 * SheetPage::MM, $g['digit'], .01);
+            $height = $g['carry'] + ([2, 2, 2, 3][$i] + 1) * $g['row'];
+            $this->assertLessThanOrEqual(SheetPage::WIDTH, $g['columns'] * $g['chars'] * $g['digit'] + ($g['columns'] - 1) * $g['gapX']);
+            $this->assertLessThanOrEqual(SheetPage::HEIGHT, $g['rows'] * $height + ($g['rows'] - 1) * $g['gapY']);
+        }
+
+        $sheet = app(BuildAdditionSheet::class)->handle(3, 5, ['top' => [10, 99], 'bottom' => [10, 99], 'addends' => 3]);
+        $this->assertCount(20, $sheet);
+        $this->assertCount(3, $sheet[0]['terms']);
+        $this->assertSame((string) array_sum($sheet[0]['terms']), $sheet[0]['answer']);
+        $this->assertSame('Additions de 3 nombres : 2 chiffres', BuildAdditionSheet::layout($sheet)['title']);
+
+        // An old sheet with more sums than fit is drawn smaller instead of on two pages.
+        $old = array_fill(0, 30, ['top' => 9999, 'bottom' => 9999]);
+        $layout = BuildAdditionSheet::layout($old);
+        $this->assertLessThan(7 * SheetPage::MM, $layout['digit']);
+        $this->assertGreaterThanOrEqual(30, $layout['columns'] * BuildAdditionSheet::grid($layout['chars'], 2, $layout['digit'] / (7 * SheetPage::MM))['rows']);
+    }
+
+    public function test_multiplication_grids_have_a_row_per_step_and_fill_the_page(): void
+    {
+        // Tables (1 digit × 1 digit): carry, number, multiplier, result.
+        $tables = BuildMultiplicationSheet::grid(2, 1, 3);
+        $this->assertSame([4, 4, false, 4, 5], [$tables['columns'], $tables['height'], $tables['total'], $tables['across'], $tables['down']]);
+        // 3 digits × 2 digits: 2 carry rows, number, multiplier, 2 partial products, a carry row for the sum, the total.
+        $product = BuildMultiplicationSheet::grid(3, 2, 6);
+        $this->assertSame([7, 8, true, 3, 3], [$product['columns'], $product['height'], $product['total'], $product['across'], $product['down']]);
+        $this->assertEqualsWithDelta(8 * SheetPage::MM, $product['cell'], .01);
+
+        foreach ([$tables, $product] as $g) {
+            $this->assertLessThanOrEqual(SheetPage::WIDTH, $g['across'] * $g['columns'] * $g['cell'] + ($g['across'] - 1) * $g['gap']);
+            $this->assertLessThanOrEqual(SheetPage::HEIGHT, $g['down'] * $g['height'] * $g['cell'] + ($g['down'] - 1) * $g['gap']);
+        }
+
+        $sheet = app(BuildMultiplicationSheet::class)->handle(5, 9, ['top' => [100, 999], 'bottom' => [10, 99]]);
+        $this->assertCount(9, $sheet);
+        $this->assertSame('Multiplications : 3 chiffres × 2 chiffres', BuildMultiplicationSheet::layout($sheet)['title']);
+        $this->assertSame('Tables de multiplication', BuildMultiplicationSheet::layout([['top' => 10, 'bottom' => 3], ['top' => 7, 'bottom' => 2]])['title']);
+        $this->assertSame('Multiplications : 2 chiffres × 1 chiffre', BuildMultiplicationSheet::layout([['top' => 34, 'bottom' => 7]])['title']);
+    }
+
+    public function test_writing_sheets_get_ai_words_for_the_working_grade_in_a_copy_table(): void
+    {
+        config(['services.openai.key' => 'test-key']);
+        Kid::query()->where('slug', 'arthur')->update(['working_grade' => 3]);
+        $rows = GenerateWritingWords::layout()['rows'];
+        $this->assertSame(16, $rows); // 12 mm handwriting rows fill the page
+        $words = ['école', 'Fenêtre', 'bébé', 'école', 'Lucie', 'deux mots', 'château', 'forêt'];
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response(['output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['words' => $words])]]]]])]);
+
+        $this->signIn('arthur');
+        $this->postJson('/modules/homework/kids/arthur/print', ['counts' => ['writing' => 1]])->assertOk();
+        $sheet = app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[0]['worksheet'];
+
+        // Valid AI words first (lower case, no duplicates, no two-word answers), topped up from the built-in list.
+        $this->assertCount($rows, $sheet);
+        $this->assertSame(['école', 'fenêtre', 'bébé', 'lucie', 'château', 'forêt'], array_slice(array_column($sheet, 'question'), 0, 6));
+        Http::assertSent(fn ($r): bool => json_decode($r['input'], true)['grade'] === 3 && json_decode($r['input'], true)['count'] === $rows);
+
+        // The next sheet avoids these words; the printed sheet is a copy table.
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response([], 500)]);
+        $this->postJson('/modules/homework/kids/arthur/print', ['counts' => ['writing' => 1]])->assertOk();
+        $second = array_column(app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[1]['worksheet'], 'question');
+        $this->assertSame([], array_intersect($second, array_column($sheet, 'question')));
+
+        $html = view('modules.homework.print', ['kid' => ['id' => 'arthur', 'name' => 'A', 'grade' => 2], 'date' => '2026-11-25', 'tasks' => [app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[0]]])->render();
+        $this->assertStringContainsString('<table class="copy"', $html);
+        $this->assertSame($rows, substr_count($html, 'border-bottom: .5pt dashed #aaa') / 3);
+    }
+
+    public function test_a_parent_raises_the_working_grade_without_stepping_back(): void
+    {
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $this->post('/modules/homework/progress/arthur/grade', ['grade' => 3])->assertRedirect('/modules/homework/progress');
+        $arthur = Kid::query()->where('slug', 'arthur')->firstOrFail();
+        $this->assertSame([2, 3], [$arthur->grade, $arthur->workGrade()]);
+
+        // 2e skills that 3e builds on are known; 3e skills start at level 1 (2 when already started in 2e).
+        $this->assertSame(['maitrise', 5], $this->progress('arthur', 'MATH.OPS.A.4a'));
+        $this->assertSame(['maitrise', 3], $this->progress('arthur', 'MATH.OPS.A.2c'));
+        $this->assertSame(['nouveau', 1], $this->progress('arthur', 'MATH.OPS.A.4b'));
+        $this->assertSame(['en_cours', 2], $this->progress('arthur', 'FR.ACC.A.3'));
+
+        // The sheets now follow 3e: column addition, and the tile says so.
+        $pick = app(PickExerciseVariant::class)->handle($arthur->id, 3, 'addition', CarbonImmutable::parse('2026-11-25'));
+        $this->assertSame(['MATH.OPS.A.4b', 1, 'month'], [$pick['variant']->skill->code, $pick['level'], $pick['reason']]);
+        $this->signIn('arthur');
+        $this->get('/modules/homework/kids/arthur/sheet?screen=homework')->assertSee('<small class="kz-choice-level">3 chiffres + 2 chiffres</small>', false);
+
+        $this->get('/modules/homework/progress')->assertSee('School: 2 grade')->assertSee('<option value="3" selected>', false);
+        $this->artisan('hub:working-grade', ['kid' => 'arthur', 'grade' => 2])->expectsOutputToContain('works at grade 2 (school grade 2)')->assertSuccessful();
+        $this->assertNull($arthur->fresh()->working_grade);
+    }
+
+    public function test_parents_move_a_skill_by_hand(): void
+    {
+        $this->post('/settings/unlock', ['pin' => '4821']);
+        $skill = Skill::query()->where('code', 'MATH.OPS.A.4a')->value('id');
+        $this->post("/modules/homework/progress/arthur/skills/{$skill}", ['action' => 'up'])->assertRedirect();
+        $this->assertSame(['en_cours', 3], $this->progress('arthur', 'MATH.OPS.A.4a'));
+        $this->post("/modules/homework/progress/arthur/skills/{$skill}", ['action' => 'down'])->assertRedirect();
+        $this->assertSame(['en_cours', 2], $this->progress('arthur', 'MATH.OPS.A.4a'));
+        $this->post("/modules/homework/progress/arthur/skills/{$skill}", ['action' => 'master'])->assertRedirect();
+        $this->assertSame(['maitrise', 5], $this->progress('arthur', 'MATH.OPS.A.4a'));
+        $this->post("/modules/homework/progress/arthur/skills/{$skill}", ['action' => 'delete'])->assertSessionHasErrors('action');
+        $this->get('/modules/homework/progress')->assertSee('aria-label="One level up"', false)->assertSee('>Mastered</button>', false);
+
+        $this->post('/settings/lock');
+        $this->post("/modules/homework/progress/arthur/skills/{$skill}", ['action' => 'up'])->assertRedirect();
+        $this->assertSame(['maitrise', 5], $this->progress('arthur', 'MATH.OPS.A.4a')); // needs the settings PIN
+    }
+
+    public function test_skills_under_one_already_in_progress_are_upkeep_not_this_months_work(): void
+    {
+        // Theo works on 3 digits × 2 digits at level 2: the tables (two steps under it) are known.
+        $theo = Kid::idFor('theo');
+        KidSkillProgress::query()->where('kid_id', $theo)->where('skill_id', Skill::query()->where('code', 'MATH.OPS.A.7b')->value('id'))->update(['level' => 2, 'status' => 'en_cours']);
+        KidSkillProgress::query()->where('kid_id', $theo)->where('skill_id', Skill::query()->where('code', 'MATH.OPS.A.6')->value('id'))->update(['level' => 1, 'status' => 'en_cours']);
+
+        $pick = app(PickExerciseVariant::class)->handle($theo, 5, 'multiplication', CarbonImmutable::parse('2026-11-25'));
+        $this->assertSame(['MATH.OPS.A.7b', 2, 'month'], [$pick['variant']->skill->code, $pick['level'], $pick['reason']]);
+    }
+
+    public function test_ai_division_items_are_checked_against_the_level(): void
+    {
+        $check = ['divisors' => [2, 5, 10], 'quotient' => [1, 10], 'remainder' => false];
+        $items = app(CheckDivisionItems::class)->handle([
+            ['question' => 'Calcule : 40 ÷ 5', 'answer' => '8'],
+            ['question' => 'Calcule : 56 ÷ 8', 'answer' => '7'],          // divisor outside ÷ 2, 5, 10
+            ['question' => 'Combien font 30 : 10 ?', 'answer' => '4'],    // wrong answer
+            ['question' => 'Vérifie que c’est une division des tables.', 'answer' => 'oui'], // no calculation
+        ], $check, 3);
+
+        $this->assertSame(['question' => 'Calcule : 40 ÷ 5', 'answer' => '8'], $items[0]);
+        $this->assertSame('3', $items[2]['answer']);
+        foreach ([$items[1], $items[3]] as $made) {
+            $this->assertMatchesRegularExpression('/^Calcule : (\d+) ÷ (2|5|10)$/', $made['question']);
+            preg_match('/(\d+) ÷ (\d+)/', $made['question'], $m);
+            $this->assertSame((string) intdiv((int) $m[1], (int) $m[2]), $made['answer']);
+            $this->assertSame(0, (int) $m[1] % (int) $m[2]);
+        }
+    }
+
+    public function test_print_text_keeps_arrows_and_symbols_printable(): void
+    {
+        $this->assertSame('un livre <span style="font-family: \'DejaVu Sans\'">→</span> des livres &amp; ça', PdfText::html('un livre → des livres & ça'));
+        $this->assertSame('Écris l’article « le »', PdfText::html('Écris l’article « le »'));
     }
 
     /** @return array{string, int} */

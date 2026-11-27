@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Actions\Homework\AddHomeworkTasks;
 use App\Actions\Homework\BuildAdditionSheet;
+use App\Actions\Homework\BuildMultiplicationSheet;
 use App\Dashboard\ModuleRegistry;
 use App\Models\HomeworkTask;
 use App\Models\Kid;
@@ -174,13 +175,15 @@ class HomeworkTest extends TestCase
         $this->signIn('theo');
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertOk();
         $sheet = app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]['worksheet'];
-        $this->assertCount(20, $sheet);
+        // Theo's addition level (4 digits + 4 digits): as many sums as fit at handwriting size.
+        $layout = BuildAdditionSheet::layout($sheet);
+        $this->assertCount($layout['columns'] * $layout['rows'], $sheet);
         $this->assertSame((string) ($sheet[0]['top'] + $sheet[0]['bottom']), $sheet[0]['answer']);
 
-        // 4-digit + 3-digit numbers: the column fits a 5-digit sum, and the title names the digits.
+        // 4-digit + 3-digit numbers: the column fits a 5-digit sum and the + sign, and the title names the digits.
         $layout = BuildAdditionSheet::layout([['top' => 9876, 'bottom' => 543], ['top' => 1200, 'bottom' => 999]]);
-        $this->assertSame(['chars' => 6, 'font' => 19, 'rows' => 1, 'digits' => 4, 'title' => 'Additions : 3 et 4 chiffres'], $layout);
-        $this->assertSame(5, BuildAdditionSheet::layout([['top' => 99, 'bottom' => 99]])['chars'] + 1);
+        $this->assertSame([6, 4, 'Additions : 3 et 4 chiffres'], [$layout['chars'], $layout['digits'], $layout['title']]);
+        $this->assertSame(4, BuildAdditionSheet::layout([['top' => 99, 'bottom' => 99]])['chars']);
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
             ->assertSee('Calcule chaque somme.')
@@ -208,7 +211,8 @@ class HomeworkTest extends TestCase
         $tasks = app(HomeworkStore::class)->tasks('theo', '2026-11-25');
         $this->assertSame(['done', 'done'], array_column($tasks, 'status'));
         $this->assertArrayHasKey('worksheet', $tasks[0]);
-        $this->assertCount(9, $tasks[0]['worksheet']); // multiplications are made on the hub, in grids
+        $grid = BuildMultiplicationSheet::layout($tasks[0]['worksheet']);
+        $this->assertCount($grid['across'] * $grid['down'], $tasks[0]['worksheet']); // made on the hub, as many grids as fit
         $this->assertSame((string) ($tasks[0]['worksheet'][0]['top'] * $tasks[0]['worksheet'][0]['bottom']), $tasks[0]['worksheet'][0]['answer']);
         $this->assertCount(1, glob($this->spool().'/*.pdf'));
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
@@ -341,7 +345,7 @@ class HomeworkTest extends TestCase
 
         $this->get('/modules/homework/kids/theo/preview/2026-11-25/t1')->assertOk()
             ->assertSee('<p class="sheet-no">#0003</p>', false)
-            ->assertSee('Combien font 6 × 7?')
+            ->assertSee('Combien font 20 ÷ 5?')
             ->assertDontSee('class="toolbar"', false);
     }
 
@@ -495,23 +499,11 @@ class HomeworkTest extends TestCase
         $this->get('/modules/homework/kids/theo/2026-11-20/t1/worksheet')->assertNotFound();
     }
 
-    public function test_parents_set_the_words_to_copy(): void
-    {
-        $this->post('/settings/unlock', ['pin' => '4821']);
-        $this->get('/modules/homework/settings')->assertOk()->assertSee('Words to copy')->assertSee('maison');
-
-        $this->post('/modules/homework/kids/arthur/words', ['words' => "papillon\n\nmagicien\npapillon"])->assertRedirect('/modules/homework/settings');
-        $this->assertSame(['papillon', 'magicien'], app(HomeworkStore::class)->words('arthur'));
-
-        $this->pick('arthur', ['writing' => 1]);
-        $this->get('/modules/homework/kids/arthur/2026-11-25/t1/worksheet')->assertOk()->assertSee('Écriture')->assertSee('papillon')->assertSee('magicien');
-    }
-
     public function test_the_packet_prints_ai_worksheets_and_signed_qr_approval_awards_points_once(): void
     {
         config(['services.openai.key' => 'test-key', 'dashboard.allowed_ips' => ['192.0.2.1']]);
         $url = 'https://api.openai.com/v1/responses';
-        $exercise = ['question' => 'Combine 12 et 15.', 'answer' => '27'];
+        $exercise = ['question' => '1) Combien font 50 ÷ 5 ?', 'answer' => '9']; // numbered by the AI, wrong answer
         $worksheets = [
             ['topic' => 'Divisions', 'exercises' => array_fill(0, 4, $exercise)],
             ['topic' => 'Lecture', 'exercises' => array_fill(0, 4, ['question' => 'Que lit le personnage?', 'answer' => 'Un livre.'])],
@@ -534,12 +526,12 @@ class HomeworkTest extends TestCase
         Http::assertSentCount(2);
         Http::assertSent(fn (Request $request): bool => $request->url() === $url
             && ! $request['store']
-            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'focus' => ['divisions correspondant aux tables de 2, 5 et 10, sans reste', ''], 'copy_words' => []]
+            && json_decode($request['input'], true) === ['grade' => 5, 'topics' => ['Divisions', 'Lecture'], 'focus' => ['divisions correspondant aux tables de 2, 5 et 10, sans reste', '']]
             && str_contains($request['instructions'], 'non-empty focus'));
 
         $html = $this->get($packet)->assertOk()
-            ->assertSee('Print all worksheets')->assertSee('Combine 12 et 15.')->assertSee('Que lit le personnage?')
-            ->assertDontSee('<strong>27</strong>', false)
+            ->assertSee('Print all worksheets')->assertSee('Combien font 50 ÷ 5 ?')->assertDontSee('1) Combien')->assertSee('Que lit le personnage?')
+            ->assertDontSee('<strong>10</strong>', false)
             ->getContent();
         $this->assertSame(2, substr_count($html, 'aria-label="Code QR de confirmation"'));
         preg_match_all('~href="([^"]+/confirm/[^"]+)"~', $html, $matches);
@@ -571,7 +563,7 @@ class HomeworkTest extends TestCase
 
         $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertRedirect();
         $this->post('/settings/unlock', ['pin' => '4821']);
-        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('<strong>27</strong>', false);
+        $this->get('/modules/homework/kids/theo/2026-11-25/t1/answers')->assertOk()->assertSee('<strong>10</strong>', false); // answer corrected by the check
     }
 
     public function test_unknown_kids_are_not_found(): void
@@ -605,7 +597,10 @@ class HomeworkTest extends TestCase
      */
     private function packet(array $topics): array
     {
-        $worksheets = array_map(fn (string $topic): array => ['topic' => $topic, 'exercises' => array_fill(0, 4, ['question' => 'Combien font 6 × 7?', 'answer' => '42'])], $topics);
+        // Division sheets are checked against the level (tables ÷ 2, ÷ 5, ÷ 10 here), so they get a fitting calculation.
+        $worksheets = array_map(fn (string $topic): array => ['topic' => $topic, 'exercises' => array_fill(0, 4, $topic === 'Divisions'
+            ? ['question' => 'Combien font 20 ÷ 5?', 'answer' => '4']
+            : ['question' => 'Combien font 6 × 7?', 'answer' => '42'])], $topics);
 
         return ['status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['worksheets' => $worksheets])]]]]];
     }

@@ -212,6 +212,19 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
     - Skills of this year start at level 1, or a little further into the year when they continue last year's →.
     - Sheets already approved count too: each old sheet matched the level with the same numbers.
   - **Settings › Progrès:** per kid, this month's skills, and each skill's level, status, last score and next review.
+    - **Working grade:** "Les feuilles suivent" sets the grade the sheets follow (`kids.working_grade`; empty = school grade); `php artisan hub:working-grade arthur 3` does the same. The engine, the month windows, →/★, the tiles and the AI all use it.
+      - Going up: skills the new grade only reuses are mastered; skills of the old grade that the new grade builds on are mastered (no step back); the new grade's skills start at level 1, or 2 when already started.
+    - **Per skill:** − / + / Maîtrisé move a skill by hand (parent PIN).
+  - **Known skills:** a skill under one the kid masters, or works on at level 2 or more, counts as known. It only comes back as upkeep, never as this month's work (no tables for a kid already doing 3 × 2 digits).
+  - **Sheet sizes:** the printed sheet fills one Letter page, sized for handwriting (`SheetPage`: 532 × 590 pt under the header).
+    - **Additions:** 7 mm per digit, 9.5 mm per written row, a carry row, room for the answer. Small sums give many problems; 4 digits or 3 numbers to add give fewer, bigger ones. 3 numbers are possible with `addends: 3` in a level.
+    - **Multiplications:** square 8 mm cells. The rows are carries, the number, × the multiplier, then the result (1-digit multiplier) or one partial product per multiplier digit, a carry row for the sum and the total.
+    - Old sheets with more problems than fit are drawn a little smaller, never on two pages.
+  - **Écriture:** for each sheet the AI writes words for the kid's working grade (Québec French, accented, family-safe), none from the last 5 writing sheets. They are saved on the task, so reprints match. If the AI fails, a built-in list of 50 words is used.
+    - Printed as a copy table: Mot, then 3 copies with a baseline and a dashed midline, 16 words per page.
+    - The old per-kid word list in Settings was removed; its table stays, unused.
+  - **AI sheets:** their own numbering ("1)") is removed. Division calculations are checked against the level (divisor, dividend or quotient, remainder): wrong answers are corrected, items outside the level are replaced by calculations made on the hub.
+  - **PDF font:** the body prints in Helvetica; characters it lacks (→, ≠…) are drawn in DejaVu Sans (`PdfText`).
 - Data: the MySQL tables `kids`, `homework_*` and `kid_pins`. Code: `app/Actions/Homework/`, `app/Modules/Homework/` (`KidController` for the kid area, `HomeworkController` for worksheets and parent settings), `resources/views/modules/homework/kid/`.
 
 ---
@@ -294,6 +307,7 @@ This rebuilds and restarts the app; the tablet picks up the new page on its next
 - Canadiens sheet opens at full size with a centred spinner; homework sheet made near full screen, over the side menu.
 
 **27 November 2026**
+- Working grade per kid (Arthur works at 3e); hand moves in Progrès; known-skill rule; sheets sized to fill the page; AI words for Écriture; checks on AI divisions.
 - Curriculum-driven sheets: the skills catalogue from the Progression des apprentissages, levels in the sheet builders, the choice of skill and level, progress from the parent's score, the Progrès page, and the new Grammaire et conjugaison sheet.
 - Parent's score on each approved sheet (Bien / Quelques erreurs / À revoir) and Aider à la maison (chores for points). Homework sheets became one type of task.
 - French version (Quebec French), now the default language; English kept as fallback.

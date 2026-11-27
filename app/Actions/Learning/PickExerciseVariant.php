@@ -19,7 +19,8 @@ use Illuminate\Support\Collection;
  *    (★ before →, lowest level first);
  * 3. upkeep of mastered or reused skills, the one seen longest ago first;
  * 4. anything else this sheet type offers the grade.
- * July and August skip 2. Variety: a skill already on today's sheets goes last,
+ * A skill under one the kid already masters (or works on at level 2+) never
+ * counts as 2: it is known, upkeep only. July and August skip 2. Variety: a skill already on today's sheets goes last,
  * and the same skill and level is skipped within 3 school days (reviews excepted).
  */
 class PickExerciseVariant
@@ -42,6 +43,10 @@ class PickExerciseVariant
 
         $bySkill = $variants->groupBy('skill_id');
         $progress = KidSkillProgress::query()->where('kid_id', $kidId)->get()->keyBy('skill_id');
+        // Skills under one the kid already masters, or works on at level 2 or more, are known: upkeep only.
+        $known = array_flip(app(Prerequisites::class)->below(
+            $progress->filter(fn (KidSkillProgress $p): bool => $p->status === 'maitrise' || ($p->status === 'en_cours' && $p->level >= 2))->keys()
+        ));
         $recent = $this->recent($kidId, $day);
         $month = (int) $day->format('n');
         $schoolMonth = ! in_array($month, [7, 8], true);
@@ -56,8 +61,8 @@ class PickExerciseVariant
 
             $priority = match (true) {
                 $status === 'a_revoir', $status === 'maitrise' && $p?->next_review_on !== null && $p->next_review_on->lte($day) => 1,
-                $schoolMonth && $grades !== null && $grades->expectation !== 'reinvestit' && $grades->covers($month) && $status !== 'maitrise' => 2,
-                $status === 'maitrise' || $grades?->expectation === 'reinvestit' => 3,
+                $schoolMonth && $grades !== null && $grades->expectation !== 'reinvestit' && $grades->covers($month) && $status !== 'maitrise' && ! isset($known[$skillId]) => 2,
+                $status === 'maitrise' || $grades?->expectation === 'reinvestit' || isset($known[$skillId]) => 3,
                 default => 4,
             };
             $candidates[$skillId] = [

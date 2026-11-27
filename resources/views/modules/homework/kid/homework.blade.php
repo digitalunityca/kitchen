@@ -17,9 +17,12 @@
               <span class="kz-choice-icon">@include('modules.homework.kid._icon', ['name' => $choice['key'], 'size' => 36])</span>
               <span class="kz-choice-count" data-count hidden></span>
               <b>{{ __($choice['name']) }}</b>
-              <small>+{{ $choice['points'] }} {{ __('points') }}{{ $choice['key'] === 'reading' ? ' · '.$readingMinutes.' min' : '' }}</small>
-              @if ($choice['next'])<small class="kz-choice-level">{{ $choice['next']['review'] ? '🔁 ' : '' }}{{ __('Level :n', ['n' => $choice['next']['level']]) }} · {{ $choice['next']['label'] }}</small>@endif
-              @if ($choice['already'] > 0)<small class="kz-choice-left">{{ __(':n printed today', ['n' => $choice['already']]) }}</small>@endif
+              <small>+{{ $choice['points'] }} {{ __('points') }}{{ $choice['key'] === 'reading' ? ' · '.$readingMinutes.' min' : '' }}{{ $choice['next'] ? ' · '.__('Level :n', ['n' => $choice['next']['level']]) : '' }}</small>
+              @if ($choice['next'])
+                @if ($choice['next']['review'])<span class="kz-chip-revoir">{{ __('To go over again') }}</span>@endif
+                <small class="kz-choice-level">{{ $choice['next']['label'] }}</small>
+              @endif
+              @if ($choice['already'] > 0)<small class="kz-choice-left">{{ trans_choice('{1} :n printed today|[2,*] :n printed today (plural)', $choice['already'], ['n' => $choice['already']]) }}</small>@endif
             </button>
             <button type="button" class="kz-minus" data-minus="{{ $choice['key'] }}" aria-label="{{ __('One less :name', ['name' => __($choice['name'])]) }}" hidden>−</button>
           </div>

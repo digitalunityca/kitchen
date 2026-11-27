@@ -43,26 +43,9 @@ class HomeworkController extends Controller
                 'tasks' => $this->loadDailyHomework->handle($kid, $today),
                 'balance' => $this->store->balance($kid['id']),
                 'history' => $this->store->history($kid['id']),
-                'writes' => isset(HomeworkModule::templatesFor($kid['grade'])['writing']),
-                'words' => $this->store->words($kid['id']),
             ], $this->module()->kids()),
             'templates' => HomeworkModule::TEMPLATES,
         ]);
-    }
-
-    /** POST …/kids/{kid}/words: the copying list for the writing sheets, one word or short sentence per line. */
-    public function saveWords(Request $request, string $kid): RedirectResponse
-    {
-        $profile = $this->kidOrFail($kid);
-        $request->validate(['words' => ['required', 'string', 'max:2000']]);
-
-        $words = array_values(array_unique(array_filter(array_map(
-            fn (string $line): string => mb_substr(trim($line), 0, 40),
-            preg_split('/\R/', (string) $request->input('words')) ?: [],
-        ))));
-        $this->store->synchronized(fn () => $this->store->putWords($profile['id'], $words));
-
-        return redirect()->route('modules.homework.settings')->with('status', __(':name’s word list saved (:n words).', ['name' => $profile['name'], 'n' => count($words)]));
     }
 
     /** GET …/kids-pins: each kid's homework PIN (set or not), behind the settings PIN. */
@@ -112,7 +95,7 @@ class HomeworkController extends Controller
             'task' => $found,
             'template' => HomeworkModule::TEMPLATES[$found['template']],
             'date' => CarbonImmutable::parse($date, HomeworkModule::TIMEZONE)->locale('fr_CA'),
-            'sections' => $buildWorksheet->handle($found['template'], $profile['grade'], (int) $found['seed'], $this->store->words($profile['id'])),
+            'sections' => $buildWorksheet->handle($found['template'], $profile['workGrade'] ?? $profile['grade'], (int) $found['seed'], $this->store->words($profile['id'])),
             'answers' => $answers,
         ]);
     }

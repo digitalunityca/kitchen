@@ -42,12 +42,12 @@ class SeedKidProgress
             }
 
             $variants = ExerciseVariant::query()->with('skill.grades')->where('active', true)
-                ->where('grades_from', '<=', $kid->grade)->where('grades_to', '>=', $kid->grade)->get()->groupBy('skill_id');
+                ->where('grades_from', '<=', $kid->workGrade())->where('grades_to', '>=', $kid->workGrade())->get()->groupBy('skill_id');
             $rows = [];
             foreach ($variants as $skillId => $levels) {
                 $grades = $levels->first()->skill->grades->keyBy('grade');
-                $now = $grades->get($kid->grade)?->expectation;
-                $before = $grades->get($kid->grade - 1)?->expectation;
+                $now = $grades->get($kid->workGrade())?->expectation;
+                $before = $grades->get($kid->workGrade() - 1)?->expectation;
                 $top = (int) $levels->max('level');
                 $rows[$skillId] = match (true) {
                     $now === 'reinvestit' => ['level' => $top, 'status' => 'maitrise'],
@@ -58,7 +58,7 @@ class SeedKidProgress
 
             $codes = Skill::query()->pluck('id', 'code');
             foreach (self::OLD_SHEETS as $template => $byGrade) {
-                [$code, $level] = $byGrade[$kid->grade] ?? [null, null];
+                [$code, $level] = $byGrade[$kid->workGrade()] ?? [null, null];
                 $skillId = $code !== null ? $codes[$code] ?? null : null;
                 if ($skillId === null || ! isset($rows[$skillId])) {
                     continue;

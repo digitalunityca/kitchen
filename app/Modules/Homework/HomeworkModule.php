@@ -110,6 +110,7 @@ class HomeworkModule extends Module
             'badge' => $kid->badge,
             'color' => $kid->color,
             'grade' => $kid->grade,
+            'workGrade' => $kid->workGrade(),
             'photo' => self::photoPath($kid->slug) !== null
                 ? route('modules.homework.photo', ['kid' => $kid->slug, 'v' => Storage::disk('local')->lastModified(self::photoPath($kid->slug))], absolute: false)
                 : null,
@@ -206,10 +207,11 @@ class HomeworkModule extends Module
             $router->get('kid-pins', [HomeworkController::class, 'pins'])->name('pins');
             $router->get('chores', [ChoreController::class, 'index'])->name('chores');
             $router->get('progress', [ProgressController::class, 'index'])->name('progress');
+            $router->post('progress/{kid}/grade', [ProgressController::class, 'grade'])->where('kid', $kid)->name('progress.grade');
+            $router->post('progress/{kid}/skills/{skill}', [ProgressController::class, 'adjust'])->where('kid', $kid)->whereNumber('skill')->name('progress.adjust');
             $router->post('chores', [ChoreController::class, 'store'])->name('chores.store');
             $router->post('chores/{chore}', [ChoreController::class, 'update'])->whereNumber('chore')->name('chores.update');
             $router->post('kids/{kid}/pin', [HomeworkController::class, 'savePin'])->where('kid', $kid)->name('pin');
-            $router->post('kids/{kid}/words', [HomeworkController::class, 'saveWords'])->where('kid', $kid)->name('words');
             $router->get('kids/{kid}/{date}/{task}/answers', [HomeworkController::class, 'answers'])
                 ->where(['kid' => $kid, 'date' => '\d{4}-\d{2}-\d{2}', 'task' => $task])->name('answers');
         });

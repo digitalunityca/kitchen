@@ -22,7 +22,7 @@
     .sheet-meta p { margin: 0; }
     .sheet-no { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
     .sheet-qr img { width: .9in; height: .9in; display: block; }
-    .sums { display: grid; grid-template-columns: repeat(5, 1fr); row-gap: 2.2em; justify-items: center; font-family: ui-monospace, Menlo, monospace; }
+    .sums { display: grid; grid-template-columns: repeat(5, 1fr); row-gap: 1.2rem; justify-items: center; }
     .sum { width: calc(var(--chars) * .62em); text-align: right; line-height: 1.15; }
     .sum span { float: left; }
     .grids { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 1.6rem; }
@@ -90,15 +90,15 @@
           @unless ($answers)<div class="sheet-qr">@include('modules.homework.qr', ['task' => $task])</div>@endunless
         </header>
         @if ($isSums)
-          <div class="sums" style="--chars: {{ $layout['chars'] }}; font-size: {{ $layout['font'] * 1.25 }}px">
+          <div class="sums" style="grid-template-columns: repeat({{ $layout['columns'] }}, 1fr)">
             @foreach ($task['worksheet'] as $p)
-              <div class="sum"><div>{{ $p['top'] }}</div><div><span>+</span>{{ $p['bottom'] }}</div><div class="sum-line">{{ $answers ? $p['answer'] : "\u{00A0}" }}</div></div>
+              <div>@include('modules.homework.sheets.addition-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers])</div>
             @endforeach
           </div>
         @elseif ($isGrid)
-          <div class="grids">
+          <div class="grids" style="grid-template-columns: repeat({{ $layout['across'] }}, 1fr)">
             @foreach ($task['worksheet'] as $p)
-              <div>@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers, 'cell' => 17])</div>
+              <div>@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => $answers])</div>
             @endforeach
           </div>
         @else

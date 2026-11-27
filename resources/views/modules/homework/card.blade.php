@@ -160,7 +160,7 @@
   .kz-choice:disabled { opacity: .45; box-shadow: none; }
   .kz-choice-wrap { position: relative; display: flex; }
   .kz-choice-wrap .kz-choice { flex: 1; }
-  .kz-minus { position: absolute; right: 14px; bottom: 14px; width: 52px; height: 52px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 30px; font-weight: 500; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .kz-minus { position: absolute; right: 66px; top: 12px; width: 48px; height: 48px; border-radius: 999px; background: var(--fill); color: var(--text); font-size: 30px; font-weight: 500; line-height: 1; display: flex; align-items: center; justify-content: center; }
   .kz-minus[hidden] { display: none; }
   .kz-minus:active { transform: scale(.94); }
   .kz-choice-count { position: absolute; top: 16px; right: 16px; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 999px; background: var(--kid-ink); color: #fff; font-size: 20px; font-weight: 600; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
@@ -260,7 +260,9 @@
   .kz-parent-card .kz-keys button { height: 72px; font-size: 28px; }
   .kz-parent-actions { display: flex; gap: 10px; margin-top: 4px; }
   .kz-scores { display: flex; gap: 10px; margin-top: 4px; }
-  .kz-choice-level { font-size: 14px; color: var(--sub); line-height: 1.3; text-align: left; }
+  .kz-choice-level { font-size: 16px; color: var(--text); line-height: 1.3; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .kz-chip-revoir { display: inline-block; margin-top: 4px; border-radius: 999px; padding: 3px 10px; font-size: 14px; font-weight: 600; background: rgba(255,149,0,.16); color: #8A4B00; }
+  body.night .kz-chip-revoir { color: #FFB340; }
   .kz-stuck { background: rgba(255,149,0,.14); color: #8A4B00; border-radius: 14px; padding: 10px 14px; margin: 0; }
   body.night .kz-stuck { color: #FFB340; }
   .kz-scores[hidden], .kz-keys [data-key="ok"][hidden] { display: none; }
@@ -514,9 +516,9 @@
     var cheer = document.getElementById('hw-cheer'), kids = JSON.parse(document.getElementById('hw-kids').textContent);
     var queue = [], showing = false, cheerTimer = 0, KEY = 'hw.cursor';
     var cursor = +cheer.dataset.cursor;
-    // Back from YouTube full screen: catch up on what happened meanwhile (the server skips old ones).
-    try { var saved = parseInt(localStorage.getItem(KEY), 10); if (saved >= 0 && saved < cursor) { cursor = saved; } } catch (e) {}
-    function saveCursor() { try { localStorage.setItem(KEY, String(cursor)); } catch (e) {} }
+    // Back after a reload (e.g. from YouTube Music): catch up on approvals from the last 10 minutes only, not older ones.
+    try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved && saved.c >= 0 && saved.c < cursor && Date.now() - saved.t < 600000) { cursor = saved.c; } } catch (e) {}
+    function saveCursor() { try { localStorage.setItem(KEY, JSON.stringify({ c: cursor, t: Date.now() })); } catch (e) {} }
     function badges(map) {
       Object.keys(map || {}).forEach(function (id) {
         var b = document.querySelector('[data-kid-badge="' + id + '"]'); if (!b) { return; }

@@ -22,6 +22,14 @@
   .hint { color: var(--sub); margin: 0; line-height: 1.5; }
   .stuck { color: #B3261E; font-weight: 600; }
   .scroll { overflow-x: auto; }
+  .ok { color: #248A3D; font-weight: 500; margin: 0; }
+  .grade-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 0; }
+  .grade-form select { font: inherit; font-size: 16px; color: var(--text); background: var(--fill); border: 1px solid transparent; border-radius: 12px; padding: 9px 12px; }
+  .btn { background: var(--accent); color: #fff; border-radius: 12px; padding: 10px 16px; font-weight: 600; font-size: 15px; }
+  .moves { display: flex; gap: 6px; }
+  .moves button { min-width: 44px; height: 44px; padding: 0 10px; border-radius: 12px; background: var(--fill); color: var(--text); font-size: 15px; font-weight: 600; }
+  .moves button.master { color: #1E7A34; }
+  .moves button:disabled { opacity: .35; }
   .page { max-width: 1040px; }
   td:first-child { min-width: 260px; }
 </style>
@@ -32,12 +40,21 @@
 @php($monthName = fn (?int $m): string => $m ? \Carbon\CarbonImmutable::create(2026, $m, 1)->translatedFormat('M') : '')
 @section('content')
   <h1>{{ __('Progress') }}</h1>
+  @if (session('status')) <p class="ok" role="status">{{ session('status') }}</p> @endif
   <p class="hint">{{ __('Skills come from Quebec’s Progression des apprentissages. → learns it with the teacher this year, ★ does it alone by June, ↺ reuses it. The hub picks each sheet’s skill and level; your score after a check moves the kid up (2 × Good), keeps the level, or steps back (Go over again). A mastered skill comes back for a review after :a days, then :b days.', ['a' => $reviewDays[1], 'b' => $reviewDays[2]]) }}</p>
 
   @foreach ($kids as $k)
-    <h2><span class="avatar" style="background: {{ $k['kid']->color }}">{{ $k['kid']->badge }}</span>{{ $k['kid']->name }} <small style="color: var(--sub); font-size: 15px; font-weight: 400">{{ __(':grade grade', ['grade' => $k['kid']->grade]) }}</small></h2>
+    <h2><span class="avatar" style="background: {{ $k['kid']->color }}">{{ $k['kid']->badge }}</span>{{ $k['kid']->name }} <small style="color: var(--sub); font-size: 15px; font-weight: 400">{{ __('School: :grade grade', ['grade' => $k['kid']->grade]) }}</small></h2>
+    <form method="post" action="{{ route('modules.homework.progress.grade', $k['kid']->slug) }}" class="grade-form">
+      @csrf
+      <label for="grade-{{ $k['kid']->slug }}">{{ __('Sheets follow') }}</label>
+      <select id="grade-{{ $k['kid']->slug }}" name="grade">
+        @for ($g = 1; $g <= 6; $g++)<option value="{{ $g }}" @selected($k['grade'] === $g)>{{ __(':grade grade', ['grade' => $g]) }}{{ $g === $k['kid']->grade ? ' ('.__('school').')' : '' }}</option>@endfor
+      </select>
+      <button class="btn">{{ __('Change') }}</button>
+    </form>
 
-    <h3>{{ __('This month in :grade grade', ['grade' => $k['kid']->grade]) }}</h3>
+    <h3>{{ __('This month in :grade grade', ['grade' => $k['grade']]) }}</h3>
     <ul class="month">
       @forelse ($k['thisMonth'] as $m)
         <li class="{{ $m['practised'] ? 'sheet' : '' }}" title="{{ $m['practised'] ? __('Practised on the sheets') : __('Not on the sheets yet') }}">{{ \App\Models\SkillGrade::SYMBOLS[$m['expectation']] }} {{ $m['name'] }}</li>
@@ -48,7 +65,7 @@
 
     <div class="card scroll">
       <table>
-        <thead><tr><th>{{ __('Skill') }}</th><th>{{ __('This year') }}</th><th>{{ __('Level') }}</th><th>{{ __('Status') }}</th><th>{{ __('Last score') }}</th><th>{{ __('Next review') }}</th></tr></thead>
+        <thead><tr><th>{{ __('Skill') }}</th><th>{{ __('This year') }}</th><th>{{ __('Level') }}</th><th>{{ __('Status') }}</th><th>{{ __('Last score') }}</th><th>{{ __('Next review') }}</th><th>{{ __('Change') }}</th></tr></thead>
         <tbody>
           @foreach ($k['rows'] as $r)
             <tr>
@@ -58,6 +75,14 @@
               <td><span class="badge {{ $r['status'] }}">{{ $statuses[$r['status']] ?? $r['status'] }}</span>@if ($r['attempts'])<small>{{ trans_choice('{1} :n sheet|[2,*] :n sheets', $r['attempts'], ['n' => $r['attempts']]) }}</small>@endif</td>
               <td>{{ $r['score'] ? $scores[$r['score']] : '–' }}@if ($r['seen'])<small>{{ $r['seen']->translatedFormat('j M') }}</small>@endif</td>
               <td>{{ $r['review'] ? $r['review']->translatedFormat('j M') : '–' }}</td>
+              <td>
+                <form method="post" action="{{ route('modules.homework.progress.adjust', [$k['kid']->slug, $r['skill']]) }}" class="moves">
+                  @csrf
+                  <button name="action" value="down" aria-label="{{ __('One level down') }}" @disabled($r['level'] <= 1 && $r['status'] !== 'maitrise')>−</button>
+                  <button name="action" value="up" aria-label="{{ __('One level up') }}" @disabled($r['level'] >= $r['top'])>+</button>
+                  <button name="action" value="master" class="master" @disabled($r['status'] === 'maitrise')>{{ __('Mastered') }}</button>
+                </form>
+              </td>
             </tr>
           @endforeach
         </tbody>

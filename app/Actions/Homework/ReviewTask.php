@@ -70,7 +70,7 @@ class ReviewTask
                 // The score moves the kid on the sheet's skill (next level, review, step back).
                 if ($approve && isset($task['skillId'])) {
                     $profile = Kid::query()->where('slug', $kid)->firstOrFail();
-                    $this->progress->handle($profile->id, (int) $task['skillId'], $profile->grade, $score, now(HomeworkModule::TIMEZONE)->startOfDay());
+                    $this->progress->handle($profile->id, (int) $task['skillId'], $profile->workGrade(), $score, now(HomeworkModule::TIMEZONE)->startOfDay());
                 }
 
                 return true;

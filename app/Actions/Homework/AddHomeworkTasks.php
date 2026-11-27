@@ -38,7 +38,8 @@ class AddHomeworkTasks
         $day = $date->toDateString();
         $kidId = Kid::idFor($kid['id']);
         $tasks = $this->store->tasks($kid['id'], $day) ?? [];
-        $templates = HomeworkModule::templatesFor($kid['grade']);
+        $grade = (int) ($kid['workGrade'] ?? $kid['grade']);
+        $templates = HomeworkModule::templatesFor($grade);
         $next = collect($tasks)->map(fn (array $t): int => (int) substr($t['id'], 1))->max() ?? 0;
 
         if (array_sum(array_map('intval', $counts)) > self::MAX_PER_PRINT) {
@@ -65,7 +66,7 @@ class AddHomeworkTasks
                     'seed' => random_int(0, PHP_INT_MAX),
                 ];
                 // The skill and level this sheet practises (docs/LEARNING_PLAN.md), when the type has levels.
-                $pick = $this->pick->handle($kidId, (int) $kid['grade'], $template, $date, array_values(array_filter(array_column($tasks, 'skillId'))));
+                $pick = $this->pick->handle($kidId, $grade, $template, $date, array_values(array_filter(array_column($tasks, 'skillId'))));
                 if ($pick !== null) {
                     $task += [
                         'skillId' => $pick['variant']->skill_id, 'skill' => $pick['variant']->skill->code, 'variantId' => $pick['variant']->id,

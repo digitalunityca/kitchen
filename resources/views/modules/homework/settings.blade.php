@@ -79,16 +79,6 @@
         </ul>
       @endif
 
-      @if ($kid['writes'])
-        <h3>{{ __('Words to copy (writing sheets)') }}</h3>
-        <form method="post" action="{{ route('modules.homework.words', $kid['id']) }}" style="display: flex; flex-direction: column; gap: 10px">
-          @csrf
-          <textarea name="words" aria-label="{{ __(':name’s words', ['name' => $kid['name']]) }}">{{ implode("\n", $kid['words']) }}</textarea>
-          @error('words') <p class="err">{{ $message }}</p> @enderror
-          <p><small style="color: var(--sub)">{{ __('One word or short sentence per line, for example the school’s list of the week. Each sheet picks 6.') }}</small></p>
-          <button class="btn">{{ __('Save words') }}</button>
-        </form>
-      @endif
     </div>
   @endforeach
 
