@@ -84,8 +84,8 @@ class HomeworkModule extends Module
 
     public function register(Container $app): void
     {
-        $app->bind(HomeworkStore::class, fn (): HomeworkStore => new HomeworkStore(Storage::disk('local')));
-        $app->bind(KidPinStore::class, fn (): KidPinStore => new KidPinStore(Storage::disk('local')));
+        $app->singleton(HomeworkStore::class);
+        $app->singleton(KidPinStore::class);
     }
 
     /** @return array{kids: list<array<string, mixed>>, cursor: int, voice: bool} */

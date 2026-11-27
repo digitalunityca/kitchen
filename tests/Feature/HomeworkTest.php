@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Actions\Homework\AddHomeworkTasks;
 use App\Actions\Homework\BuildAdditionSheet;
 use App\Dashboard\ModuleRegistry;
+use App\Models\KidPin;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
 use App\Modules\Homework\KidPinStore;
@@ -92,7 +93,8 @@ class HomeworkTest extends TestCase
 
         app(KidPinStore::class)->put('arthur', '5555');
         $this->post('/modules/homework/kids/arthur/unlock', ['pin' => '4821'])->assertOk()->assertSee('Hi Arthur!');
-        $this->assertStringNotContainsString('5555', Storage::disk('local')->get('homework-pins.json'));
+        $this->assertStringNotContainsString('5555', (string) KidPin::query()->find('arthur')?->hash);
+        $this->assertTrue(app(KidPinStore::class)->matches('arthur', '5555'));
     }
 
     public function test_wrong_pins_lock_the_kid_out_for_a_minute(): void
@@ -218,7 +220,7 @@ class HomeworkTest extends TestCase
         $this->signIn('theo');
 
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 2]])->assertStatus(422)->assertJson(['error' => 'Couldn’t generate the worksheets. Try again.']);
-        $this->assertSame([], app(HomeworkStore::class)->tasks('theo', '2026-11-25'));
+        $this->assertEmpty(app(HomeworkStore::class)->tasks('theo', '2026-11-25') ?? []);
 
         config(['dashboard.homework_print_spool' => null]);
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1]])->assertStatus(422)->assertJson(['error' => 'The printer isn’t reachable right now. Ask a parent.']);

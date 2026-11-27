@@ -2,12 +2,15 @@
 
 namespace Tests;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 abstract class TestCase extends BaseTestCase
 {
+    use RefreshDatabase;
+
     /** @var array<string, array<string, mixed>|int> NHL API path => JSON body, or an HTTP status for a failure */
     protected array $nhl = [];
 

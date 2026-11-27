@@ -35,7 +35,8 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            // On the home-hub-data volume (storage/app), so it survives rebuilds. Backup = copy this one file.
+            'database' => env('DB_DATABASE', storage_path('app/database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,

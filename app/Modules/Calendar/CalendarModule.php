@@ -9,7 +9,6 @@ use App\Dashboard\Module;
 use App\Http\Middleware\RequireSettingsPin;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Routing\Router;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Calendars from iCal links (Google, iCloud, Outlook…), added on
@@ -32,7 +31,7 @@ class CalendarModule extends Module
 
     public function register(Container $app): void
     {
-        $app->bind(CalendarStore::class, fn (): CalendarStore => new CalendarStore(Storage::disk('local')));
+        $app->singleton(CalendarStore::class);
     }
 
     /** How far ahead the card looks for the "Next" event after tomorrow. */
