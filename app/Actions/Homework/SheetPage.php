@@ -16,8 +16,11 @@ final class SheetPage
     /** Letter 612 × 792 pt, minus the 40 pt side margins. */
     public const WIDTH = 532.0;
 
-    /** 792 pt minus the 38 pt top and bottom margins, the header (title, QR, rule) and a safety margin. */
-    public const HEIGHT = 590.0;
+    /** What Dompdf leaves under the header on one Letter page (measured: 619 pt), minus a small safety margin. */
+    public const HEIGHT = 612.0;
+
+    /** Borders and rounding make printed rows a little taller than their cells. */
+    public const BORDER_ALLOWANCE = 1.03;
 
     /**
      * Columns and rows of problems that fit, gaps included.
@@ -28,7 +31,7 @@ final class SheetPage
     {
         return [
             'columns' => max(1, min($maxColumns, (int) floor((self::WIDTH + $gapX) / ($width + $gapX)))),
-            'rows' => max(1, min($maxRows, (int) floor((self::HEIGHT + $gapY) / ($height + $gapY)))),
+            'rows' => max(1, min($maxRows, (int) floor((self::HEIGHT + $gapY) / ($height * self::BORDER_ALLOWANCE + $gapY)))),
         ];
     }
 }

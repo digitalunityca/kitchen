@@ -62,7 +62,7 @@
           @foreach (array_chunk($task['worksheet'], $layout['columns']) as $row)
             <tr>
               @foreach ($row as $p)
-                <td style="width: {{ round(100 / $layout['columns'], 3) }}%; padding-bottom: {{ $layout['gapY'] }}pt">@include('modules.homework.sheets.addition-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
+                <td style="width: {{ round(100 / $layout['columns'], 3) }}%; padding-bottom: {{ $loop->parent->last ? 0 : $layout['gapY'] }}pt">@include('modules.homework.sheets.addition-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
               @endforeach
               @for ($i = count($row); $i < $layout['columns']; $i++)<td style="width: {{ round(100 / $layout['columns'], 3) }}%"></td>@endfor
             </tr>
@@ -73,7 +73,7 @@
           @foreach (array_chunk($task['worksheet'], $layout['across']) as $row)
             <tr>
               @foreach ($row as $p)
-                <td style="width: {{ round(100 / $layout['across'], 3) }}%; padding-bottom: {{ $layout['gap'] }}pt">@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
+                <td style="width: {{ round(100 / $layout['across'], 3) }}%; padding-bottom: {{ $loop->parent->last ? 0 : $layout['gap'] }}pt">@include('modules.homework.sheets.multiplication-box', ['p' => $p, 'layout' => $layout, 'answers' => false])</td>
               @endforeach
               @for ($i = count($row); $i < $layout['across']; $i++)<td style="width: {{ round(100 / $layout['across'], 3) }}%"></td>@endfor
             </tr>

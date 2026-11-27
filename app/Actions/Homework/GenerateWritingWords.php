@@ -45,7 +45,8 @@ class GenerateWritingWords
         $row = self::ROW_MM * SheetPage::MM;
         $header = 18.0;
 
-        return ['rows' => (int) floor((SheetPage::HEIGHT - $header) / $row), 'row' => round($row, 2), 'header' => $header, 'word' => 120.0, 'copies' => self::COPIES];
+        // Dompdf draws these rows about 10–15 % taller (the word's line height, the borders), so keep that headroom.
+        return ['rows' => (int) floor((SheetPage::HEIGHT - $header) / ($row * 1.15)), 'row' => round($row, 2), 'header' => $header, 'word' => 120.0, 'copies' => self::COPIES];
     }
 
     /** @return list<array{question: string, answer: string, word: true}> one item per word, in the shape the sheets use */

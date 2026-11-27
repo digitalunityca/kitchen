@@ -22,6 +22,7 @@ use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
 use App\Support\PdfText;
 use Carbon\CarbonImmutable;
+use Dompdf\Dompdf;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -244,7 +245,7 @@ class LearningTest extends TestCase
         config(['services.openai.key' => 'test-key']);
         Kid::query()->where('slug', 'arthur')->update(['working_grade' => 3]);
         $rows = GenerateWritingWords::layout()['rows'];
-        $this->assertSame(16, $rows); // 12 mm handwriting rows fill the page
+        $this->assertSame(15, $rows); // 12 mm handwriting rows fill the page
         $words = ['école', 'Fenêtre', 'bébé', 'école', 'Lucie', 'deux mots', 'château', 'forêt'];
         Http::fake(['https://api.openai.com/v1/responses' => Http::response(['output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode(['words' => $words])]]]]])]);
 
@@ -345,6 +346,28 @@ class LearningTest extends TestCase
     {
         $this->assertSame('un livre <span style="font-family: \'DejaVu Sans\'">→</span> des livres &amp; ça', PdfText::html('un livre → des livres & ça'));
         $this->assertSame('Écris l’article « le »', PdfText::html('Écris l’article « le »'));
+    }
+
+    public function test_every_sheet_layout_prints_on_one_page(): void
+    {
+        $sheets = [
+            'addition 1 digit' => ['addition', app(BuildAdditionSheet::class)->handle(1, 1, ['top' => [1, 9], 'bottom' => [1, 9]])],
+            'addition 4 + 4 digits' => ['addition', app(BuildAdditionSheet::class)->handle(6, 2, ['top' => [1000, 9999], 'bottom' => [1000, 9999]])],
+            'addition of 3 numbers' => ['addition', app(BuildAdditionSheet::class)->handle(3, 3, ['top' => [100, 999], 'bottom' => [100, 999], 'addends' => 3])],
+            'tables' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(3, 4, ['top' => [2, 10], 'bottom' => [2, 10]])],
+            '3 × 2 digits' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(5, 5, ['top' => [100, 999], 'bottom' => [10, 99]])],
+            '3 × 3 digits' => ['multiplication', app(BuildMultiplicationSheet::class)->handle(6, 6, ['top' => [100, 999], 'bottom' => [100, 999]])],
+            'writing' => ['writing', array_map(fn (string $w): array => ['question' => $w, 'answer' => $w, 'word' => true], array_slice(GenerateWritingWords::FALLBACK, 0, GenerateWritingWords::layout()['rows']))],
+        ];
+
+        foreach ($sheets as $name => [$template, $worksheet]) {
+            $task = ['id' => 't1', 'seed' => 1, 'number' => 7, 'template' => $template, 'worksheet' => $worksheet];
+            $pdf = new Dompdf;
+            $pdf->setPaper('letter');
+            $pdf->loadHtml(view('modules.homework.print', ['kid' => ['id' => 'arthur', 'name' => 'A', 'grade' => 3], 'date' => '2026-11-25', 'tasks' => [$task]])->render(), 'UTF-8');
+            $pdf->render();
+            $this->assertSame(1, $pdf->getCanvas()->get_page_count(), "{$name} ran onto a second page");
+        }
     }
 
     /** @return array{string, int} */
