@@ -19,7 +19,7 @@
   </div>
   <div class="card">
     @foreach ($sections as $key => [$title, $hint, $route])
-      <a class="item" href="{{ route($route) }}"><span>{{ ['calendar' => '📅', 'homework' => '📚', 'kids' => '🧒', 'chores' => '🧹', 'progress' => '📈'][$key] ?? '⚙️' }}</span><span><b>{{ __($title) }}</b><small>{{ __($hint) }}</small></span></a>
+      <a class="item" href="{{ route($route) }}"><span>{{ ['calendar' => '📅', 'homework' => '📚', 'kids' => '🧒', 'chores' => '🧹', 'progress' => '📈', 'missions' => '🎁'][$key] ?? '⚙️' }}</span><span><b>{{ __($title) }}</b><small>{{ __($hint) }}</small></span></a>
     @endforeach
   </div>
   <div class="row-actions">

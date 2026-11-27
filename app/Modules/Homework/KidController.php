@@ -15,6 +15,7 @@ use App\Actions\Homework\PrintHomework;
 use App\Actions\Homework\RedeemReward;
 use App\Actions\Homework\ReviewTask;
 use App\Actions\Learning\PickExerciseVariant;
+use App\Actions\Missions\ParentMissions;
 use App\Dashboard\ModuleRegistry;
 use App\Http\Access\AccessGate;
 use App\Http\Access\AccessSettings;
@@ -204,6 +205,47 @@ class KidController extends Controller
         return $this->render('history', $profile, $this->screenData('history', $profile));
     }
 
+    /** POST …/kids/{kid}/missions/{task}/done: the kid finished a parent's mission (a parent checks it later). */
+    public function missionDone(Request $request, string $kid, int $task, ParentMissions $missions): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if (! $this->session->active($request, $profile['id'])) {
+            return response()->json(['locked' => true], 401);
+        }
+        $missions->done(Kid::idFor($profile['id']), $task);
+
+        return $this->render('home', $profile, $this->screenData('home', $profile));
+    }
+
+    /** POST …/kids/{kid}/missions/check/{task} (decision=bien|erreurs|revoir|missed, pin): a parent checks a mission. */
+    public function missionCheck(Request $request, string $kid, int $task, ParentMissions $missions): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if ($denied = $this->guard($request, $profile['id'])) {
+            return $denied;
+        }
+        $missions->review(Kid::idFor($profile['id']), $task, (string) $request->input('decision', 'bien'));
+
+        return $this->render('history', $profile, $this->screenData('history', $profile));
+    }
+
+    /** POST …/kids/{kid}/bonus (reason, points, pin): a parent gives points right away for something already done. */
+    public function bonus(Request $request, string $kid, ParentMissions $missions): Response|JsonResponse
+    {
+        $profile = $this->kidOrFail($kid);
+        if ($denied = $this->guard($request, $profile['id'])) {
+            return $denied;
+        }
+        $reason = trim((string) $request->input('reason'));
+        $points = (int) $request->input('points');
+        if ($reason === '' || mb_strlen($reason) > 80 || $points < 1 || $points > 100) {
+            return response()->json(['error' => __('Write what it is for and choose the points.')], 422);
+        }
+        $missions->bonus(Kid::idFor($profile['id']), $reason, $points);
+
+        return $this->render('history', $profile, $this->screenData('history', $profile));
+    }
+
     /** POST …/kids/{kid}/rewards/{reward} (pin): a parent confirms buying a reward. */
     public function redeem(Request $request, string $kid, string $reward, RedeemReward $redeemReward): Response|JsonResponse
     {
@@ -279,6 +321,9 @@ class KidController extends Controller
                 'choresWaiting' => $this->chores($kid['id'], $today->toDateString())->where('status', 'done')->count(),
                 'choresDone' => $this->chores($kid['id'], $today->toDateString())->where('status', 'approved')->count(),
                 'toCheck' => count($this->toCheck($kid['id'])),
+                'missions' => app(ParentMissions::class)->open(Kid::idFor($kid['id']))->map(fn (Task $m): array => [
+                    'id' => $m->id, 'title' => (string) ($m->data['title'] ?? ''), 'points' => $m->points, 'due' => $m->data['due'] ?? null, 'waiting' => $m->status === 'done',
+                ])->all(),
             ],
             'homework' => $this->homeworkData($kid, $today, $tasks),
             'chores' => ['chores' => app(ListKidChores::class)->handle(Kid::idFor($kid['id']), $today)],
@@ -350,6 +395,9 @@ class KidController extends Controller
             }
         }
 
+        foreach ($this->missionTasks($kid, $cutoff)->where('status', 'done') as $m) {
+            $list[] = ['id' => $m->id, 'kind' => 'mission', 'points' => $m->points, 'date' => $m->date->format('Y-m-d'), 'name' => (string) ($m->data['title'] ?? '')];
+        }
         foreach ($this->chores($kid, $cutoff)->where('status', 'done') as $chore) {
             $list[] = ['id' => $chore->id, 'kind' => 'chore', 'points' => $chore->points, 'date' => $chore->date->format('Y-m-d'), 'name' => (string) ($chore->data['name'] ?? '')];
         }
@@ -409,6 +457,20 @@ class KidController extends Controller
                     'approved' => 'done', 'missed' => 'missed', default => 'check'
                 },
                 'time' => ($chore->approved_at ?? $chore->done_at)?->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(),
+            ];
+        }
+
+        foreach ($this->missionTasks($kid['id'], $cutoff)->whereIn('status', ['done', 'approved']) as $m) {
+            $days[($m->approved_at ?? $m->done_at)?->setTimezone(HomeworkModule::TIMEZONE)->format('Y-m-d') ?? $m->date->format('Y-m-d')][] = [
+                'kind' => 'mission',
+                'id' => $m->id,
+                'name' => (string) ($m->data['title'] ?? ''),
+                'bonus' => (bool) ($m->data['bonus'] ?? false),
+                'points' => $m->points,
+                'score' => $m->score,
+                'earned' => $m->score ? ReviewTask::pointsFor($m->points, $m->score) : $m->points,
+                'status' => $m->status === 'approved' ? 'done' : 'check',
+                'time' => ($m->approved_at ?? $m->done_at)?->setTimezone(HomeworkModule::TIMEZONE)->toIso8601String(),
             ];
         }
 
@@ -515,6 +577,13 @@ class KidController extends Controller
     {
         return KidSkillProgress::query()->with('skill')->where('kid_id', Kid::idFor($kid))->whereNotNull('stuck_since')
             ->get()->map(fn (KidSkillProgress $p): string => $p->skill->name_fr)->all();
+    }
+
+    /** @return Collection<int, Task> the kid's parent missions and bonuses since that day (not cancelled) */
+    private function missionTasks(string $kid, string $since): Collection
+    {
+        return Task::query()->where('task_type_id', TaskType::idFor(TaskType::PARENT_MISSION))->where('kid_id', Kid::idFor($kid))
+            ->whereDate('date', '>=', $since)->where('status', '!=', 'cancelled')->orderBy('id')->get();
     }
 
     /** @return Collection<int, Task> the kid's chores since that day */

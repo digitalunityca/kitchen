@@ -18,10 +18,29 @@
             @for ($i = 0; $i < $todayTotal; $i++)<i class="{{ $i < $todayChecked ? 'on' : '' }}"></i>@endfor
           </div>
         @endif
+        @if ($missions !== [])
+          <p class="kz-sub">{{ trans_choice('{1} :n mission from a parent|[2,*] :n missions from a parent', count($missions), ['n' => count($missions)]) }}</p>
+        @endif
         @if ($choresWaiting + $choresDone > 0)
           <p class="kz-sub">{{ trans_choice('{1} :n chore done|[2,*] :n chores done', $choresWaiting + $choresDone, ['n' => $choresWaiting + $choresDone]) }}{{ $choresWaiting > 0 ? ' · '.__(':n waiting for a parent', ['n' => $choresWaiting]) : '' }}</p>
         @endif
       </div>
+      @if ($missions !== [])
+        {{-- Missions from a parent: "I'm done", then a parent checks it in History. --}}
+        <div class="kz-missions">
+          <p class="kz-today-title">{{ __('Missions') }}</p>
+          @foreach (array_slice($missions, 0, 3) as $m)
+            <div class="kz-mission">
+              <span class="kz-mission-text"><b>{{ $m['title'] }}</b><small>+{{ $m['points'] }} {{ __('points') }}{{ $m['due'] ? ' · '.__('by :date', ['date' => \Carbon\CarbonImmutable::parse($m['due'])->translatedFormat('j F')]) : '' }}</small></span>
+              @if ($m['waiting'])
+                <span class="kz-badge is-check">{{ __('Waiting for a parent') }}</span>
+              @else
+                <button type="button" class="kz-btn" data-mission-done="{{ route('modules.homework.mission.done', [$kid['id'], $m['id']]) }}">{{ __('I’m done') }}</button>
+              @endif
+            </div>
+          @endforeach
+        </div>
+      @endif
     </section>
     <nav class="kz-tiles" aria-label="{{ __(':name’s homework', ['name' => $kid['name']]) }}">
       <button type="button" class="kz-tile kz-tile-main" data-go="homework">

@@ -41,6 +41,7 @@
         </div>
       </form>
     @endif
+    <p style="margin-top: 1.5rem"><a href="{{ route('modules.homework.missions') }}">🎁 {{ __('Give a reward or a mission') }}</a></p>
   </main>
 </body>
 </html>

@@ -280,6 +280,21 @@
   .kz-parent-actions { display: flex; gap: 10px; margin-top: 4px; }
   .kz-scores { display: flex; gap: 10px; margin-top: 4px; }
   .kz-choice-level { font-size: 16px; color: var(--text); line-height: 1.3; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .kz-missions { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .kz-missions .kz-today-title { margin: 0; }
+  .kz-mission { display: flex; align-items: center; gap: 10px; }
+  .kz-mission-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .kz-mission-text b { font-size: 17px; font-weight: 600; }
+  .kz-mission-text small { font-size: 14px; color: var(--sub); }
+  .kz-mission .kz-btn { min-height: 48px; padding: 0 16px; font-size: 16px; }
+  .kz-bonus-btn { min-height: 48px; padding: 0 16px; font-size: 16px; }
+  .kz-bonus-fields { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .kz-bonus-fields[hidden] { display: none; }
+  .kz-bonus-fields input[type=text] { font: inherit; font-size: 17px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .kz-bonus-points { display: flex; gap: 8px; justify-content: center; }
+  .kz-bonus-points input { position: absolute; opacity: 0; }
+  .kz-bonus-points span { display: inline-flex; min-width: 60px; min-height: 44px; align-items: center; justify-content: center; border-radius: 12px; background: var(--fill); font-weight: 600; }
+  .kz-bonus-points input:checked + span { background: var(--kid-ink); color: #fff; }
   .kz-chip-revoir { display: inline-block; margin-top: 4px; border-radius: 999px; padding: 3px 10px; font-size: 14px; font-weight: 600; background: rgba(255,149,0,.16); color: #8A4B00; }
   body.night .kz-chip-revoir { color: #FFB340; }
   .kz-stuck { background: rgba(255,149,0,.14); color: #8A4B00; border-radius: 14px; padding: 10px 14px; margin: 0; }
@@ -407,6 +422,10 @@
         p.querySelector('[data-score-points="erreurs"]').textContent = '+' + pts;
         p.querySelector('[data-score-points="revoir"]').textContent = '+' + Math.ceil(pts / 2);
       }
+      // A bonus asks what it is for and how many points.
+      var bonus = !!btn.dataset.parentBonus, fields = p.querySelector('[data-bonus-fields]');
+      if (fields) { fields.hidden = !bonus; if (bonus) { fields.querySelector('[data-field="reason"]').value = ''; } }
+      p.dataset.bonus = bonus ? '1' : '';
       p.querySelector('[data-error]').hidden = true;
       setPin(p, ''); p.hidden = false;
     }
@@ -421,7 +440,12 @@
       if (decision === 'cancel') { p.hidden = true; setPin(p, ''); return; }
       if (digits(p).length < 4) { wrong(p, __('Type the parent PIN first.')); return; }
       p.dataset.busy = '1';
-      post(p.dataset.url, { pin: digits(p), decision: decision }).then(function (r) {
+      var data = { pin: digits(p), decision: decision };
+      if (p.dataset.bonus) {
+        data.reason = p.querySelector('[data-field="reason"]').value;
+        var picked = p.querySelector('[data-field="points"]:checked'); data.points = picked ? picked.value : '';
+      }
+      post(p.dataset.url, data).then(function (r) {
         if (r.ok) { return r.text().then(show); }
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401) { return go(); }
@@ -474,10 +498,10 @@
     }
 
     /* Aider à la maison: "I'm done" (a parent checks it later in History) */
-    function choreDone(btn) {
+    function choreDone(btn, url) {
       if (btn.disabled) { return; }
       btn.disabled = true;
-      post(btn.dataset.choreDone, {}).then(function (r) {
+      post(url || btn.dataset.choreDone, {}).then(function (r) {
         if (r.ok) { return r.text().then(show); }
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401) { return go(); }
@@ -516,6 +540,7 @@
       if ((t = e.target.closest('[data-print-all]'))) { printAll(t.closest('[data-screen]')); return; }
       if ((t = e.target.closest('[data-parent-open]'))) { openParent(t); return; }
       if ((t = e.target.closest('[data-chore-done]'))) { choreDone(t); return; }
+      if ((t = e.target.closest('[data-mission-done]'))) { choreDone(t, t.dataset.missionDone); return; }
       if ((t = e.target.closest('[data-filter-chip]'))) { filter(t.closest('[data-screen]'), t.dataset.filterChip); return; }
       if ((t = e.target.closest('[data-preview]'))) { preview(t); return; }
       if ((t = e.target.closest('[data-viewer-close]'))) { var v = t.closest('[data-viewer]'); v.hidden = true; v.querySelector('iframe').removeAttribute('src'); return; }
@@ -575,7 +600,13 @@
       cheer.style.setProperty('--kid', kid.color);
       cheer.querySelector('[data-cheer-face]').innerHTML = kid.photo ? '<img src="' + kid.photo + '" alt="">' : kid.badge;
       var title, note, spoken;
-      if (e.kind === 'chore') {
+      if (e.kind === 'bonus') {
+        title = __('Bravo :name! +:n ⭐').replace(':name', kid.name).replace(':n', e.points);
+        note = __('A reward from a parent: :reason').replace(':reason', e.name);
+        spoken = __('Bravo :name! :n points!').replace(':name', kid.name).replace(':n', e.points);
+        countUp(cheer.querySelector('[data-cheer-points]'), e.balance - e.points, e.balance);
+        confetti();
+      } else if (e.kind === 'chore') {
         title = __('Bravo :name! +:n ⭐').replace(':name', kid.name).replace(':n', e.points);
         note = __('Thanks for helping: :chore.').replace(':chore', e.name);
         spoken = __('Thanks for helping, :name! :n points!').replace(':name', kid.name).replace(':n', e.points);

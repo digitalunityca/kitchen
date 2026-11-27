@@ -13,6 +13,8 @@ class TaskType extends Model
 
     public const HOME_HELP = 'home_help';
 
+    public const PARENT_MISSION = 'parent_mission';
+
     protected $guarded = [];
 
     /** @var array<string, int> */

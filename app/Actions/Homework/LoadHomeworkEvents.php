@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Homework;
 
+use App\Models\Task;
+use App\Models\TaskType;
 use App\Modules\Homework\HomeworkModule;
 use App\Modules\Homework\HomeworkStore;
 
@@ -31,7 +33,12 @@ class LoadHomeworkEvents
         $cutoff = now(HomeworkModule::TIMEZONE)->subMinutes(self::MAX_AGE_MINUTES)->toIso8601String();
         $events = [];
 
-        foreach (array_slice($ledger, max(0, min($after ?? $next, $next))) as $entry) {
+        $fresh = array_slice($ledger, max(0, min($after ?? $next, $next)));
+        // Lines pointing at a task: a chore, or a parent's mission or bonus.
+        $missions = Task::query()->whereKey(array_filter(array_column($fresh, 'taskRef')))
+            ->where('task_type_id', TaskType::idFor(TaskType::PARENT_MISSION))->pluck('id')->all();
+
+        foreach ($fresh as $entry) {
             if (! in_array($entry['kid'], $kids, true) || (string) $entry['at'] < $cutoff) {
                 continue;
             }
@@ -41,7 +48,7 @@ class LoadHomeworkEvents
                 $events[$key]['points'] += (int) $entry['points'];
                 $events[$key]['sheets']++;
             } elseif (! empty($entry['taskRef'])) {
-                $events[] = ['kind' => 'chore', 'kid' => $entry['kid'], 'points' => (int) $entry['points'], 'name' => (string) $entry['reason']];
+                $events[] = ['kind' => in_array($entry['taskRef'], $missions, true) ? 'bonus' : 'chore', 'kid' => $entry['kid'], 'points' => (int) $entry['points'], 'name' => (string) $entry['reason']];
             } elseif (! empty($entry['rewardId'])) {
                 $events[] = ['kind' => 'reward', 'kid' => $entry['kid'], 'points' => (int) $entry['points'], 'name' => __((string) $entry['reason'])];
             }

@@ -97,3 +97,11 @@ Screenshots (test names, no photos):
 - 15-kid-pin-soccer-realistic.jpg
 - 16-kid-home-soccer-realistic.jpg
 - 17-kid-home-gaming-realistic.jpg
+
+## Update: rewards from a parent (missions and bonus), 27 Nov 2026
+
+Screenshots (test names, no photos):
+- 18-kid-home-missions.jpg: Missions on the kid's home ("J'ai fini" / waiting for a parent)
+- 19-history-mission-and-bonus-button.jpg: a mission to check in History, and the "Récompense d'un parent" button
+- 20-bonus-dialog.jpg: the bonus dialog (what it is for, +5/10/20/50, parent PIN)
+- 21-settings-missions.jpg: Settings › Récompenses d'un parent

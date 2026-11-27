@@ -184,6 +184,11 @@ One round avatar button per kid in the side menu (Theo, Arthur; set in `config/d
   - Each printed sheet also has a QR code a parent can scan to approve it, with the same three choices.
 - **Kid home:** the points once (big), one "Aujourd'hui" block (sheets checked, chores), today's sheets as icons on the Devoirs tile, and a slim Nouvelles bar.
   - Each kid has a background theme (`kids.theme`: `soccer`, `gaming`; first set from `config/dashboard.php`). The themes are original inline SVGs (resources/views/modules/homework/kid/themes/), soft behind translucent white cards, fainter outside the home screen.
+- **Récompenses d'un parent:**
+  - **Mission:** a parent gives one or more kids something to do, with points and an optional date. It shows on the kid's home (Aujourd'hui and a Missions block). The kid taps "J'ai fini"; a parent scores it in History with the PIN (Bien or Quelques erreurs: full points, À revoir: half), or marks it not done, which keeps it open.
+  - **Bonus:** points given right away for something already done, from Settings or from History ("Récompense d'un parent", parent PIN, reason and +5/10/20/50).
+  - Both are `parent_mission` tasks; the points go to the ledger and celebrate on the dashboard.
+  - Settings › Récompenses d'un parent: give, see and take back missions. The QR approval page links to it.
 - **Aider à la maison:** today's chores (seeded: mettre la table, desservir, faire son lit, préparer son sac at 5 points; ranger sa chambre, vider le lave-vaisselle, sortir le recyclage at 10).
   - The kid taps "J'ai fini"; a parent approves it in History; the points count toward rewards like any points, with a celebration on the dashboard.
   - Each chore counts a set number of times a day, on every day, school days or the weekend.

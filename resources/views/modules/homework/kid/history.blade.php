@@ -17,6 +17,7 @@
     @foreach (['check' => __('To check'), 'done' => __('Approved'), 'missed' => __('Not done'), 'all' => __('All')] as $key => $label)
       <button type="button" class="kz-chip" data-filter-chip="{{ $key }}" aria-pressed="{{ $filter === $key ? 'true' : 'false' }}">{{ $label }} <span>{{ $counts[$key] }}</span></button>
     @endforeach
+    <button type="button" class="kz-btn ghost kz-bonus-btn" data-parent-open="{{ route('modules.homework.bonus', $kid['id']) }}" data-parent-bonus="1" data-parent-title="{{ __('A reward from a parent') }}">🎁 {{ __('Reward from a parent') }}</button>
     <p class="kz-quiet kz-week">{{ __('This week:') }} <b>{{ $stats['weekTasks'] }}</b> {{ $stats['weekTasks'] === 1 ? __('sheet') : __('sheets') }}, <b>+{{ $stats['weekPoints'] }}</b> {{ __('points') }}</p>
   </div>
   @if ($stuck !== [])
@@ -29,7 +30,20 @@
         <ul class="kz-list">
           @foreach ($day['rows'] as $row)
             <li class="kz-row is-{{ $row['status'] }}" data-status="{{ $row['status'] }}">
-              @if ($row['kind'] === 'chore')
+              @if ($row['kind'] === 'mission')
+                <span class="kz-row-icon kz-chore-emoji" aria-hidden="true">🎁</span>
+                <span class="kz-row-text"><b>{{ $row['name'] }}</b><small>{{ $row['bonus'] ? __('Bonus from a parent') : __('Mission from a parent') }} · +{{ $row['points'] }} {{ __('points') }}</small></span>
+                @if ($row['status'] === 'done')
+                  <span class="kz-approved">@include('modules.homework.kid._icon', ['name' => 'ok', 'size' => 22]){{ __('Approved') }}@if ($row['score'] ?? null) <span class="kz-score-tag">· {{ $scores[$row['score']] }}</span>@endif · +{{ $row['earned'] }}</span>
+                @else
+                  <span class="kz-badge is-check">{{ $badges['check'] }}</span>
+                  <span class="kz-row-actions">
+                    @php($check = route('modules.homework.mission.check', [$kid['id'], $row['id']]))
+                    <button type="button" class="kz-btn ghost" data-parent-open="{{ $check }}" data-parent-decision="missed" data-parent-title="{{ __('Not done') }} : {{ $row['name'] }}">{{ __('Not done') }}</button>
+                    <button type="button" class="kz-btn" data-parent-open="{{ $check }}" data-parent-scores="1" data-parent-points="{{ $row['points'] }}" data-parent-title="{{ __('Check') }} {{ $row['name'] }}">{{ __('Approve') }}</button>
+                  </span>
+                @endif
+              @elseif ($row['kind'] === 'chore')
                 <span class="kz-row-icon kz-chore-emoji" aria-hidden="true">{{ $row['emoji'] }}</span>
                 <span class="kz-row-text"><b>{{ $row['name'] }}</b><small>{{ __('Help at home') }} · +{{ $row['points'] }} {{ __('points') }}</small></span>
                 @if ($row['status'] === 'done')
