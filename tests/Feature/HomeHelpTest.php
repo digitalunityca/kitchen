@@ -43,7 +43,7 @@ class HomeHelpTest extends TestCase
             ->assertSee('Thanks for helping! A parent will check it.')->assertSee('Waiting for a parent');
         $this->post('/modules/homework/kids/theo/chores/'.$setTable.'/done')->assertStatus(422)->assertJson(['error' => 'This one is already done for today.']);
         $this->assertSame(0, app(HomeworkStore::class)->balance('theo'));
-        $this->get(self::SHEET)->assertSee('1 task is waiting for a parent check');
+        $this->get(self::SHEET)->assertSee('1 chore done · 1 waiting for a parent')->assertSee('1 to check');
 
         // History: the chore is in "To check"; approving needs the parent PIN and pays once.
         $task = Task::query()->where('chore_id', $setTable)->value('id');

@@ -280,7 +280,7 @@ class HomeworkTest extends TestCase
             ->assertSee('<li class="kz-row is-missed" data-status="missed">', false);
         $this->assertSame('missed', app(HomeworkStore::class)->tasks('arthur', '2026-11-25')[1]['status']);
 
-        $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> checked today', false)->assertSee('1 to check');
+        $this->get('/modules/homework/kids/arthur/sheet')->assertSee('<b>1 of 2</b> sheets checked', false)->assertSee('1 to check');
 
         $this->post('/modules/homework/kids/arthur/check/2026-11-25/t3', ['pin' => '4821']);
         $this->get('/modules/homework/kids/arthur/sheet?screen=history')->assertSee('data-filter="all"', false)->assertDontSee('>Approve</button>', false);

@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Modules\Homework\HomeworkModule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +21,7 @@ use Illuminate\Support\Str;
  * @property string $name
  * @property string $badge
  * @property string $color
+ * @property string|null $theme
  * @property int $grade
  * @property int|null $working_grade
  * @property int $position
@@ -32,6 +34,9 @@ class Kid extends Model
     {
         return ['grade' => 'integer', 'working_grade' => 'integer', 'position' => 'integer'];
     }
+
+    /** Backgrounds a kid's area can have (resources/views/modules/homework/kid/themes). */
+    public const THEMES = ['soccer', 'gaming'];
 
     /** The grade the sheets follow: the working grade a parent set, else the school grade. */
     public function workGrade(): int
@@ -49,6 +54,7 @@ class Kid extends Model
                 'badge' => (string) ($kid['badge'] ?? mb_substr($name, 0, 1)),
                 'color' => (string) ($kid['color'] ?? '#5AC8FA'),
                 'grade' => (int) ($kid['grade'] ?? 2),
+            ] + (Schema::hasColumn('kids', 'theme') ? ['theme' => $kid['theme'] ?? null] : []) + [
                 'position' => $position,
             ]);
         }

@@ -30,6 +30,7 @@
       <button type="button" class="kid-close" aria-label="{{ __('Close') }}">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
+      @if ($kid['theme'] ?? null)<div class="kz-theme" aria-hidden="true">@include('modules.homework.kid.themes.'.$kid['theme'])</div>@endif
       <div class="kid-body" data-src="{{ route('modules.homework.sheet', $kid['id']) }}"><p class="kz-loading">{{ __('Loading…') }}</p></div>
     </section>
   @endforeach
@@ -68,7 +69,17 @@
   body.night .kid-sheet { background: #0E0E10; box-shadow: 0 0 0 1px rgba(255,255,255,.08); }
   .kid-close { position: absolute; top: 18px; right: 20px; z-index: 3; width: 52px; height: 52px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; color: var(--text); }
   .kid-close:active { transform: scale(.94); }
-  .kid-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .kid-body { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; z-index: 1; }
+  /* The kid's theme: a soft drawing behind the white cards, a little stronger on the home screen. */
+  .kz-theme { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 0; opacity: .35; transition: opacity .3s ease; }
+  .kid-sheet:has([data-screen="home"]) .kz-theme { opacity: .75; }
+  .kz-theme-art { width: 100%; height: 100%; display: block; }
+  body.night .kz-theme { opacity: .12; }
+  body.night .kid-sheet:has([data-screen="home"]) .kz-theme { opacity: .2; }
+  .kid-close { z-index: 2; }
+  /* On the home screen the cards let the theme show through a little (text stays on near-white). */
+  .kid-sheet:has(.kz-theme) .kz-home .kz-score, .kid-sheet:has(.kz-theme) .kz-home .kz-tile { background: rgba(255,255,255,.8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  body.night .kid-sheet:has(.kz-theme) .kz-home .kz-score, body.night .kid-sheet:has(.kz-theme) .kz-home .kz-tile { background: rgba(28,28,30,.85); }
   .kz-loading { color: var(--sub); text-align: center; padding: 30px 0; margin: auto; }
 
   /* Every screen */
@@ -135,8 +146,16 @@
   .kz-steps { display: flex; gap: 6px; }
   .kz-steps i { flex: 1; height: 10px; border-radius: 99px; background: var(--fill); }
   .kz-steps i.on { background: var(--kid); }
-  .kz-tiles { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; gap: 18px; }
-  .kz-tiles .kz-tile:first-child { grid-row: span 2; }
+  .kz-tiles { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr auto; gap: 18px; }
+  .kz-tiles .kz-tile-main { grid-row: span 3; justify-content: space-between; }
+  .kz-tile-main .kz-tile-sheets { display: flex; flex-wrap: wrap; gap: 8px; margin: auto 0 12px; }
+  .kz-tile-sheets i { width: 40px; height: 40px; border-radius: 12px; background: var(--fill); color: var(--sub); display: flex; align-items: center; justify-content: center; font-style: normal; }
+  .kz-tile-sheets i.checked { background: rgba(52,199,89,.18); color: #1E7A34; }
+  .kz-tiles .kz-tile-small { grid-column: span 2; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 14px 20px; }
+  .kz-tile-small b { font-size: 20px; }
+  .kz-tile-small small { font-size: 15px; }
+  .kz-score-star { color: var(--kid); margin-bottom: 6px; }
+  .kz-today-title { font-size: 15px !important; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: .04em; }
   .kz-chore-emoji { font-size: 34px; line-height: 1; flex: none; }
   .kz-row-icon.kz-chore-emoji { font-size: 24px; }
   .kz-chore.is-done { opacity: .6; box-shadow: none; background: var(--fill); }

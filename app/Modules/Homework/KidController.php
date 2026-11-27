@@ -274,6 +274,10 @@ class KidController extends Controller
                 'schoolDay' => ! $today->isWeekend(),
                 'todayTotal' => collect($tasks)->where('status', '!=', 'missed')->count(),
                 'todayChecked' => collect($tasks)->where('status', 'approved')->count(),
+                // Today's sheets as small icons on the Devoirs tile (checked ones marked).
+                'todaySheets' => collect($tasks)->where('status', '!=', 'missed')->map(fn (array $t): array => ['template' => $t['template'], 'checked' => $t['status'] === 'approved'])->values()->all(),
+                'choresWaiting' => $this->chores($kid['id'], $today->toDateString())->where('status', 'done')->count(),
+                'choresDone' => $this->chores($kid['id'], $today->toDateString())->where('status', 'approved')->count(),
                 'toCheck' => count($this->toCheck($kid['id'])),
             ],
             'homework' => $this->homeworkData($kid, $today, $tasks),

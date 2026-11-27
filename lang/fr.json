@@ -17,6 +17,7 @@
     ":n points awarded.": ":n points accordés.",
     ":n printed today": ":n imprimée(s) aujourd’hui",
     ":n to check": ":n à vérifier",
+    ":n waiting for a parent": ":n en attente d’un parent",
     ":name now works at :grade grade.": ":name travaille maintenant en :gradee année.",
     ":name’s PIN is cleared. The parent PIN still opens their homework.": "Le NIP de :name est effacé. Le NIP d’un parent ouvre toujours ses devoirs.",
     ":name’s PIN is saved.": "Le NIP de :name est enregistré.",
@@ -455,10 +456,13 @@
     "waiting for a check": "en attente de vérification",
     "weather.high": "Max",
     "weather.low": "Min",
+    "{1} :n chore done|[2,*] :n chores done": "{1} :n tâche faite|[2,*] :n tâches faites",
     "{1} :n printed today|[2,*] :n printed today (plural)": "{1} :n imprimée aujourd’hui|[2,*] :n imprimées aujourd’hui",
     "{1} :n sheet is waiting for a parent check|[2,*] :n sheets are waiting for a parent check": "{1} :n feuille attend la vérification d’un parent|[2,*] :n feuilles attendent la vérification d’un parent",
+    "{1} :n sheet today|[2,*] :n sheets today": "{1} :n feuille aujourd’hui|[2,*] :n feuilles aujourd’hui",
     "{1} :n sheet|[2,*] :n sheets": "{1} :n feuille|[2,*] :n feuilles",
     "{1} :n task is waiting for a parent check|[2,*] :n tasks are waiting for a parent check": "{1} :n tâche attend la vérification d’un parent|[2,*] :n tâches attendent la vérification d’un parent",
+    "{1} <b>:done of :total</b> sheet checked|[2,*] <b>:done of :total</b> sheets checked": "{1} <b>:done sur :total</b> feuille vérifiée|[2,*] <b>:done sur :total</b> feuilles vérifiées",
     "{1} For safety, PIN entry is paused. Try again in :n minute.|[2,*] For safety, PIN entry is paused. Try again in :n minutes.": "{1} Par sécurité, l’entrée du NIP est suspendue. Réessaie dans :n minute.|[2,*] Par sécurité, l’entrée du NIP est suspendue. Réessaie dans :n minutes.",
     "{1} Generating :n worksheet…|[2,*] Generating :n worksheets…": "{1} Création de :n feuille…|[2,*] Création de :n feuilles…"
 }

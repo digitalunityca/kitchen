@@ -67,3 +67,22 @@ Quick wins are marked ⚡.
       - Chores: a compact list (emoji, name, points, on/off) that opens one row to edit.
 
 Suggested order: the quick wins 1, 2, 3, 4 and 7 in one pass; then 5, 6 and 8 together, since they touch the same components; then 9 and 10.
+
+## Update: kid home (finding 6) and themes, 27 Nov 2026
+
+Done, with the kids' themes:
+- **Points:** shown once (the big number); the pill only appears on the other screens.
+- **Aujourd'hui:** one block with sheets checked, a progress bar and the chores done.
+- **Devoirs tile:** today's sheets as small icons, checked ones in green.
+- **Nouvelles:** a slim bar instead of a full tile.
+
+**Themes** are stored per kid (`kids.theme`, seeded from the config): **soccer** for Theo, **gaming and building bricks** for Arthur.
+- Both are original drawings: pitch, net, ball and a generic striped #10 jersey; generic controllers and studded bricks.
+- No logos, brands or real people; nothing downloaded.
+- The theme sits soft behind translucent white cards on the home screen, and fainter on the PIN screen and the other screens.
+
+Screenshots (test names "Élève 5e" / "Élève 3e", no photos):
+- 11-kid-home-soccer.jpg
+- 12-kid-pin-soccer.jpg
+- 13-kid-home-gaming.jpg
+- 14-kid-pin-gaming.jpg

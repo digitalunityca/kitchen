@@ -111,6 +111,7 @@ class HomeworkModule extends Module
             'color' => $kid->color,
             'grade' => $kid->grade,
             'workGrade' => $kid->workGrade(),
+            'theme' => in_array($kid->theme, Kid::THEMES, true) ? $kid->theme : null,
             'photo' => self::photoPath($kid->slug) !== null
                 ? route('modules.homework.photo', ['kid' => $kid->slug, 'v' => Storage::disk('local')->lastModified(self::photoPath($kid->slug))], absolute: false)
                 : null,

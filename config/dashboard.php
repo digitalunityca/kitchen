@@ -72,8 +72,9 @@ return [
         // 1-6) sizes the worksheets and picks the templates offered.
         HomeworkModule::class => [
             'kids' => [
-                ['name' => 'Theo', 'badge' => 'T', 'color' => '#FF9500', 'grade' => 5],
-                ['name' => 'Arthur', 'badge' => 'A', 'color' => '#34C759', 'grade' => 2],
+                // theme: the background of the kid's area (soccer, gaming); the database keeps it after the first run.
+                ['name' => 'Theo', 'badge' => 'T', 'color' => '#FF9500', 'grade' => 5, 'theme' => 'soccer'],
+                ['name' => 'Arthur', 'badge' => 'A', 'color' => '#34C759', 'grade' => 2, 'theme' => 'gaming'],
             ],
         ],
 

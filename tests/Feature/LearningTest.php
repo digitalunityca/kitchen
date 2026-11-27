@@ -14,6 +14,7 @@ use App\Actions\Learning\PickExerciseVariant;
 use App\Actions\Learning\SeedKidProgress;
 use App\Actions\Learning\SyncCurriculum;
 use App\Actions\Learning\UpdateSkillProgress;
+use App\Dashboard\ModuleRegistry;
 use App\Models\ExerciseVariant;
 use App\Models\HomeworkTask;
 use App\Models\Kid;
@@ -416,6 +417,27 @@ class LearningTest extends TestCase
         $this->signIn('theo');
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['division' => 1]])->assertOk();
         $this->assertSame('fact', app(HomeworkStore::class)->tasks('theo', '2026-11-25')[0]['worksheet'][0]['kind']);
+    }
+
+    public function test_the_kid_home_shows_the_points_once_and_the_kids_theme(): void
+    {
+        $this->assertSame(['soccer', 'gaming'], Kid::query()->orderBy('position')->pluck('theme')->all());
+        $this->get('/')->assertOk()
+            ->assertSee('data-kid-sheet="theo"', false)->assertSee('<div class="kz-theme" aria-hidden="true">', false)
+            ->assertSee('id="soccer-stripes"', false)->assertSee('id="gaming-brick"', false);
+
+        $this->signIn('theo');
+        $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1, 'multiplication' => 1]]);
+        $home = $this->get('/modules/homework/kids/theo/sheet')->assertOk();
+        $this->assertSame(0, substr_count($home->getContent(), 'class="kz-points"')); // only the big number on home
+        $home->assertSee('<b class="kz-score-num">0</b>', false)->assertSee('<b>0 of 2</b> sheets checked', false)
+            ->assertSee('<span class="kz-tile-sheets"', false)->assertSee('kz-tile kz-tile-small', false);
+        $this->get('/modules/homework/kids/theo/sheet?screen=rewards')->assertSee('class="kz-points"', false);
+
+        // No theme: no background layer.
+        Kid::query()->where('slug', 'arthur')->update(['theme' => null]);
+        $this->app->instance(ModuleRegistry::class, new ModuleRegistry);
+        $this->assertSame(1, substr_count($this->get('/')->getContent(), '<div class="kz-theme"'));
     }
 
     /** @return array{string, int} */
