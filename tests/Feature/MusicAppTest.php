@@ -18,7 +18,7 @@ class MusicAppTest extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
-        config([self::KEY.'.app_token' => 'test-token-123', self::KEY.'.app_webhook' => 'https://trigger.example.test/device/music']);
+        config([self::KEY.'.app_token' => 'test-token-123', self::KEY.'.app_webhook' => 'https://trigger.example.test/device']);
     }
 
     public function test_macrodroid_reports_the_song_with_its_token_and_the_card_shows_it(): void
@@ -50,7 +50,7 @@ class MusicAppTest extends TestCase
         Http::fake(['trigger.example.test/*' => Http::response('ok')]);
 
         $this->postJson('/modules/youtube-music/app/control', ['action' => 'next'])->assertOk()->assertJson(['ok' => true]);
-        Http::assertSent(fn (Request $r): bool => $r->url() === 'https://trigger.example.test/device/music?action=next');
+        Http::assertSent(fn (Request $r): bool => $r->url() === 'https://trigger.example.test/device/next');
         $this->postJson('/modules/youtube-music/app/control', ['action' => 'rm -rf'])->assertUnprocessable();
 
         config([self::KEY.'.app_webhook' => '']);

@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\Cache;
  * MacroDroid (an automation app on the tablet):
  * - MacroDroid posts the song playing in YouTube Music here (X-Hub-Token header,
  *   YTM_APP_TOKEN in .env), and the card shows it with ⏮ ⏯ ⏭.
- * - The card's buttons come back here and the hub calls MacroDroid's webhook
- *   (YTM_APP_WEBHOOK in .env), which presses play/pause/next/previous in the app.
+ * - The card's buttons come back here and the hub calls MacroDroid's webhook for
+ *   that button (YTM_APP_WEBHOOK in .env is the device's webhook address; the
+ *   identifiers are play-pause, next and previous), which controls the app.
  * Neither secret is ever logged or sent to the page.
  */
 class MusicAppController
@@ -73,7 +74,8 @@ class MusicAppController
         }
 
         try {
-            $ok = $http->timeout(6)->get($this->webhook(), ['action' => $action])->successful();
+            // One MacroDroid webhook per button: <device url>/play-pause, /next, /previous.
+            $ok = $http->timeout(6)->get(rtrim($this->webhook(), '/').'/'.$action)->successful();
         } catch (ConnectionException) {
             $ok = false;
         }

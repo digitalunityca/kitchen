@@ -71,8 +71,8 @@ return [
             // agent to this one for the trip; the dashboard switches it back on return.
             'tv_url' => 'https://www.youtube.com/tv',
             // The YouTube Music app link through MacroDroid (MusicAppController): the
-            // token MacroDroid sends with "now playing", and MacroDroid's webhook URL
-            // the hub calls for play/pause/next/previous. Both secret, in .env only.
+            // token MacroDroid sends with "now playing", and MacroDroid's device webhook
+            // address; the hub calls <address>/play-pause, /next or /previous. Both secret, in .env only.
             'app_token' => (string) env('YTM_APP_TOKEN', ''),
             'app_webhook' => (string) env('YTM_APP_WEBHOOK', ''),
             'tv_user_agent' => env('YOUTUBE_TV_USER_AGENT',
