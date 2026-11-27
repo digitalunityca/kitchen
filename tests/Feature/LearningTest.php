@@ -424,7 +424,7 @@ class LearningTest extends TestCase
         $this->assertSame(['soccer', 'gaming'], Kid::query()->orderBy('position')->pluck('theme')->all());
         $this->get('/')->assertOk()
             ->assertSee('data-kid-sheet="theo"', false)->assertSee('<div class="kz-theme" aria-hidden="true">', false)
-            ->assertSee('id="soccer-stripes"', false)->assertSee('id="gaming-brick"', false);
+            ->assertSee('id="soccer-grass"', false)->assertSee('id="gaming-brick"', false);
 
         $this->signIn('theo');
         $this->postJson('/modules/homework/kids/theo/print', ['counts' => ['addition' => 1, 'multiplication' => 1]]);
